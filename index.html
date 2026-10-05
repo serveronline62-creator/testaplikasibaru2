@@ -40,11 +40,16 @@
           class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
       </div>
       <div id="loginError" class="hidden text-sm text-red-600 bg-red-50 p-2 rounded"></div>
-      <button type="submit"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition">
+      <button type="submit" id="loginBtn"
+        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-2.5 rounded-lg transition">
         Masuk
       </button>
       <p class="text-xs text-gray-400 text-center">Demo Admin KUB: admin@kub.id / admin123</p>
+      <p class="text-xs text-center">
+        <a href="#" onclick="seedAdminDefault();return false;" class="text-gray-400 hover:text-blue-600 hover:underline">
+          🔧 Inisialisasi akun admin default
+        </a>
+      </p>
       <p class="text-sm text-center text-gray-600 pt-2 border-t">
         Belum punya akun?
         <a href="#" onclick="showRegister();return false;" class="text-blue-600 hover:underline font-medium">
@@ -78,8 +83,8 @@
           class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
       </div>
       <div id="regError" class="hidden text-sm text-red-600 bg-red-50 p-2 rounded"></div>
-      <button type="submit"
-        class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition">
+      <button type="submit" id="regBtn"
+        class="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-medium py-2.5 rounded-lg transition">
         Daftar
       </button>
       <p class="text-sm text-center text-gray-600 pt-2 border-t">
@@ -142,17 +147,42 @@
 <!-- ==================== TOAST ==================== -->
 <div id="toastRoot" class="fixed top-4 right-4 z-[60] space-y-2"></div>
 
+<!-- ==================== FIREBASE SDK (compat) ==================== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
 <script>
 /* ============================================================
-   STORAGE LAYER (localStorage sebagai database)
+   KONFIGURASI FIREBASE
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBIIq8VrSFfWm-il1mdxjWwos4tB5kHDA4",
+  authDomain: "aplikasi-rt-442f0.firebaseapp.com",
+  databaseURL: "https://aplikasi-rt-442f0-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "aplikasi-rt-442f0",
+  storageBucket: "aplikasi-rt-442f0.firebasestorage.app",
+  messagingSenderId: "619193954122",
+  // appId opsional untuk SDK compat, isi bila tersedia dari Firebase Console:
+  // appId: "1:619193954122:web:xxxxxxxxxxxxxxxx"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const rtdb = firebase.database();
+
+/* Path profil user di Realtime Database */
+const USERS_PATH = 'kub_users';
+
+/* ============================================================
+   STORAGE LAYER (localStorage untuk data operasional KUB)
+   Catatan: Firebase hanya menyimpan autentikasi + profil user.
    ============================================================ */
 const DB_KEY = 'kub_app_db_v2';
-const SESSION_KEY = 'kub_app_session';
 
 const defaultDB = {
-  users: [
-    { id: 'u1', nama: 'Admin KUB', email: 'admin@kub.id', password: 'admin123', role: 'admin_kub', kub_id: null }
-  ],
+  // users TIDAK lagi disimpan di localStorage — diambil dari Firebase RTDB
+  users: [],
   kub: [
     { id: 'k1', kode: 'KUB-01', nama: 'KUB St. Yosef', wilayah: 'RW 01', alamat: 'Jl. Melati No. 1', ketua: 'Bpk. Anton', jumlah_kk: 0 }
   ],
@@ -187,14 +217,20 @@ function loadDB() {
   try {
     const raw = localStorage.getItem(DB_KEY);
     if (!raw) { localStorage.setItem(DB_KEY, JSON.stringify(defaultDB)); return structuredClone(defaultDB); }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    parsed.users = []; // users selalu dari Firebase
+    return parsed;
   } catch { return structuredClone(defaultDB); }
 }
-function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+function saveDB() {
+  // jangan simpan users ke localStorage
+  const clone = { ...DB, users: [] };
+  localStorage.setItem(DB_KEY, JSON.stringify(clone));
+}
 function uid(prefix='id') { return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 let DB = loadDB();
-let SESSION = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+let currentUser = null;   // profil user yang sedang login (dari RTDB)
 
 /* ============================================================
    UI HELPERS
@@ -231,6 +267,109 @@ function fmtDate(d) {
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============================================================
+   FIREBASE AUTH HELPERS
+   ============================================================ */
+function mapAuthError(err) {
+  const map = {
+    'auth/invalid-email': 'Format email tidak valid.',
+    'auth/user-disabled': 'Akun ini dinonaktifkan.',
+    'auth/user-not-found': 'Email belum terdaftar.',
+    'auth/wrong-password': 'Password salah.',
+    'auth/invalid-credential': 'Email atau password salah.',
+    'auth/invalid-login-credentials': 'Email atau password salah.',
+    'auth/email-already-in-use': 'Email sudah terdaftar.',
+    'auth/weak-password': 'Password terlalu lemah (minimal 6 karakter).',
+    'auth/network-request-failed': 'Koneksi internet bermasalah.',
+    'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi nanti.',
+    'auth/requires-recent-login': 'Sesi kedaluwarsa, silakan login ulang.',
+    'auth/operation-not-allowed': 'Metode Email/Password belum diaktifkan di Firebase Console.',
+  };
+  return map[err?.code] || (err?.message || 'Terjadi kesalahan.');
+}
+
+/** Ambil seluruh profil user dari Realtime Database → DB.users */
+async function loadUsersFromRTDB() {
+  const snap = await rtdb.ref(USERS_PATH).once('value');
+  const val = snap.val() || {};
+  DB.users = Object.entries(val).map(([uid, p]) => ({ id: uid, ...p }));
+  return DB.users;
+}
+
+/** Simpan / update profil user di RTDB */
+async function saveUserProfile(uid, profile) {
+  const clean = {
+    nama: profile.nama || '',
+    email: profile.email || '',
+    role: profile.role || 'umat',
+    umat_id: profile.umat_id ?? null,
+    keluarga_id: profile.keluarga_id ?? null,
+    updated_at: new Date().toISOString(),
+  };
+  await rtdb.ref(`${USERS_PATH}/${uid}`).update(clean);
+}
+
+/** Dipanggil setelah login Firebase berhasil */
+async function onLoginSuccess(fbUser) {
+  await loadUsersFromRTDB();
+  let profile = DB.users.find(u => u.id === fbUser.uid);
+
+  if (!profile) {
+    // Profil belum ada di RTDB → buat fallback
+    profile = {
+      id: fbUser.uid,
+      nama: fbUser.displayName || fbUser.email,
+      email: fbUser.email,
+      role: 'umat',
+      umat_id: null,
+      keluarga_id: null,
+    };
+    await saveUserProfile(fbUser.uid, profile);
+    DB.users.push(profile);
+  }
+
+  currentUser = profile;
+  showApp();
+}
+
+/** Seed akun admin default (dijalankan sekali, pakai secondary app agar tidak mengganggu sesi) */
+async function seedAdminDefault(silent = false) {
+  const email = 'admin@kub.id';
+  const password = 'admin123';
+  let secondary;
+  try {
+    secondary = firebase.app('seedApp');
+  } catch {
+    secondary = firebase.initializeApp(firebaseConfig, 'seedApp');
+  }
+  const secAuth = secondary.auth();
+
+  try {
+    const cred = await secAuth.createUserWithEmailAndPassword(email, password);
+    await rtdb.ref(`${USERS_PATH}/${cred.user.uid}`).set({
+      nama: 'Admin KUB',
+      email,
+      role: 'admin_kub',
+      umat_id: null,
+      keluarga_id: null,
+      created_at: new Date().toISOString(),
+    });
+    await secAuth.signOut();
+    console.log('[KUB] Akun admin default dibuat:', email);
+    if (!silent) toast('Akun admin default dibuat: admin@kub.id / admin123');
+  } catch (err) {
+    if (err.code === 'auth/email-already-in-use') {
+      if (!silent) toast('Akun admin default sudah ada', 'info');
+    } else {
+      console.warn('[KUB] Seed admin gagal:', err.code, err.message);
+      if (!silent) toast('Gagal: ' + mapAuthError(err), 'error');
+    }
+    try { await secAuth.signOut(); } catch (_) {}
+  } finally {
+    try { await secondary.delete(); } catch (_) {}
+  }
+}
+
+/* ============================================================
    ROUTER / MENU (dengan role akses)
    ============================================================ */
 const MENU = [
@@ -250,7 +389,6 @@ const MENU = [
 ];
 
 let currentPage = 'dashboard';
-let currentUser = null;
 
 function menuForRole(role) { return MENU.filter(m => m.roles.includes(role || 'admin_kub')); }
 function isUmat() { return currentUser?.role === 'umat'; }
@@ -292,44 +430,50 @@ function toggleSidebar() {
 }
 
 /* ============================================================
-   AUTH — LOGIN
+   AUTH — LOGIN (Firebase Auth)
    ============================================================ */
-document.getElementById('loginForm').addEventListener('submit', (e) => {
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pass = document.getElementById('loginPassword').value;
-  const user = DB.users.find(u => u.email.toLowerCase() === email && u.password === pass);
+  const pass  = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
-  if (!user) {
-    errEl.textContent = 'Email atau password salah.';
+  const btn   = document.getElementById('loginBtn');
+
+  errEl.classList.add('hidden');
+  btn.disabled = true; btn.textContent = 'Memproses…';
+
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    await onLoginSuccess(cred.user);
+  } catch (err) {
+    errEl.textContent = mapAuthError(err);
     errEl.classList.remove('hidden');
-    return;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Masuk';
   }
-  SESSION = { user_id: user.id, ts: Date.now() };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(SESSION));
-  showApp();
 });
 
-function logout() {
-  localStorage.removeItem(SESSION_KEY);
-  SESSION = null;
+async function logout() {
+  try {
+    await auth.signOut();
+  } catch (e) { console.warn(e); }
+  currentUser = null;
   location.reload();
 }
 
 function showApp() {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  const u = DB.users.find(x => x.id === SESSION.user_id) || DB.users[0];
-  currentUser = u;
-  document.getElementById('userName').textContent = u.nama;
+  const u = currentUser;
+  document.getElementById('userName').textContent = u.nama || u.email;
   document.getElementById('userRole').textContent = roleLabel(u.role);
-  document.getElementById('userAvatar').textContent = u.nama.charAt(0).toUpperCase();
+  document.getElementById('userAvatar').textContent = (u.nama || '?').charAt(0).toUpperCase();
   renderMenu();
   go('dashboard');
 }
 
 /* ============================================================
-   AUTH — REGISTER UMAT
+   AUTH — REGISTER UMAT (Firebase Auth + profil RTDB)
    ============================================================ */
 function showRegister() {
   document.getElementById('loginForm').classList.add('hidden');
@@ -352,35 +496,55 @@ function showRegErr(msg) {
   e.textContent = msg; e.classList.remove('hidden');
 }
 
-document.getElementById('registerForm').addEventListener('submit', (e) => {
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const umatId = document.getElementById('regUmat').value;
   const email  = document.getElementById('regEmail').value.trim().toLowerCase();
   const p1     = document.getElementById('regPassword').value;
   const p2     = document.getElementById('regPassword2').value;
+  const btn    = document.getElementById('regBtn');
+
+  document.getElementById('regError').classList.add('hidden');
 
   if (!umatId) return showRegErr('Tidak ada umat yang tersedia untuk didaftarkan. Hubungi admin.');
-  if (DB.users.some(u => u.email.toLowerCase() === email)) return showRegErr('Email sudah terdaftar.');
   if (p1.length < 6) return showRegErr('Password minimal 6 karakter.');
   if (p1 !== p2) return showRegErr('Konfirmasi password tidak cocok.');
 
-  const umat = DB.umat.find(u => u.id === umatId);
-  const newUser = {
-    id: uid('u'),
-    nama: umat.nama_lengkap,
-    email,
-    password: p1,
-    role: 'umat',
-    umat_id: umatId,
-    keluarga_id: umat.keluarga_id,
-  };
-  DB.users.push(newUser);
-  saveDB();
+  // cek apakah umat sudah punya akun (berdasarkan cache RTDB)
+  if (DB.users.some(u => u.umat_id === umatId)) return showRegErr('Umat ini sudah memiliki akun.');
 
-  SESSION = { user_id: newUser.id, ts: Date.now() };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(SESSION));
-  toast('Pendaftaran berhasil. Selamat datang, ' + umat.nama_lengkap + '!');
-  showApp();
+  const umat = DB.umat.find(u => u.id === umatId);
+  if (!umat) return showRegErr('Data umat tidak ditemukan.');
+
+  btn.disabled = true; btn.textContent = 'Mendaftar…';
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, p1);
+
+    // update displayName Firebase
+    try { await cred.user.updateProfile({ displayName: umat.nama_lengkap }); } catch (_) {}
+
+    // simpan profil ke RTDB
+    const profile = {
+      nama: umat.nama_lengkap,
+      email,
+      role: 'umat',
+      umat_id: umatId,
+      keluarga_id: umat.keluarga_id,
+      created_at: new Date().toISOString(),
+    };
+    await saveUserProfile(cred.user.uid, profile);
+
+    // refresh cache & set user
+    await loadUsersFromRTDB();
+    currentUser = DB.users.find(u => u.id === cred.user.uid) || { id: cred.user.uid, ...profile };
+
+    toast('Pendaftaran berhasil. Selamat datang, ' + umat.nama_lengkap + '!');
+    showApp();
+  } catch (err) {
+    showRegErr(mapAuthError(err));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Daftar';
+  }
 });
 
 /* ============================================================
@@ -390,7 +554,7 @@ function pageDashboard(el) {
   /* ---------- Dashboard khusus UMAT ---------- */
   if (isUmat()) {
     const me = DB.umat.find(u => u.id === currentUser.umat_id);
-    const kk = DB.keluarga.find(k => k.id === me?.keluarga_id);
+    const kk = DB.keluarga.find(k => k.id === (currentUser.keluarga_id || me?.keluarga_id));
     const kub = DB.kub.find(k => k.id === kk?.kub_id);
     const hadirSaya = DB.presensi.filter(p => p.umat_id === me?.id && p.status === 'hadir').length;
     const iuranSaya = DB.iuran.filter(i => i.keluarga_id === kk?.id);
@@ -883,7 +1047,6 @@ function hapusKegiatan(id) {
    PAGE: PRESENSI
    ============================================================ */
 function pagePresensi(el) {
-  /* Umat: hanya lihat riwayat presensi sendiri */
   if (isUmat()) {
     const rows = DB.presensi.filter(p => p.umat_id === currentUser.umat_id);
     el.innerHTML = `
@@ -913,7 +1076,6 @@ function pagePresensi(el) {
     return;
   }
 
-  /* Admin: kelola presensi */
   el.innerHTML = `
     <p class="text-gray-500 text-sm mb-4">Pilih kegiatan untuk mengelola presensi:</p>
     <div class="grid md:grid-cols-3 gap-4">
@@ -935,7 +1097,6 @@ function presensiKegiatan(kegiatanId) {
   const kg = DB.kegiatan.find(k => k.id === kegiatanId);
   if (!kg) return;
 
-  // Umat: view-only presensi sendiri
   if (isUmat()) {
     const my = DB.presensi.find(p => p.kegiatan_id === kegiatanId && p.umat_id === currentUser.umat_id);
     openModal(`
@@ -1550,7 +1711,7 @@ function exportLaporanCSV() {
    ============================================================ */
 function pagePengaturan(el) {
   if (isUmat()) {
-    const me = DB.users.find(u => u.id === currentUser.id);
+    const me = DB.users.find(u => u.id === currentUser.id) || currentUser;
     el.innerHTML = `
       <div class="grid md:grid-cols-2 gap-4">
         <div class="bg-white rounded-xl p-5 shadow-sm border">
@@ -1572,9 +1733,14 @@ function pagePengaturan(el) {
           </form>
         </div>
         <div class="bg-white rounded-xl p-5 shadow-sm border">
-          <h3 class="font-semibold mb-3">ℹ️ Tentang Akun</h3>
-          <p class="text-sm text-gray-600">
-            Anda login sebagai <b>Umat</b>. Untuk mengubah data pribadi (tanggal lahir, pekerjaan, dll.) silakan hubungi Admin KUB.
+          <h3 class="font-semibold mb-3">🔐 Info Akun Firebase</h3>
+          <div class="text-sm text-gray-600 space-y-2">
+            <div class="flex justify-between"><span>UID</span><b class="font-mono text-xs">${esc(currentUser.id)}</b></div>
+            <div class="flex justify-between"><span>Role</span><b>${roleLabel(currentUser.role)}</b></div>
+            <div class="flex justify-between"><span>Umat ID</span><b class="font-mono text-xs">${esc(currentUser.umat_id||'-')}</b></div>
+          </div>
+          <p class="text-sm text-gray-600 mt-4">
+            Untuk mengubah data pribadi (tanggal lahir, pekerjaan, dll.) silakan hubungi Admin KUB.
           </p>
         </div>
       </div>
@@ -1582,16 +1748,21 @@ function pagePengaturan(el) {
     return;
   }
 
+  const adminUser = DB.users.find(u => u.id === currentUser.id) || currentUser;
+
   el.innerHTML = `
     <div class="grid md:grid-cols-2 gap-4">
       <div class="bg-white rounded-xl p-5 shadow-sm border">
         <h3 class="font-semibold mb-3">👤 Profil Admin KUB</h3>
         <form onsubmit="simpanProfil(event)" class="space-y-3">
           <div><label class="text-sm">Nama</label>
-            <input name="nama" required value="${esc(DB.users[0].nama)}" class="w-full px-3 py-2 border rounded-lg"/>
+            <input name="nama" required value="${esc(adminUser.nama)}" class="w-full px-3 py-2 border rounded-lg"/>
           </div>
           <div><label class="text-sm">Email</label>
-            <input name="email" type="email" required value="${esc(DB.users[0].email)}" class="w-full px-3 py-2 border rounded-lg"/>
+            <input name="email" type="email" required value="${esc(adminUser.email)}" class="w-full px-3 py-2 border rounded-lg"/>
+          </div>
+          <div><label class="text-sm">Password Lama (untuk ganti password)</label>
+            <input name="oldpass" type="password" class="w-full px-3 py-2 border rounded-lg"/>
           </div>
           <div><label class="text-sm">Password Baru (kosongkan bila tidak diubah)</label>
             <input name="password" type="password" class="w-full px-3 py-2 border rounded-lg"/>
@@ -1602,7 +1773,7 @@ function pagePengaturan(el) {
 
       <div class="bg-white rounded-xl p-5 shadow-sm border">
         <h3 class="font-semibold mb-3">💾 Backup & Restore Data</h3>
-        <p class="text-sm text-gray-500 mb-3">Data tersimpan di browser (localStorage). Backup rutin dianjurkan.</p>
+        <p class="text-sm text-gray-500 mb-3">Data operasional tersimpan di browser (localStorage). Backup rutin dianjurkan.</p>
         <div class="flex flex-wrap gap-2">
           <button onclick="exportData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">📥 Export JSON</button>
           <label class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm cursor-pointer">
@@ -1614,7 +1785,7 @@ function pagePengaturan(el) {
       </div>
 
       <div class="bg-white rounded-xl p-5 shadow-sm border md:col-span-2">
-        <h3 class="font-semibold mb-3">👥 Akun Umat Terdaftar</h3>
+        <h3 class="font-semibold mb-3">👥 Akun Umat Terdaftar (Firebase Auth)</h3>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-50 text-gray-500 text-left">
@@ -1622,6 +1793,7 @@ function pagePengaturan(el) {
                 <th class="px-3 py-2">Nama</th>
                 <th class="px-3 py-2">Email</th>
                 <th class="px-3 py-2">Role</th>
+                <th class="px-3 py-2">UID</th>
                 <th class="px-3 py-2 text-right">Aksi</th>
               </tr>
             </thead>
@@ -1632,69 +1804,128 @@ function pagePengaturan(el) {
                   <td class="px-3 py-2">${esc(u.email)}</td>
                   <td class="px-3 py-2"><span class="text-xs px-2 py-0.5 rounded-full ${
                     u.role==='admin_kub'?'bg-blue-100 text-blue-700':'bg-green-100 text-green-700'}">${esc(roleLabel(u.role))}</span></td>
+                  <td class="px-3 py-2 font-mono text-[10px] text-gray-400">${esc(u.id)}</td>
                   <td class="px-3 py-2 text-right">
-                    ${u.role==='umat'?`<button onclick="hapusUser('${u.id}')" class="text-red-600 hover:underline">Hapus</button>`:'-'}
+                    ${u.role==='umat'?`<button onclick="hapusUser('${u.id}')" class="text-red-600 hover:underline">Hapus profil</button>`:'-'}
                   </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
+        <p class="text-xs text-gray-400 mt-2">
+          Menghapus hanya menghapus profil dari database. Untuk menghapus akun Auth sepenuhnya, gunakan Firebase Console → Authentication.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 shadow-sm border md:col-span-2">
+        <h3 class="font-semibold mb-3">🔐 Info Firebase</h3>
+        <div class="text-sm text-gray-600 space-y-1">
+          <div class="flex justify-between"><span>Project ID</span><b class="font-mono text-xs">${esc(firebaseConfig.projectId)}</b></div>
+          <div class="flex justify-between"><span>Auth Domain</span><b class="font-mono text-xs">${esc(firebaseConfig.authDomain)}</b></div>
+          <div class="flex justify-between"><span>UID Anda</span><b class="font-mono text-xs">${esc(currentUser.id)}</b></div>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl p-5 shadow-sm border md:col-span-2">
         <h3 class="font-semibold mb-3">ℹ️ Tentang Aplikasi</h3>
         <p class="text-sm text-gray-600">
-          <b>KUB App</b> — Sistem Informasi Kelompok Umat Basis v1.0<br/>
-          Aplikasi single-file HTML untuk mengelola data KUB: keluarga, umat, kegiatan, presensi, iuran, kas, jadwal petugas, pengumuman, dan laporan.
-          Data disimpan secara lokal di browser Anda. Untuk penggunaan multi-user & multi-paroki, migrasikan ke backend (Supabase/MySQL + Next.js).
+          <b>KUB App</b> — Sistem Informasi Kelompok Umat Basis v1.1 (Firebase Edition)<br/>
+          Autentikasi & profil pengguna menggunakan <b>Firebase Authentication</b> + <b>Realtime Database</b>.
+          Data operasional KUB (keluarga, umat, kegiatan, kas, dll.) disimpan lokal di browser.
         </p>
       </div>
     </div>
   `;
 }
 
-function simpanProfil(e) {
+/* ---------- Simpan profil ADMIN (update Firebase + RTDB) ---------- */
+async function simpanProfil(e) {
   e.preventDefault();
   const f = new FormData(e.target);
-  DB.users[0].nama = f.get('nama');
-  DB.users[0].email = f.get('email');
-  if (f.get('password')) DB.users[0].password = f.get('password');
-  saveDB(); toast('Profil tersimpan');
-  document.getElementById('userName').textContent = DB.users[0].nama;
-  document.getElementById('userAvatar').textContent = DB.users[0].nama.charAt(0).toUpperCase();
-}
-
-function simpanProfilSaya(e) {
-  e.preventDefault();
-  const f = new FormData(e.target);
-  const me = DB.users.find(u => u.id === currentUser.id);
+  const nama  = f.get('nama').trim();
   const email = f.get('email').trim().toLowerCase();
   const oldpass = f.get('oldpass');
   const newpass = f.get('password');
+  const me = DB.users.find(u => u.id === currentUser.id) || currentUser;
 
-  if (DB.users.some(u => u.id !== me.id && u.email.toLowerCase() === email)) {
-    return toast('Email sudah digunakan akun lain','error');
+  try {
+    // ganti password bila diisi
+    if (newpass) {
+      if (newpass.length < 6) return toast('Password minimal 6 karakter', 'error');
+      const cred = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, oldpass);
+      await auth.currentUser.reauthenticateWithCredential(cred);
+      await auth.currentUser.updatePassword(newpass);
+    }
+    // ganti email bila berubah
+    if (email && email !== auth.currentUser.email) {
+      await auth.currentUser.updateEmail(email);
+    }
+    if (nama && nama !== auth.currentUser.displayName) {
+      try { await auth.currentUser.updateProfile({ displayName: nama }); } catch (_) {}
+    }
+
+    // update profil di RTDB
+    me.nama = nama;
+    me.email = email;
+    await saveUserProfile(me.id, me);
+    currentUser = me;
+
+    document.getElementById('userName').textContent = me.nama;
+    document.getElementById('userAvatar').textContent = me.nama.charAt(0).toUpperCase();
+    toast('Profil tersimpan');
+  } catch (err) {
+    toast(mapAuthError(err), 'error');
   }
-  if (newpass) {
-    if (oldpass !== me.password) return toast('Password lama salah','error');
-    if (newpass.length < 6) return toast('Password minimal 6 karakter','error');
-    me.password = newpass;
-  }
-  me.email = email;
-  saveDB(); toast('Profil tersimpan');
 }
 
-function hapusUser(id) {
+/* ---------- Simpan profil UMAT ---------- */
+async function simpanProfilSaya(e) {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const email = f.get('email').trim().toLowerCase();
+  const oldpass = f.get('oldpass');
+  const newpass = f.get('password');
+  const me = DB.users.find(u => u.id === currentUser.id) || currentUser;
+
+  try {
+    if (newpass) {
+      if (newpass.length < 6) return toast('Password minimal 6 karakter', 'error');
+      const cred = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, oldpass);
+      await auth.currentUser.reauthenticateWithCredential(cred);
+      await auth.currentUser.updatePassword(newpass);
+    }
+    if (email && email !== auth.currentUser.email) {
+      await auth.currentUser.updateEmail(email);
+    }
+    me.email = email;
+    await saveUserProfile(me.id, me);
+    currentUser = me;
+    toast('Profil tersimpan');
+  } catch (err) {
+    toast(mapAuthError(err), 'error');
+  }
+}
+
+/* ---------- Hapus profil user dari RTDB ---------- */
+async function hapusUser(id) {
   const u = DB.users.find(x => x.id === id);
   if (!u || u.role === 'admin_kub') return;
-  if (!confirm(`Hapus akun "${u.nama}"? Umat bisa mendaftar lagi dengan nama yang sama.`)) return;
-  DB.users = DB.users.filter(x => x.id !== id);
-  saveDB(); toast('Akun dihapus','info'); go('pengaturan');
+  if (!confirm(`Hapus profil "${u.nama}"? Umat bisa mendaftar lagi dengan nama yang sama.\n\nCatatan: akun Auth tetap ada di Firebase Console.`)) return;
+  try {
+    await rtdb.ref(`${USERS_PATH}/${id}`).remove();
+    DB.users = DB.users.filter(x => x.id !== id);
+    toast('Profil dihapus','info');
+    go('pengaturan');
+  } catch (err) {
+    toast('Gagal menghapus: ' + err.message, 'error');
+  }
 }
 
+/* ---------- Backup / Restore data lokal ---------- */
 function exportData() {
-  const blob = new Blob([JSON.stringify(DB, null, 2)], { type:'application/json' });
+  const payload = { ...DB, users: [] };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `kub-backup-${todayStr()}.json`;
@@ -1709,7 +1940,8 @@ function importData(e) {
   r.onload = () => {
     try {
       const data = JSON.parse(r.result);
-      if (!data.users || !data.kub) throw new Error('Format tidak valid');
+      if (!data.kub) throw new Error('Format tidak valid');
+      data.users = [];
       DB = data; saveDB(); toast('Data berhasil diimport'); location.reload();
     } catch (err) { toast('File tidak valid: ' + err.message, 'error'); }
   };
@@ -1717,9 +1949,8 @@ function importData(e) {
 }
 
 function resetData() {
-  if (!confirm('Yakin reset semua data? Data akan kembali ke awal.')) return;
+  if (!confirm('Yakin reset semua data lokal? Data KUB akan kembali ke awal (akun Firebase tidak terhapus).')) return;
   localStorage.removeItem(DB_KEY);
-  localStorage.removeItem(SESSION_KEY);
   location.reload();
 }
 
@@ -1734,16 +1965,29 @@ function updateClock() {
 }
 setInterval(updateClock, 1000); updateClock();
 
-if (SESSION) {
-  showApp();
-} else {
-  document.getElementById('loginScreen').classList.remove('hidden');
-}
+/* Pantau status login Firebase */
+auth.onAuthStateChanged(async (fbUser) => {
+  if (fbUser) {
+    try {
+      await onLoginSuccess(fbUser);
+    } catch (err) {
+      console.error('[KUB] Gagal memuat profil:', err);
+      toast('Gagal memuat profil: ' + err.message, 'error');
+    }
+  } else {
+    currentUser = null;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+  }
+});
+
+/* Seed akun admin default sekali (silent) */
+setTimeout(() => { seedAdminDefault(true); }, 1200);
 
 // expose ke global (untuk onclick di HTML)
 Object.assign(window, {
   go, logout, toggleSidebar, closeModal, openModal,
-  showRegister, showLogin,
+  showRegister, showLogin, seedAdminDefault,
   formKub, simpanKub, hapusKub,
   formKeluarga, simpanKeluarga, hapusKeluarga,
   formUmat, simpanUmat, hapusUmat, renderUmatTable,
