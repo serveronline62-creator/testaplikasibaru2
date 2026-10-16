@@ -7,7 +7,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#0f172a; --panel:#ffffff; --soft:#f1f5f9; --line:#e2e8f0;
+    --panel:#ffffff; --soft:#f1f5f9; --line:#e2e8f0;
     --txt:#0f172a; --muted:#64748b;
     --brand:#2563eb; --brand2:#1d4ed8; --ok:#059669;
     --radius:14px;
@@ -25,7 +25,6 @@
   header.top h1{margin:0 0 6px;font-size:22px;letter-spacing:.2px}
   header.top p{margin:0;color:#cbd5e1;font-size:13.5px}
 
-  /* ---------- Tabs ---------- */
   .tabs{display:flex;gap:8px;margin:0 0 -1px;position:relative;z-index:3}
   .tab{
     padding:11px 26px;border-radius:12px 12px 0 0;font-size:13.5px;font-weight:600;
@@ -40,8 +39,6 @@
   }
   .tab.active .badge{background:#dbeafe;color:var(--brand2)}
 
-  .panel-wrap{background:transparent}
-
   .card{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:0 10px 30px rgba(15,23,42,.08);padding:20px;margin-bottom:18px;
@@ -50,7 +47,6 @@
   .card .sub{color:var(--muted);font-size:12.5px;margin:0 0 16px}
   code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:12px}
 
-  /* ---------- Upload ---------- */
   .drop{
     border:2px dashed #cbd5e1;border-radius:14px;padding:34px 20px;text-align:center;
     background:#f8fafc;transition:.18s;cursor:pointer;display:block;
@@ -61,7 +57,6 @@
   .drop span{font-size:12.5px;color:var(--muted)}
   input[type=file]{display:none}
 
-  /* ---------- Filter ---------- */
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
   .field label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:5px}
   .field input,.field select{
@@ -75,8 +70,6 @@
     font-family:inherit;font-size:13px;font-weight:600;border-radius:10px;padding:10px 18px;
     border:1px solid transparent;cursor:pointer;transition:.15s;
   }
-  .btn-primary{background:var(--brand);color:#fff}
-  .btn-primary:hover{background:var(--brand2)}
   .btn-ghost{background:#fff;border-color:#cbd5e1;color:#334155}
   .btn-ghost:hover{background:var(--soft)}
   .btn-ok{background:var(--ok);color:#fff}
@@ -86,14 +79,12 @@
   .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#334155;user-select:none;cursor:pointer}
   .chk input{width:16px;height:16px;accent-color:var(--brand)}
 
-  /* ---------- Stats ---------- */
   .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
   .pill{
     background:#f8fafc;border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-size:12.5px;color:#334155;
   }
   .pill b{color:var(--brand2)}
 
-  /* ---------- Table ---------- */
   .tablebox{overflow:auto;max-height:60vh;border:1px solid var(--line);border-radius:12px;background:#fff}
   table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
   thead th{
@@ -121,7 +112,7 @@
 
   <header class="top">
     <h1>Filter &amp; Extract Excel — TAP 1 / TAP 2</h1>
-    <p>Unggah file Excel, saring datanya, lalu unduh hasilnya sesuai template <b>TAP 1</b> atau <b>TAP 2</b>.</p>
+    <p>Hasil export <b>presisi</b> sama dengan file contoh: header, urutan kolom, tipe data, dan format tanggal.</p>
   </header>
 
   <div class="tabs" id="tabsBar"></div>
@@ -132,8 +123,10 @@
 
 <script>
 /* =========================================================================
-   1) KONFIGURASI TAB — TAP 1 & TAP 2
+   1) KONFIGURASI KOLOM — persis sama dengan file contoh
    ========================================================================= */
+
+/* TAP 1 — perhatikan: "Nik Tujuan" (N kapital, k kecil) */
 const TAP1_COLUMNS = [
   "No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
   "Nik Tujuan","Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute",
@@ -142,6 +135,7 @@ const TAP1_COLUMNS = [
   "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
 ];
 
+/* TAP 2 — perhatikan: "NIK Tujuan" (semua kapital) */
 const TAP2_COLUMNS = [
   "No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
   "NIK Tujuan","Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute",
@@ -150,8 +144,21 @@ const TAP2_COLUMNS = [
   "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
 ];
 
-const NUMERIC_COLS = new Set(["Baris","Qty","Conversion Qty","Conversion Value","Price Per Unit","Total Value"]);
-const DATE_COLS    = new Set(["Dibuat Pada","Dikonfirmasi Pada","Diubah Pada"]);
+/* Kolom yang harus berupa angka (number) di Excel */
+const NUMERIC_COLS = new Set([
+  "No","Baris","Qty","Conversion Qty","Conversion Value","Price Per Unit","Total Value"
+]);
+
+/* Kolom tanggal */
+const DATE_COLS = new Set(["Dibuat Pada","Dikonfirmasi Pada","Diubah Pada"]);
+
+/* Kolom yang teksnya harus dipertahankan sebagai teks walau isinya angka (mis. NIK, Nomor Referensi) */
+const TEXT_COLS = new Set([
+  "Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
+  "Tipe Transaksi","Status","Part","Deskripsi","Satuan","Conversion UM",
+  "Mata Uang","Site Parent","Dibuat Oleh","Dikonfirmasi Oleh","Diubah Oleh"
+]);
+
 const MAX_PREVIEW_ROWS = 800;
 
 const TAB_CONFIGS = {
@@ -161,9 +168,7 @@ const TAB_CONFIGS = {
     exportTag: "TAP1",
     sheetPreferred: /tap\s*1/i,
     columns: TAP1_COLUMNS,
-    /* TAP 1: "2026-10-12 00:00:00" */
-    dateFormat: "datetime",
-    datetimeSeparator: " "
+    dateFormat: "datetime"     // contoh: 2026-10-12 00:00:00
   },
   tap2: {
     label: "TAP 2",
@@ -171,8 +176,7 @@ const TAB_CONFIGS = {
     exportTag: "TAP2",
     sheetPreferred: /tap\s*2/i,
     columns: TAP2_COLUMNS,
-    /* TAP 2: "16/10/2026" */
-    dateFormat: "dmy"
+    dateFormat: "dmy"          // contoh: 16/10/2026
   }
 };
 
@@ -181,59 +185,55 @@ const TAB_CONFIGS = {
    ========================================================================= */
 const $ = id => document.getElementById(id);
 const norm = s => String(s ?? "").replace(/\s+/g," ").trim().toLowerCase();
+const pad2 = n => String(n).padStart(2,"0");
 
 const escapeHtml = s => String(s).replace(/[&<>"']/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const escapeAttr = escapeHtml;
 
-function pad2(n){ return String(n).padStart(2,"0"); }
+function isoDate(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 
-function isoDate(d){
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-}
-
-/** Ubah nilai apa pun menjadi "YYYY-MM-DD" untuk perbandingan filter tanggal. */
+/** Normalisasi nilai apa pun → "YYYY-MM-DD" untuk perbandingan filter. */
 function toDateOnly(v){
   if (v instanceof Date) return isoDate(v);
   const s = String(v ?? "").trim();
   if (!s) return "";
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);          // YYYY-MM-DD
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);        // ISO
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);        // DD/MM/YYYY
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);      // DD/MM/YYYY
   if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
   const d = new Date(s);
   return isNaN(d) ? "" : isoDate(d);
 }
 
-/** Format nilai tanggal sesuai preferensi tab (datetime / dmy). */
+/** Format nilai tanggal sesuai preferensi tab. */
 function formatDateForTab(value, fmt){
   if (value === null || value === undefined || value === "") return "";
+
+  let d = null;
+  const s = String(value).trim();
+
+  // deteksi string yang sudah diformat
   if (fmt === "dmy"){
-    let d = null;
-    if (value instanceof Date) d = value;
-    else {
-      const s = String(value).trim();
-      let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);   // sudah DD/MM/YYYY
-      if (m) return `${pad2(m[1])}/${pad2(m[2])}/${m[3]}`;
-      m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);              // dari ISO
-      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-      d = new Date(s);
-      if (isNaN(d)) return s;
-    }
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);           // sudah DD/MM/YYYY
+    if (m) return `${pad2(m[1])}/${pad2(m[2])}/${m[3]}`;
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);                       // dari ISO
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    d = value instanceof Date ? value : new Date(s);
+    if (isNaN(d)) return s;
     return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
   }
-  // datetime: "YYYY-MM-DD HH:mm:ss"
-  let d = null;
-  if (value instanceof Date) d = value;
-  else {
-    const s = String(value).trim();
-    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);     // dari DD/MM/YYYY
-    if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])} 00:00:00`;
-    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);                // sudah ISO (mungkin sudah ada jam)
-    if (m) return s.length >= 19 ? s.slice(0,19).replace("T"," ") : `${m[1]}-${m[2]}-${m[3]} 00:00:00`;
-    d = new Date(s);
-    if (isNaN(d)) return s;
+
+  // fmt === "datetime"
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])} 00:00:00`;
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/);
+  if (m){
+    const hh = m[4] ?? "00", mm = m[5] ?? "00", ss = m[6] ?? "00";
+    return `${m[1]}-${m[2]}-${m[3]} ${hh}:${mm}:${ss}`;
   }
+  d = value instanceof Date ? value : new Date(s);
+  if (isNaN(d)) return s;
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ` +
          `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
@@ -249,7 +249,7 @@ function toast(msg){
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTm);
-  toastTm = setTimeout(() => t.classList.remove("show"), 2600);
+  toastTm = setTimeout(() => t.classList.remove("show"), 2800);
 }
 
 /* =========================================================================
@@ -264,15 +264,10 @@ class TabController {
     this.bind();
   }
 
-  /* short-hands */
   el(suffix){ return document.getElementById(`${suffix}-${this.tabId}`); }
 
-  /* --------------------------------------------------------------------
-     Bangun panel HTML untuk tab ini
-     -------------------------------------------------------------------- */
   mount(){
-    const p = this.tabId;
-    const cfg = this.cfg;
+    const p = this.tabId, cfg = this.cfg;
     const panel = document.createElement("div");
     panel.className = "tab-panel" + (p === "tap1" ? "" : " hidden");
     panel.id = `panel-${p}`;
@@ -347,11 +342,7 @@ class TabController {
     $("tabPanels").appendChild(panel);
   }
 
-  /* --------------------------------------------------------------------
-     Pasang event listener
-     -------------------------------------------------------------------- */
   bind(){
-    /* ---- upload ---- */
     const fileInput = this.el("file");
     fileInput.addEventListener("change", e => {
       const f = e.target.files[0];
@@ -370,10 +361,8 @@ class TabController {
       if (f) this.loadFile(f);
     });
 
-    /* ---- sheet selector ---- */
     this.el("sheetSelect").addEventListener("change", e => this.buildFromSheet(e.target.value));
 
-    /* ---- filter inputs ---- */
     ["fSearch","fKode","fSite","fTipe","fStatus","fLokasi","fPart","fRef","fDari","fSampai"]
       .forEach(key => {
         const el = this.el(key);
@@ -381,15 +370,11 @@ class TabController {
         el.addEventListener("change", () => this.applyFilter());
       });
 
-    /* ---- actions ---- */
     this.el("btnReset").addEventListener("click", () => this.resetFilter());
     this.el("btnExport").addEventListener("click", () => this.exportExcel());
     this.el("chkRenumber").addEventListener("change", () => this.renderPreview());
   }
 
-  /* --------------------------------------------------------------------
-     Baca file Excel
-     -------------------------------------------------------------------- */
   loadFile(file){
     this.state.baseName = file.name.replace(/\.(xlsx|xls|xlsm|csv)$/i,"");
     const reader = new FileReader();
@@ -398,7 +383,6 @@ class TabController {
         const wb = XLSX.read(new Uint8Array(ev.target.result), { type:"array", cellDates:true });
         this.state.wb = wb;
 
-        /* isi dropdown sheet */
         const sel = this.el("sheetSelect");
         sel.innerHTML = "";
         wb.SheetNames.forEach(n => {
@@ -407,7 +391,6 @@ class TabController {
           sel.appendChild(o);
         });
 
-        /* pilih sheet sesuai preferensi tab, lalu fallback ke yang pertama */
         const preferred = wb.SheetNames.find(n => this.cfg.sheetPreferred.test(n));
         sel.value = preferred || wb.SheetNames[0];
 
@@ -422,9 +405,9 @@ class TabController {
     reader.readAsArrayBuffer(file);
   }
 
-  /* --------------------------------------------------------------------
-     Parse sheet → array of objects
-     -------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     Parse sheet → array of objects dengan TIPE DATA DIPERTAHANKAN
+     ------------------------------------------------------------------ */
   buildFromSheet(sheetName){
     const ws = this.state.wb.Sheets[sheetName];
     if (!ws) return;
@@ -434,7 +417,7 @@ class TabController {
       header:1, raw:true, defval:null, blankrows:true
     });
 
-    /* --- deteksi baris header --- */
+    /* --- cari baris header --- */
     let headerIdx = -1;
     for (let i = 0; i < Math.min(aoa.length, 100); i++){
       const r = (aoa[i] || []).map(norm);
@@ -456,13 +439,11 @@ class TabController {
 
     const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
 
-    /* --- peta kolom: nama → indeks (fallback ke posisi) --- */
     const colIdx = this.cfg.columns.map((col, i) => {
       const found = headers.findIndex(h => norm(h) === norm(col));
       return found !== -1 ? found : (i < headers.length ? i : -1);
     });
 
-    /* --- ambil baris data --- */
     const rows = [];
     for (let r = headerIdx + 1; r < aoa.length; r++){
       const raw = aoa[r] || [];
@@ -474,14 +455,41 @@ class TabController {
         const src = colIdx[i];
         let v = src >= 0 ? raw[src] : null;
 
+        /* --- kolom tanggal: selalu diformat sesuai tab --- */
         if (DATE_COLS.has(col)){
           obj[col] = formatDateForTab(v, this.cfg.dateFormat);
           return;
         }
-        if (v instanceof Date){ obj[col] = formatDateForTab(v, this.cfg.dateFormat); return; }
-        if (v === null || v === undefined){ obj[col] = ""; return; }
-        if (typeof v === "number"){ obj[col] = v; return; }
-        obj[col] = String(v).trim();
+
+        /* --- nilai kosong: string kosong (bukan null) untuk display --- */
+        if (v === null || v === undefined){
+          obj[col] = "";
+          return;
+        }
+
+        /* --- Date object di kolom non-tanggal (jarang) --- */
+        if (v instanceof Date){
+          obj[col] = formatDateForTab(v, this.cfg.dateFormat);
+          return;
+        }
+
+        /* --- kolom numeric: paksa number bila memungkinkan --- */
+        if (NUMERIC_COLS.has(col) && col !== "No"){
+          if (typeof v === "number"){ obj[col] = v; return; }
+          const s = String(v).trim();
+          if (s !== "" && !isNaN(Number(s))){ obj[col] = Number(s); return; }
+          obj[col] = s;
+          return;
+        }
+
+        /* --- kolom teks: paksa string --- */
+        if (TEXT_COLS.has(col)){
+          obj[col] = String(v).trim();
+          return;
+        }
+
+        /* --- sisanya: pertahankan tipe asli --- */
+        obj[col] = typeof v === "number" ? v : String(v).trim();
       });
 
       /* buang baris kosong */
@@ -497,9 +505,6 @@ class TabController {
     this.el("preview").classList.remove("hidden");
   }
 
-  /* --------------------------------------------------------------------
-     Bangun dropdown filter
-     -------------------------------------------------------------------- */
   buildFilterOptions(){
     const map = {
       fKode:"Kode Perusahaan", fSite:"Site", fTipe:"Tipe Transaksi",
@@ -517,9 +522,6 @@ class TabController {
     });
   }
 
-  /* --------------------------------------------------------------------
-     Filter
-     -------------------------------------------------------------------- */
   applyFilter(){
     const q      = norm(this.el("fSearch").value);
     const kode   = this.el("fKode").value;
@@ -563,15 +565,12 @@ class TabController {
     this.applyFilter();
   }
 
-  /* --------------------------------------------------------------------
-     Pratinjau tabel
-     -------------------------------------------------------------------- */
   renderPreview(){
     const thead = this.el("thead");
     const tbody = this.el("tbody");
 
     thead.innerHTML = this.cfg.columns.map(c =>
-      `<th class="${NUMERIC_COLS.has(c) || c === "No" ? "num" : ""}">${escapeHtml(c)}</th>`
+      `<th class="${NUMERIC_COLS.has(c) ? "num" : ""}">${escapeHtml(c)}</th>`
     ).join("");
 
     const renumber = this.el("chkRenumber").checked;
@@ -580,9 +579,15 @@ class TabController {
 
     tbody.innerHTML = shown.map((r, i) => {
       const cells = this.cfg.columns.map(col => {
-        let v = col === "No" ? (renumber ? i + 1 : (r["No"] ?? "")) : r[col];
-        const isNum = NUMERIC_COLS.has(col) || col === "No";
-        return `<td class="${isNum ? "num" : ""}">${escapeHtml(v === "" || v === null || v === undefined ? "" : v)}</td>`;
+        let v;
+        if (col === "No"){
+          v = renumber ? (i + 1) : (r["No"] ?? "");
+        } else {
+          v = r[col];
+        }
+        const isNum = NUMERIC_COLS.has(col);
+        const display = (v === "" || v === null || v === undefined) ? "" : v;
+        return `<td class="${isNum ? "num" : ""}">${escapeHtml(display)}</td>`;
       }).join("");
       return `<tr>${cells}</tr>`;
     }).join("");
@@ -597,9 +602,9 @@ class TabController {
     this.el("stCols").textContent     = this.cfg.columns.length;
   }
 
-  /* --------------------------------------------------------------------
-     Export ke Excel
-     -------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     EXPORT — hasil presisi sama dengan file contoh
+     ------------------------------------------------------------------ */
   exportExcel(){
     if (!this.state.rows.length){ toast("Belum ada data untuk diekspor."); return; }
 
@@ -607,25 +612,58 @@ class TabController {
     const withBlank = this.el("chkBlank").checked;
 
     const aoa = [];
-    if (withBlank) aoa.push([], [], []);           // 3 baris kosong di atas header
-    aoa.push(this.cfg.columns.slice());            // baris header
+    if (withBlank) aoa.push([], [], []);           // 3 baris kosong (seperti contoh)
+    aoa.push(this.cfg.columns.slice());            // baris ke-4: header
 
     this.state.filtered.forEach((r, i) => {
-      aoa.push(this.cfg.columns.map(col => {
-        if (col === "No") return renumber ? i + 1 : (r["No"] ?? "");
+      const row = this.cfg.columns.map(col => {
+
+        /* --- kolom "No" --- */
+        if (col === "No"){
+          if (renumber) return i + 1;
+          const orig = r["No"];
+          if (orig === null || orig === undefined || orig === "") return null;
+          if (typeof orig === "number") return orig;
+          const n = Number(orig);
+          return isNaN(n) ? String(orig) : n;
+        }
+
         const v = r[col];
-        if (v === null || v === undefined || v === "") return "";
-        if (NUMERIC_COLS.has(col) && typeof v === "number") return v;
-        if (NUMERIC_COLS.has(col) && v !== "" && !isNaN(Number(v))) return Number(v);
+
+        /* --- sel kosong: tulis null agar benar-benar kosong di Excel --- */
+        if (v === null || v === undefined || v === "") return null;
+
+        /* --- kolom numerik: keluarkan sebagai number --- */
+        if (NUMERIC_COLS.has(col)){
+          if (typeof v === "number") return v;
+          const s = String(v).trim();
+          if (s !== "" && !isNaN(Number(s))) return Number(s);
+          return s;
+        }
+
+        /* --- kolom teks: keluarkan sebagai string --- */
+        if (TEXT_COLS.has(col)) return String(v);
+
+        /* --- kolom tanggal: keluarkan sebagai string sesuai format --- */
+        if (DATE_COLS.has(col)) return String(v);
+
+        /* --- sisanya: pertahankan tipe asli --- */
         return v;
-      }));
+      });
+      aoa.push(row);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
+    /* lebar kolom proporsional */
     ws["!cols"] = this.cfg.columns.map(c => ({
       wch: Math.min(45, Math.max(11, c.length + 4))
     }));
+
+    /* freeze header (baris ke-4 = index 3) bila ada 3 baris kosong */
+    if (withBlank){
+      ws["!freeze"] = { xSplit:0, ySplit:4 };
+    }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, this.cfg.label);
@@ -642,7 +680,6 @@ class TabController {
 const CONTROLLERS = {};
 
 (function init(){
-  /* --- buat tombol tab --- */
   const tabsBar = $("tabsBar");
   Object.entries(TAB_CONFIGS).forEach(([id, cfg]) => {
     const t = document.createElement("div");
@@ -653,7 +690,6 @@ const CONTROLLERS = {};
     tabsBar.appendChild(t);
   });
 
-  /* --- buat controller untuk setiap tab --- */
   Object.entries(TAB_CONFIGS).forEach(([id, cfg]) => {
     CONTROLLERS[id] = new TabController(id, cfg);
   });
