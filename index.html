@@ -1,294 +1,148 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Filter &amp; Extract Excel → INPUT DO</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Filter &amp; Extract Excel — TAP 1 / TAP 2</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#f4f6fb; --card:#fff; --ink:#1b2333; --muted:#6b7688;
-    --line:#e3e8f0; --brand:#2563eb; --brand2:#1d4ed8; --ok:#0f9d58;
-    --warn:#b45309; --radius:14px;
+    --bg:#0f172a; --panel:#ffffff; --soft:#f1f5f9; --line:#e2e8f0;
+    --txt:#0f172a; --muted:#64748b;
+    --brand:#2563eb; --brand2:#1d4ed8; --ok:#059669;
+    --radius:14px;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
   body{
-    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
-    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.45;
+    margin:0;
+    font-family:"Segoe UI",Inter,Roboto,system-ui,-apple-system,sans-serif;
+    background:linear-gradient(180deg,#0f172a 0%,#1e293b 220px,#f1f5f9 220px,#f1f5f9 100%);
+    color:var(--txt); min-height:100vh;
   }
-  .wrap{max-width:1360px;margin:0 auto;padding:0 20px}
-  /* ---------- header ---------- */
-  .topbar{
-    background:linear-gradient(120deg,#1e3a8a,#2563eb 55%,#3b82f6);
-    color:#fff; padding:22px 0 26px;
+  .wrap{max-width:1500px;margin:0 auto;padding:26px 20px 60px}
+
+  header.top{color:#fff;margin-bottom:22px}
+  header.top h1{margin:0 0 6px;font-size:22px;letter-spacing:.2px}
+  header.top p{margin:0;color:#cbd5e1;font-size:13.5px}
+
+  /* ---------- Tabs ---------- */
+  .tabs{display:flex;gap:8px;margin:0 0 -1px;position:relative;z-index:3}
+  .tab{
+    padding:11px 26px;border-radius:12px 12px 0 0;font-size:13.5px;font-weight:600;
+    background:rgba(255,255,255,.14);color:#e2e8f0;cursor:pointer;
+    border:1px solid transparent;border-bottom:none;transition:.18s;user-select:none;
   }
-  .bar{display:flex;align-items:center;gap:16px}
-  .logo{
-    width:46px;height:46px;border-radius:12px;flex:0 0 auto;
-    background:rgba(255,255,255,.16);display:grid;place-items:center;
-    font-size:22px;border:1px solid rgba(255,255,255,.25)
+  .tab:hover{background:rgba(255,255,255,.24)}
+  .tab.active{background:#f1f5f9;color:var(--brand2);border-color:var(--line);cursor:default}
+  .tab .badge{
+    display:inline-block;margin-left:8px;font-size:10.5px;background:#e2e8f0;color:#475569;
+    padding:2px 7px;border-radius:999px;font-weight:700;letter-spacing:.3px;
   }
-  .topbar h1{margin:0;font-size:19px;letter-spacing:.2px}
-  .topbar p{margin:3px 0 0;font-size:13px;opacity:.85}
-  main{padding:22px 0 70px}
-  /* ---------- card ---------- */
+  .tab.active .badge{background:#dbeafe;color:var(--brand2)}
+
+  .panel-wrap{background:transparent}
+
   .card{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:20px;margin-bottom:18px;box-shadow:0 1px 2px rgba(16,24,40,.04);
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:0 10px 30px rgba(15,23,42,.08);padding:20px;margin-bottom:18px;
   }
-  .card-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-  .card-head h2{margin:0;font-size:15px;font-weight:600}
-  .num{
-    width:26px;height:26px;border-radius:50%;background:#e8efff;color:var(--brand);
-    display:grid;place-items:center;font-weight:700;font-size:13px;flex:0 0 auto
-  }
-  .spacer{flex:1}
-  .hidden{display:none !important}
-  /* ---------- dropzone ---------- */
+  .card h2{margin:0 0 4px;font-size:15px}
+  .card .sub{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+  code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:12px}
+
+  /* ---------- Upload ---------- */
   .drop{
-    border:2px dashed #c7d2e6;border-radius:12px;padding:34px 20px;text-align:center;
-    background:#fafbff;transition:.15s
+    border:2px dashed #cbd5e1;border-radius:14px;padding:34px 20px;text-align:center;
+    background:#f8fafc;transition:.18s;cursor:pointer;display:block;
   }
-  .drop.over{border-color:var(--brand);background:#eef4ff}
-  .drop p{margin:0 0 6px}
-  .drop .muted{color:var(--muted);font-size:12px;margin:10px 0}
-  /* ---------- buttons ---------- */
-  .btn{
-    appearance:none;border:1px solid transparent;background:var(--brand);color:#fff;
-    padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;
-    transition:.15s;font-family:inherit
+  .drop:hover,.drop.over{border-color:var(--brand);background:#eff6ff}
+  .drop .ico{font-size:34px;line-height:1;margin-bottom:10px}
+  .drop b{display:block;font-size:14.5px;margin-bottom:4px}
+  .drop span{font-size:12.5px;color:var(--muted)}
+  input[type=file]{display:none}
+
+  /* ---------- Filter ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+  .field label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:5px}
+  .field input,.field select{
+    width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;font-size:13px;
+    background:#fff;color:var(--txt);outline:none;transition:.15s;font-family:inherit;
   }
-  .btn:hover{background:var(--brand2)}
-  .btn.ghost{background:#fff;color:var(--ink);border-color:var(--line)}
-  .btn.ghost:hover{background:#f4f7fd}
-  .btn.ok{background:var(--ok)}
-  .btn.ok:hover{background:#0c8049}
-  .btn.sm{padding:6px 11px;font-size:12px}
-  .btn:disabled{opacity:.45;cursor:not-allowed}
-  /* ---------- forms ---------- */
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
-  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
-  .field label{font-size:12px;font-weight:600;color:#42506b}
-  .field .hint{font-size:11px;color:var(--muted)}
-  input[type=text],input[type=date],input[type=email],select,textarea{
-    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;
-    font-size:13px;font-family:inherit;background:#fff;color:var(--ink);outline:none
+  .field input:focus,.field select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+
+  .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+  button{
+    font-family:inherit;font-size:13px;font-weight:600;border-radius:10px;padding:10px 18px;
+    border:1px solid transparent;cursor:pointer;transition:.15s;
   }
-  input:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px #2563eb1f}
-  .check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
-  .check input{width:15px;height:15px;accent-color:var(--brand)}
-  /* ---------- ref chips ---------- */
-  .refbox{
-    max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:10px;
-    padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px;
-    background:#fcfdff
-  }
-  .refbox label{
-    display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;
-    cursor:pointer;font-size:12.5px;font-variant-numeric:tabular-nums
-  }
-  .refbox label:hover{background:#eef4ff}
-  .refbox input{accent-color:var(--brand);width:14px;height:14px}
-  .refbox em{margin-left:auto;font-style:normal;font-size:11px;color:var(--muted)}
-  /* ---------- stats ---------- */
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--brand2)}
+  .btn-ghost{background:#fff;border-color:#cbd5e1;color:#334155}
+  .btn-ghost:hover{background:var(--soft)}
+  .btn-ok{background:var(--ok);color:#fff}
+  .btn-ok:hover{background:#047857}
+  button:disabled{opacity:.5;cursor:not-allowed}
+
+  .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#334155;user-select:none;cursor:pointer}
+  .chk input{width:16px;height:16px;accent-color:var(--brand)}
+
+  /* ---------- Stats ---------- */
   .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-  .stat{
-    background:#f7f9fd;border:1px solid var(--line);border-radius:10px;padding:8px 14px;
-    display:flex;flex-direction:column;min-width:110px
+  .pill{
+    background:#f8fafc;border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-size:12.5px;color:#334155;
   }
-  .stat b{font-size:19px;line-height:1.1}
-  .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-  /* ---------- table ---------- */
-  .tblwrap{border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:430px}
+  .pill b{color:var(--brand2)}
+
+  /* ---------- Table ---------- */
+  .tablebox{overflow:auto;max-height:60vh;border:1px solid var(--line);border-radius:12px;background:#fff}
   table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
-  th,td{padding:7px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid #eef1f7}
   thead th{
-    position:sticky;top:0;background:#f2f6fd;z-index:2;font-weight:600;
-    color:#33415c;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;
-    border-bottom:1px solid #dde5f2
+    position:sticky;top:0;z-index:2;background:#0f172a;color:#fff;font-weight:600;
+    padding:10px 12px;text-align:left;white-space:nowrap;border-right:1px solid #1e293b;
   }
-  tbody tr:hover{background:#f8fbff}
-  tbody tr:last-child td{border-bottom:none}
+  thead th:last-child{border-right:none}
+  tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1e293b}
+  tbody tr:nth-child(even) td{background:#fafbfc}
+  tbody tr:hover td{background:#eff6ff}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
-  details summary{cursor:pointer;font-size:13px;font-weight:600;color:#42506b;margin-bottom:10px}
-  .banner{
-    background:#fff8e6;border:1px solid #f2d99b;color:#8a5a00;border-radius:10px;
-    padding:9px 13px;font-size:12.5px;margin-bottom:14px
+  .empty{padding:40px;text-align:center;color:var(--muted);font-size:13.5px}
+  .hidden{display:none !important}
+
+  .toast{
+    position:fixed;right:22px;bottom:22px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:11px;
+    font-size:13px;box-shadow:0 12px 28px rgba(0,0,0,.3);opacity:0;transform:translateY(12px);
+    transition:.25s;pointer-events:none;z-index:99;
   }
-  .fileinfo{
-    margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
-    padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap
-  }
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:0 0 auto}
-  .exportbar{
-    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-    padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--line)
-  }
-  code{background:#f1f4fa;padding:1px 5px;border-radius:4px;font-size:12px}
-  @media (max-width:640px){
-    .topbar h1{font-size:16px}
-    .card{padding:15px}
-  }
+  .toast.show{opacity:1;transform:translateY(0)}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<header class="topbar">
-  <div class="wrap bar">
-    <div class="logo">⇄</div>
-    <div>
-      <h1>Filter &amp; Extract Excel — INPUT DO</h1>
-      <p>Ubah baris <b>PURCHASE</b> dari file ASA menjadi dokumen <b>RECEIPT (Input DO)</b></p>
-    </div>
-  </div>
-</header>
+  <header class="top">
+    <h1>Filter &amp; Extract Excel — TAP 1 / TAP 2</h1>
+    <p>Unggah file Excel, saring datanya, lalu unduh hasilnya sesuai template <b>TAP 1</b> atau <b>TAP 2</b>.</p>
+  </header>
 
-<main class="wrap">
+  <div class="tabs" id="tabsBar"></div>
+  <div class="panel-wrap" id="tabPanels"></div>
+</div>
 
-  <!-- ============ 1. UPLOAD ============ -->
-  <section class="card">
-    <div class="card-head"><span class="num">1</span><h2>Unggah File Sumber</h2></div>
-    <div class="drop" id="drop">
-      <p><b>Tarik &amp; letakkan</b> file Excel di sini</p>
-      <p class="muted">— atau —</p>
-      <button class="btn" id="btnBrowse">Pilih File</button>
-      <button class="btn ghost" id="btnDemo">Coba Data Contoh</button>
-      <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden />
-      <p class="muted" style="margin-top:14px">
-        Kolom wajib: <code>Nomor Dokumen</code>, <code>Nomor Referensi</code>, <code>Tipe Transaksi</code>,
-        <code>Part</code>, <code>Qty</code>
-      </p>
-    </div>
-    <div class="fileinfo hidden" id="fileInfo"></div>
-  </section>
-
-  <!-- ============ 2. FILTER ============ -->
-  <section class="card hidden" id="cardFilter">
-    <div class="card-head">
-      <span class="num">2</span><h2>Filter Data</h2>
-      <div class="spacer"></div>
-      <button class="btn ghost sm" id="btnReset">Reset Filter</button>
-    </div>
-
-    <div class="field" style="margin-bottom:16px">
-      <label>Nomor Referensi</label>
-      <div class="refbox" id="refList"></div>
-      <div class="hint">Tidak ada yang dicentang = semua referensi ikut diproses.</div>
-    </div>
-
-    <div class="grid">
-      <div class="field">
-        <label for="fSite">Site</label>
-        <select id="fSite"></select>
-      </div>
-      <div class="field">
-        <label for="fTipe">Tipe Transaksi</label>
-        <select id="fTipe"></select>
-      </div>
-      <div class="field">
-        <label for="fStatus">Status</label>
-        <select id="fStatus"></select>
-      </div>
-      <div class="field">
-        <label for="fFrom">Dibuat Pada — Dari</label>
-        <input type="date" id="fFrom" />
-      </div>
-      <div class="field">
-        <label for="fTo">Dibuat Pada — Sampai</label>
-        <input type="date" id="fTo" />
-      </div>
-      <div class="field">
-        <label for="fCari">Cari Part / Deskripsi</label>
-        <input type="text" id="fCari" placeholder="mis. VS-130745" />
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 3. OPSI OUTPUT ============ -->
-  <section class="card hidden" id="cardOpt">
-    <div class="card-head"><span class="num">3</span><h2>Pengaturan Dokumen Hasil</h2></div>
-
-    <div class="grid">
-      <div class="field">
-        <label for="oDocTpl">Format Nomor Dokumen</label>
-        <input type="text" id="oDocTpl" value="TMR/KPG/SV/26/10/{n:3}" />
-        <div class="hint"><code>{n}</code> = nomor urut, <code>{n:3}</code> = 3 digit (001, 002…)</div>
-      </div>
-      <div class="field">
-        <label for="oRef">Nomor Referensi (DO)</label>
-        <input type="text" id="oRef" placeholder="TKR/PST/SV/26/10/112" />
-      </div>
-      <div class="field">
-        <label for="oNik">NIK Tujuan</label>
-        <input type="text" id="oNik" value="0" />
-      </div>
-      <div class="field">
-        <label for="oTipe">Tipe Transaksi</label>
-        <input type="text" id="oTipe" value="RECEIPT" />
-      </div>
-      <div class="field">
-        <label for="oStatus">Status</label>
-        <input type="text" id="oStatus" value="" placeholder="(kosong)" />
-      </div>
-      <div class="field">
-        <label for="oUser">Dibuat / Dikonfirmasi / Diubah Oleh</label>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="oUser" value="gregorius.b.sale@polytron.co.id" />
-          <button class="btn ghost sm" id="btnGuess" title="Tebak dari kolom 'Dibuat Oleh' sumber">Tebak</button>
-        </div>
-      </div>
-      <div class="field">
-        <label for="oDateMode">Tanggal Dokumen</label>
-        <select id="oDateMode">
-          <option value="today">Tanggal hari ini</option>
-          <option value="source">Ambil dari sumber</option>
-          <option value="manual">Tanggal khusus…</option>
-        </select>
-      </div>
-      <div class="field hidden" id="wrapManual">
-        <label for="oDateManual">Tanggal Khusus</label>
-        <input type="date" id="oDateManual" />
-      </div>
-    </div>
-
-    <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:18px">
-      <label class="check"><input type="checkbox" id="cPermintaan" /> Salin <b>Nomor Permintaan</b></label>
-      <label class="check"><input type="checkbox" id="cHarga" /> Salin <b>Price / Total / Mata Uang</b></label>
-      <label class="check"><input type="checkbox" id="cParent" /> Salin <b>Site Parent</b></label>
-    </div>
-  </section>
-
-  <!-- ============ 4. HASIL ============ -->
-  <section class="card hidden" id="cardResult">
-    <div class="card-head"><span class="num">4</span><h2>Hasil &amp; Export</h2></div>
-
-    <div class="stats" id="stats"></div>
-    <div id="warnBox"></div>
-
-    <div class="exportbar">
-      <button class="btn ok" id="btnExport">⬇ Download Excel (.xlsx)</button>
-      <button class="btn ghost" id="btnCopy">Copy ke Clipboard (TSV)</button>
-      <span class="hint" id="exportHint"></span>
-    </div>
-
-    <h3 style="font-size:13px;margin:0 0 10px;color:#42506b">Pratinjau Hasil (format INPUT DO)</h3>
-    <div class="tblwrap"><div id="outTable"></div></div>
-
-    <details style="margin-top:18px">
-      <summary>Lihat data sumber setelah difilter</summary>
-      <div class="tblwrap"><div id="srcTable"></div></div>
-    </details>
-  </section>
-
-</main>
+<div class="toast" id="toast"></div>
 
 <script>
-/* =====================================================================
-   KONSTANTA
-   ===================================================================== */
-const TARGET_HEADERS = [
+/* =========================================================================
+   1) KONFIGURASI TAB — TAP 1 & TAP 2
+   ========================================================================= */
+const TAP1_COLUMNS = [
+  "No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
+  "Nik Tujuan","Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute",
+  "Qty","Satuan","Conversion Qty","Conversion UM","Conversion Value","Nomor Permintaan",
+  "Price Per Unit","Total Value","Mata Uang","Site Parent","Dibuat Oleh","Dibuat Pada",
+  "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
+];
+
+const TAP2_COLUMNS = [
   "No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
   "NIK Tujuan","Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute",
   "Qty","Satuan","Conversion Qty","Conversion UM","Conversion Value","Nomor Permintaan",
@@ -296,475 +150,523 @@ const TARGET_HEADERS = [
   "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
 ];
 
-const PREVIEW_LIMIT = 150;
+const NUMERIC_COLS = new Set(["Baris","Qty","Conversion Qty","Conversion Value","Price Per Unit","Total Value"]);
+const DATE_COLS    = new Set(["Dibuat Pada","Dikonfirmasi Pada","Diubah Pada"]);
+const MAX_PREVIEW_ROWS = 800;
 
-const state = {
-  fileName : "",
-  headers  : [],
-  rows     : [],
-  filtered : [],
-  output   : [],
-  refs     : []
+const TAB_CONFIGS = {
+  tap1: {
+    label: "TAP 1",
+    badge: "ASA19",
+    exportTag: "TAP1",
+    sheetPreferred: /tap\s*1/i,
+    columns: TAP1_COLUMNS,
+    /* TAP 1: "2026-10-12 00:00:00" */
+    dateFormat: "datetime",
+    datetimeSeparator: " "
+  },
+  tap2: {
+    label: "TAP 2",
+    badge: "INPUT DO",
+    exportTag: "TAP2",
+    sheetPreferred: /tap\s*2/i,
+    columns: TAP2_COLUMNS,
+    /* TAP 2: "16/10/2026" */
+    dateFormat: "dmy"
+  }
 };
 
-/* =====================================================================
-   UTILITAS
-   ===================================================================== */
-const $  = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+/* =========================================================================
+   2) UTILITAS
+   ========================================================================= */
+const $ = id => document.getElementById(id);
+const norm = s => String(s ?? "").replace(/\s+/g," ").trim().toLowerCase();
 
-const norm = v => String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+const escapeHtml = s => String(s).replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const escapeAttr = escapeHtml;
 
-const esc = v => String(v ?? "")
-  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function pad2(n){ return String(n).padStart(2,"0"); }
 
-const pad = (n, len = 2) => String(n).padStart(len, "0");
+function isoDate(d){
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
 
-function toDate(v) {
-  if (v === null || v === undefined || v === "") return null;
-  if (v instanceof Date) return isNaN(v) ? null : v;
-  if (typeof v === "number") {
-    const d = XLSX.SSF.parse_date_code(v);
-    if (d) return new Date(d.y, d.m - 1, d.d, d.H || 0, d.M || 0, d.S || 0);
-    return null;
-  }
-  const s = String(v).trim();
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);            // YYYY-MM-DD
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
-  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);    // DD/MM/YYYY
-  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+/** Ubah nilai apa pun menjadi "YYYY-MM-DD" untuk perbandingan filter tanggal. */
+function toDateOnly(v){
+  if (v instanceof Date) return isoDate(v);
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);          // YYYY-MM-DD
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);        // DD/MM/YYYY
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
   const d = new Date(s);
-  return isNaN(d) ? null : d;
+  return isNaN(d) ? "" : isoDate(d);
 }
 
-const fmtDDMMYYYY = d => d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : "";
-
-function fmtCell(v) {
-  if (v === null || v === undefined) return "";
-  if (v instanceof Date) return fmtDDMMYYYY(v);
-  return String(v);
-}
-
-const val = (row, key) => {
-  const v = row[norm(key)];
-  return v === undefined || v === null ? "" : v;
-};
-
-function guessEmail(name) {
-  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "";
-  const first = parts[0].toLowerCase().replace(/[^a-z]/g, "");
-  const rest  = parts.slice(1).map(p => (p[0] || "").toLowerCase().replace(/[^a-z]/g, "")).filter(Boolean);
-  if (!first) return "";
-  return [first, ...rest].join(".") + "@polytron.co.id";
-}
-
-function docNumber(tpl, n) {
-  if (!/\{n/i.test(tpl)) return tpl + n;
-  return tpl.replace(/\{n(?::(\d+))?\}/gi, (_, w) => w ? String(n).padStart(+w, "0") : String(n));
-}
-
-/* =====================================================================
-   MEMBACA FILE
-   ===================================================================== */
-function findHeaderRow(aoa) {
-  const limit = Math.min(aoa.length, 25);
-  for (let i = 0; i < limit; i++) {
-    const r = (aoa[i] || []).map(norm);
-    if (r.includes("nomor dokumen") && r.includes("tipe transaksi")) return i;
-  }
-  return -1;
-}
-
-function processAOA(aoa, fileName) {
-  const hIdx = findHeaderRow(aoa);
-  if (hIdx === -1) {
-    alert("Header tidak ditemukan.\nPastikan file memiliki kolom 'Nomor Dokumen' dan 'Tipe Transaksi'.");
-    return;
-  }
-  const heads = (aoa[hIdx] || []).map(h => String(h ?? "").trim());
-
-  const rows = [];
-  for (let i = hIdx + 1; i < aoa.length; i++) {
-    const arr = aoa[i] || [];
-    if (!arr.length || arr.every(c => c === "" || c === null || c === undefined)) continue;
-    const obj = {};
-    heads.forEach((h, j) => { if (h) obj[norm(h)] = arr[j] ?? ""; });
-    rows.push(obj);
-  }
-
-  state.fileName = fileName;
-  state.headers  = heads;
-  state.rows     = rows;
-
-  $("#fileInfo").classList.remove("hidden");
-  $("#fileInfo").innerHTML =
-    `<span class="dot"></span><b>${esc(fileName)}</b>
-     <span style="color:#166534">— ${rows.length} baris data berhasil dibaca</span>`;
-
-  buildFilterUI();
-  ["#cardFilter", "#cardOpt", "#cardResult"].forEach(s => $(s).classList.remove("hidden"));
-  refresh();
-}
-
-function handleFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array", cellDates: true });
-      // cari sheet pertama yang punya header valid
-      for (const name of wb.SheetNames) {
-        const aoa = XLSX.utils.sheet_to_json(wb.Sheets[name], {
-          header: 1, defval: "", blankrows: false, raw: true
-        });
-        if (findHeaderRow(aoa) !== -1) {
-          processAOA(aoa, file.name);
-          return;
-        }
-      }
-      alert("Tidak ada sheet dengan struktur kolom yang dikenali.");
-    } catch (err) {
-      console.error(err);
-      alert("Gagal membaca file: " + err.message);
+/** Format nilai tanggal sesuai preferensi tab (datetime / dmy). */
+function formatDateForTab(value, fmt){
+  if (value === null || value === undefined || value === "") return "";
+  if (fmt === "dmy"){
+    let d = null;
+    if (value instanceof Date) d = value;
+    else {
+      const s = String(value).trim();
+      let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);   // sudah DD/MM/YYYY
+      if (m) return `${pad2(m[1])}/${pad2(m[2])}/${m[3]}`;
+      m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);              // dari ISO
+      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+      d = new Date(s);
+      if (isNaN(d)) return s;
     }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-/* =====================================================================
-   FILTER UI
-   ===================================================================== */
-const uniqValues = key =>
-  [...new Set(state.rows.map(r => String(val(r, key)).trim()).filter(v => v !== ""))].sort();
-
-function fillSelect(sel, values, allLabel = "Semua") {
-  sel.innerHTML = `<option value="">${allLabel}</option>` +
-    values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
-}
-
-function buildFilterUI() {
-  // --- checkbox daftar Nomor Referensi ---
-  state.refs = uniqValues("Nomor Referensi");
-  const counts = {};
-  state.rows.forEach(r => {
-    const k = String(val(r, "Nomor Referensi")).trim();
-    if (k) counts[k] = (counts[k] || 0) + 1;
-  });
-  $("#refList").innerHTML = state.refs.length
-    ? state.refs.map(r =>
-        `<label><input type="checkbox" class="refchk" value="${esc(r)}" />
-         <span>${esc(r)}</span><em>${counts[r] || 0} baris</em></label>`).join("")
-    : `<div class="empty">Tidak ada nomor referensi.</div>`;
-
-  $$(".refchk").forEach(cb => cb.addEventListener("change", () => {
-    // auto-isi Nomor Referensi (DO) jika tepat 1 dipilih
-    const picked = $$(".refchk").filter(c => c.checked).map(c => c.value);
-    if (picked.length === 1) $("#oRef").value = picked[0];
-    refresh();
-  }));
-
-  fillSelect($("#fSite"),   uniqValues("Site"));
-  fillSelect($("#fTipe"),   uniqValues("Tipe Transaksi"));
-  fillSelect($("#fStatus"), uniqValues("Status"));
-}
-
-/* =====================================================================
-   FILTER LOGIC
-   ===================================================================== */
-function applyFilters() {
-  const pickedRefs = $$(".refchk").filter(c => c.checked).map(c => c.value);
-  const site   = $("#fSite").value;
-  const tipe   = $("#fTipe").value;
-  const status = $("#fStatus").value;
-  const q      = $("#fCari").value.trim().toLowerCase();
-  const from   = $("#fFrom").value ? new Date($("#fFrom").value + "T00:00:00") : null;
-  const to     = $("#fTo").value   ? new Date($("#fTo").value   + "T23:59:59") : null;
-
-  state.filtered = state.rows.filter(r => {
-    if (pickedRefs.length && !pickedRefs.includes(String(val(r, "Nomor Referensi")).trim())) return false;
-    if (site   && String(val(r, "Site")).trim() !== site) return false;
-    if (tipe   && String(val(r, "Tipe Transaksi")).trim() !== tipe) return false;
-    if (status && String(val(r, "Status")).trim() !== status) return false;
-
-    if (q) {
-      const hay = (String(val(r, "Part")) + " " + String(val(r, "Deskripsi"))).toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    if (from || to) {
-      const d = toDate(val(r, "Dibuat Pada"));
-      if (!d) return false;
-      if (from && d < from) return false;
-      if (to   && d > to)   return false;
-    }
-    return true;
-  });
-}
-
-/* =====================================================================
-   TRANSFORMASI → FORMAT INPUT DO
-   ===================================================================== */
-function currentDateString() {
-  const mode = $("#oDateMode").value;
-  if (mode === "today")  return fmtDDMMYYYY(new Date());
-  if (mode === "manual") {
-    const v = $("#oDateManual").value;
-    return v ? fmtDDMMYYYY(new Date(v + "T00:00:00")) : fmtDDMMYYYY(new Date());
+    return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
   }
-  // mode "source"
-  const first = state.filtered[0];
-  const d = first ? toDate(val(first, "Dibuat Pada")) : null;
-  return fmtDDMMYYYY(d || new Date());
-}
-
-function buildOutput() {
-  const tpl        = $("#oDocTpl").value || "TMR/KPG/SV/26/10/{n:3}";
-  const refNo      = $("#oRef").value;
-  const nik        = $("#oNik").value;
-  const tipe       = $("#oTipe").value;
-  const status     = $("#oStatus").value;
-  const user       = $("#oUser").value;
-  const tgl        = currentDateString();
-  const cPermintaan = $("#cPermintaan").checked;
-  const cHarga      = $("#cHarga").checked;
-  const cParent     = $("#cParent").checked;
-
-  state.output = state.filtered.map((r, i) => {
-    const o = {};
-    TARGET_HEADERS.forEach(h => { o[h] = ""; });   // urutan kolom terjaga
-
-    o["No"]                = i + 1;
-    o["Kode Perusahaan"]   = val(r, "Kode Perusahaan");
-    o["Site"]              = val(r, "Site");
-    o["Nomor Dokumen"]     = docNumber(tpl, i + 1);
-    o["Nomor Referensi"]   = refNo;
-    o["Lokasi Tujuan"]     = val(r, "Lokasi Tujuan");
-    o["NIK Tujuan"]        = nik;
-    o["Tipe Transaksi"]    = tipe;
-    o["Status"]            = status;
-    o["Baris"]             = i + 1;
-    o["Part"]              = val(r, "Part");
-    o["Deskripsi"]         = val(r, "Deskripsi");
-    o["Lot"]               = val(r, "Lot");
-    o["Attribute"]         = val(r, "Attribute");
-    o["Qty"]               = val(r, "Qty");
-    o["Satuan"]            = val(r, "Satuan");
-    o["Conversion Qty"]    = val(r, "Conversion Qty");
-    o["Conversion UM"]     = val(r, "Conversion UM");
-    o["Conversion Value"]  = val(r, "Conversion Value");
-
-    if (cPermintaan) o["Nomor Permintaan"] = val(r, "Nomor Permintaan");
-    if (cHarga) {
-      o["Price Per Unit"] = val(r, "Price Per Unit");
-      o["Total Value"]    = val(r, "Total Value");
-      o["Mata Uang"]      = val(r, "Mata Uang");
-    }
-    if (cParent) o["Site Parent"] = val(r, "Site Parent");
-
-    o["Dibuat Oleh"]        = user;
-    o["Dibuat Pada"]        = tgl;
-    o["Dikonfirmasi Oleh"]  = user;
-    o["Dikonfirmasi Pada"]  = tgl;
-    o["Diubah Oleh"]        = user;
-    o["Diubah Pada"]        = tgl;
-
-    return o;
-  });
-}
-
-/* =====================================================================
-   RENDER
-   ===================================================================== */
-function renderStats() {
-  const totalQty = state.output.reduce((s, o) => s + (Number(o["Qty"]) || 0), 0);
-  $("#stats").innerHTML = `
-    <div class="stat"><b>${state.rows.length}</b><span>Baris sumber</span></div>
-    <div class="stat"><b>${state.filtered.length}</b><span>Setelah filter</span></div>
-    <div class="stat"><b>${state.output.length}</b><span>Baris hasil</span></div>
-    <div class="stat"><b>${totalQty}</b><span>Total Qty</span></div>`;
-}
-
-function renderWarnings() {
-  const box = $("#warnBox");
-  const msgs = [];
-  if (!$("#oRef").value.trim())
-    msgs.push("Kolom <b>Nomor Referensi (DO)</b> masih kosong — akan tertulis kosong di file hasil.");
-  if (!/\{n/i.test($("#oDocTpl").value))
-    msgs.push("Format Nomor Dokumen tidak memuat <code>{n}</code> — nomor urut tidak akan bertambah otomatis.");
-  if (!state.filtered.length)
-    msgs.push("Tidak ada data yang lolos filter. Periksa kembali kriteria filter Anda.");
-
-  box.innerHTML = msgs.length
-    ? msgs.map(m => `<div class="banner">⚠️ ${m}</div>`).join("")
-    : "";
-}
-
-function renderTable(target, headers, rows, limit) {
-  if (!rows.length) {
-    target.innerHTML = `<div class="empty">Tidak ada data untuk ditampilkan.</div>`;
-    return;
+  // datetime: "YYYY-MM-DD HH:mm:ss"
+  let d = null;
+  if (value instanceof Date) d = value;
+  else {
+    const s = String(value).trim();
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);     // dari DD/MM/YYYY
+    if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])} 00:00:00`;
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);                // sudah ISO (mungkin sudah ada jam)
+    if (m) return s.length >= 19 ? s.slice(0,19).replace("T"," ") : `${m[1]}-${m[2]}-${m[3]} 00:00:00`;
+    d = new Date(s);
+    if (isNaN(d)) return s;
   }
-  const shown = rows.slice(0, limit);
-  const numCols = new Set(["No","Baris","Qty","Conversion Qty","Conversion Value","Price Per Unit","Total Value"]);
-  let html = "<table><thead><tr>" +
-    headers.map(h => `<th class="${numCols.has(h) ? "num" : ""}">${esc(h)}</th>`).join("") +
-    "</tr></thead><tbody>";
-  shown.forEach(r => {
-    html += "<tr>" + headers.map(h => {
-      const v = r[h];
-      const txt = v === undefined || v === null || v === "" ? "" : String(v);
-      return `<td class="${numCols.has(h) ? "num" : ""}">${esc(txt)}</td>`;
-    }).join("") + "</tr>";
-  });
-  html += "</tbody></table>";
-  if (rows.length > limit)
-    html += `<div class="empty">… dan ${rows.length - limit} baris lainnya (semua tetap ikut ter-export).</div>`;
-  target.innerHTML = html;
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ` +
+         `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
-function renderSourcePreview() {
-  const cols = state.headers.filter(h => h);
-  renderTable($("#srcTable"), cols.length ? cols : ["(kosong)"], state.filtered, PREVIEW_LIMIT);
-}
-
-function renderOutputPreview() {
-  renderTable($("#outTable"), TARGET_HEADERS, state.output, PREVIEW_LIMIT);
-}
-
-function refresh() {
-  if (!state.rows.length) return;
-  applyFilters();
-  buildOutput();
-  renderStats();
-  renderWarnings();
-  renderOutputPreview();
-  renderSourcePreview();
-  $("#exportHint").textContent = state.output.length
-    ? `${state.output.length} baris siap diunduh.`
-    : "Tidak ada baris untuk diunduh.";
-  $("#btnExport").disabled = !state.output.length;
-  $("#btnCopy").disabled   = !state.output.length;
-}
-
-/* =====================================================================
-   EXPORT
-   ===================================================================== */
-function buildSheetAOA() {
-  return [
-    TARGET_HEADERS.slice(),
-    ...state.output.map(o => TARGET_HEADERS.map(h => o[h]))
-  ];
-}
-
-function exportXlsx() {
-  if (!state.output.length) return;
-  const ws = XLSX.utils.aoa_to_sheet(buildSheetAOA());
-  ws["!cols"] = TARGET_HEADERS.map(h => ({ wch: Math.max(11, Math.min(40, h.length + 5)) }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-
-  const refSlug = ($("#oRef").value || "DO").replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_");
+function todayStamp(){
   const d = new Date();
-  const stamp = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
-  XLSX.writeFile(wb, `INPUT DO ${refSlug} ${stamp}.xlsx`);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(d.getMinutes())}`;
 }
 
-async function copyTsv() {
-  if (!state.output.length) return;
-  const aoa = buildSheetAOA();
-  const tsv = aoa.map(r => r.map(c => String(c ?? "").replace(/\t/g, " ")).join("\t")).join("\n");
-  try {
-    await navigator.clipboard.writeText(tsv);
-    const btn = $("#btnCopy");
-    const old = btn.textContent;
-    btn.textContent = "✓ Tersalin!";
-    setTimeout(() => { btn.textContent = old; }, 1500);
-  } catch {
-    alert("Gagal menyalin. Gunakan tombol Download Excel.");
+let toastTm;
+function toast(msg){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTm);
+  toastTm = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* =========================================================================
+   3) TAB CONTROLLER
+   ========================================================================= */
+class TabController {
+  constructor(tabId, cfg){
+    this.tabId = tabId;
+    this.cfg   = cfg;
+    this.state = { wb:null, rows:[], filtered:[], baseName:"extract", sheetName:"" };
+    this.mount();
+    this.bind();
   }
-}
 
-/* =====================================================================
-   EVENT BINDING
-   ===================================================================== */
-(function init() {
-  /* --- upload --- */
-  const drop = $("#drop"), input = $("#file");
-  $("#btnBrowse").addEventListener("click", () => input.click());
-  input.addEventListener("change", e => handleFile(e.target.files[0]));
+  /* short-hands */
+  el(suffix){ return document.getElementById(`${suffix}-${this.tabId}`); }
 
-  ["dragenter","dragover"].forEach(ev =>
-    drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
-  ["dragleave","drop"].forEach(ev =>
-    drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
-  drop.addEventListener("drop", e => {
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  });
+  /* --------------------------------------------------------------------
+     Bangun panel HTML untuk tab ini
+     -------------------------------------------------------------------- */
+  mount(){
+    const p = this.tabId;
+    const cfg = this.cfg;
+    const panel = document.createElement("div");
+    panel.className = "tab-panel" + (p === "tap1" ? "" : " hidden");
+    panel.id = `panel-${p}`;
 
-  /* --- data contoh --- */
-  $("#btnDemo").addEventListener("click", () => {
-    const DEMO = [
-      ["No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan","Nik Tujuan",
-       "Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute","Qty","Satuan",
-       "Conversion Qty","Conversion UM","Conversion Value","Nomor Permintaan","Price Per Unit",
-       "Total Value","Mata Uang","Site Parent","Dibuat Oleh","Dibuat Pada","Dikonfirmasi Oleh",
-       "Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"],
-      [1,"SKM","KPG","MSK/KPG/SV/26/10/007","1240206247","SVRMBKPG","","PURCHASE","CONFIRMED",10,
-       "VS-130745-AEA02","POST COMP FOR HANDLE BAR EV X05 P02","","",2,"EA",0,"",0,"ORD6KPGA01TS",
-       0,0,"","LPT","Gregorius Berlin Sale","2026-10-12 00:00:00","Gregorius Berlin Sale",
-       "2026-10-12 00:00:00","Gregorius Berlin Sale","2026-10-12 00:00:00"],
-      [2,"SKM","KPG","MSK/KPG/SV/26/10/008","1240206386","SVRMBKPG","","PURCHASE","CONFIRMED",10,
-       "VS-130745-AEA20","POST COMP FOR HANDLE BAR EV X05 M02","","",2,"EA",0,"",0,"ORD6KPGA01TS",
-       0,0,"","LPT","Gregorius Berlin Sale","2026-10-12 00:00:00","Gregorius Berlin Sale",
-       "2026-10-12 00:00:00","Gregorius Berlin Sale","2026-10-12 00:00:00"]
-    ];
-    processAOA(DEMO, "ASA19_1240206247_2026-10-16.xlsx (contoh)");
-    $("#oRef").value = "TKR/PST/SV/26/10/112";
-    refresh();
-  });
+    panel.innerHTML = `
+      <section class="card">
+        <h2>1. Unggah File Excel — ${cfg.label}</h2>
+        <p class="sub">Format <code>.xlsx</code> / <code>.xls</code> / <code>.csv</code> — baris header dideteksi otomatis.</p>
 
-  /* --- filter & opsi → refresh --- */
-  ["#fSite","#fTipe","#fStatus","#fFrom","#fTo","#fCari",
-   "#oDocTpl","#oRef","#oNik","#oTipe","#oStatus","#oUser",
-   "#oDateMode","#oDateManual","#cPermintaan","#cHarga","#cParent"]
-    .forEach(sel => {
-      const el = $(sel);
-      el.addEventListener("input", refresh);
-      el.addEventListener("change", refresh);
+        <label class="drop" id="drop-${p}" for="file-${p}">
+          <div class="ico">📄</div>
+          <b>Klik untuk memilih file, atau tarik &amp; lepas di sini</b>
+          <span>File diproses sepenuhnya di browser Anda — tidak diunggah ke server.</span>
+        </label>
+        <input type="file" id="file-${p}" accept=".xlsx,.xls,.xlsm,.csv" />
+
+        <div id="sheetBox-${p}" class="field hidden" style="margin-top:16px;max-width:340px">
+          <label for="sheetSelect-${p}">Pilih Sheet</label>
+          <select id="sheetSelect-${p}"></select>
+        </div>
+      </section>
+
+      <section class="card hidden" id="filter-${p}">
+        <h2>2. Filter Data — ${cfg.label}</h2>
+        <p class="sub">Kosongkan kolom yang tidak ingin disaring.</p>
+
+        <div class="grid">
+          <div class="field" style="grid-column:span 2">
+            <label for="fSearch-${p}">Pencarian Bebas (semua kolom)</label>
+            <input type="text" id="fSearch-${p}" placeholder="Cth: KV-039602 / SVRMBKPG / TKR/PST" />
+          </div>
+          <div class="field"><label for="fKode-${p}">Kode Perusahaan</label><select id="fKode-${p}"></select></div>
+          <div class="field"><label for="fSite-${p}">Site</label><select id="fSite-${p}"></select></div>
+          <div class="field"><label for="fTipe-${p}">Tipe Transaksi</label><select id="fTipe-${p}"></select></div>
+          <div class="field"><label for="fStatus-${p}">Status</label><select id="fStatus-${p}"></select></div>
+          <div class="field"><label for="fLokasi-${p}">Lokasi Tujuan</label><select id="fLokasi-${p}"></select></div>
+          <div class="field"><label for="fPart-${p}">Part</label><select id="fPart-${p}"></select></div>
+          <div class="field"><label for="fRef-${p}">Nomor Referensi</label><input type="text" id="fRef-${p}" placeholder="Cth: TKR/PST/SV/26/10/112" /></div>
+          <div class="field"><label for="fDari-${p}">Dibuat Pada (dari)</label><input type="date" id="fDari-${p}" /></div>
+          <div class="field"><label for="fSampai-${p}">Dibuat Pada (sampai)</label><input type="date" id="fSampai-${p}" /></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-ghost" id="btnReset-${p}">↺ Reset Filter</button>
+          <label class="chk"><input type="checkbox" id="chkRenumber-${p}" checked /> Nomor ulang kolom "No"</label>
+          <label class="chk"><input type="checkbox" id="chkBlank-${p}" checked /> Sertakan 3 baris kosong di atas header</label>
+          <div style="flex:1"></div>
+          <button class="btn-ok" id="btnExport-${p}">⬇ Download Excel (${cfg.label})</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="preview-${p}">
+        <h2>3. Pratinjau Hasil — ${cfg.label}</h2>
+        <p class="sub">Tampilan di bawah ini sama dengan isi file yang akan diunduh.</p>
+
+        <div class="stats">
+          <div class="pill">Total baris: <b id="stTotal-${p}">0</b></div>
+          <div class="pill">Setelah difilter: <b id="stFiltered-${p}">0</b></div>
+          <div class="pill">Kolom: <b id="stCols-${p}">0</b></div>
+        </div>
+
+        <div class="tablebox">
+          <table id="tbl-${p}">
+            <thead><tr id="thead-${p}"></tr></thead>
+            <tbody id="tbody-${p}"></tbody>
+          </table>
+          <div class="empty hidden" id="emptyMsg-${p}">Tidak ada baris yang cocok dengan filter.</div>
+        </div>
+        <p class="sub" id="limitNote-${p}" style="margin-top:10px"></p>
+      </section>
+    `;
+    $("tabPanels").appendChild(panel);
+  }
+
+  /* --------------------------------------------------------------------
+     Pasang event listener
+     -------------------------------------------------------------------- */
+  bind(){
+    /* ---- upload ---- */
+    const fileInput = this.el("file");
+    fileInput.addEventListener("change", e => {
+      const f = e.target.files[0];
+      if (f) this.loadFile(f);
     });
 
-  /* --- tanggal manual toggle --- */
-  $("#oDateMode").addEventListener("change", () => {
-    $("#wrapManual").classList.toggle("hidden", $("#oDateMode").value !== "manual");
-    refresh();
+    const drop = this.el("drop");
+    ["dragenter","dragover"].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); })
+    );
+    ["dragleave","drop"].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); })
+    );
+    drop.addEventListener("drop", e => {
+      const f = e.dataTransfer.files[0];
+      if (f) this.loadFile(f);
+    });
+
+    /* ---- sheet selector ---- */
+    this.el("sheetSelect").addEventListener("change", e => this.buildFromSheet(e.target.value));
+
+    /* ---- filter inputs ---- */
+    ["fSearch","fKode","fSite","fTipe","fStatus","fLokasi","fPart","fRef","fDari","fSampai"]
+      .forEach(key => {
+        const el = this.el(key);
+        el.addEventListener("input",  () => this.applyFilter());
+        el.addEventListener("change", () => this.applyFilter());
+      });
+
+    /* ---- actions ---- */
+    this.el("btnReset").addEventListener("click", () => this.resetFilter());
+    this.el("btnExport").addEventListener("click", () => this.exportExcel());
+    this.el("chkRenumber").addEventListener("change", () => this.renderPreview());
+  }
+
+  /* --------------------------------------------------------------------
+     Baca file Excel
+     -------------------------------------------------------------------- */
+  loadFile(file){
+    this.state.baseName = file.name.replace(/\.(xlsx|xls|xlsm|csv)$/i,"");
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try{
+        const wb = XLSX.read(new Uint8Array(ev.target.result), { type:"array", cellDates:true });
+        this.state.wb = wb;
+
+        /* isi dropdown sheet */
+        const sel = this.el("sheetSelect");
+        sel.innerHTML = "";
+        wb.SheetNames.forEach(n => {
+          const o = document.createElement("option");
+          o.value = n; o.textContent = n;
+          sel.appendChild(o);
+        });
+
+        /* pilih sheet sesuai preferensi tab, lalu fallback ke yang pertama */
+        const preferred = wb.SheetNames.find(n => this.cfg.sheetPreferred.test(n));
+        sel.value = preferred || wb.SheetNames[0];
+
+        this.el("sheetBox").classList.remove("hidden");
+        this.buildFromSheet(sel.value);
+        toast(`[${this.cfg.label}] Berhasil membaca: ${file.name}`);
+      }catch(err){
+        console.error(err);
+        toast("Gagal membaca file: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* --------------------------------------------------------------------
+     Parse sheet → array of objects
+     -------------------------------------------------------------------- */
+  buildFromSheet(sheetName){
+    const ws = this.state.wb.Sheets[sheetName];
+    if (!ws) return;
+    this.state.sheetName = sheetName;
+
+    const aoa = XLSX.utils.sheet_to_json(ws, {
+      header:1, raw:true, defval:null, blankrows:true
+    });
+
+    /* --- deteksi baris header --- */
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(aoa.length, 100); i++){
+      const r = (aoa[i] || []).map(norm);
+      if (r.includes("kode perusahaan") && r.includes("nomor dokumen")){ headerIdx = i; break; }
+    }
+    if (headerIdx === -1){
+      let best = -1, bestScore = 0;
+      for (let i = 0; i < Math.min(aoa.length, 100); i++){
+        const r = (aoa[i] || []).map(norm);
+        const score = this.cfg.columns.filter(c => r.includes(norm(c))).length;
+        if (score > bestScore){ bestScore = score; best = i; }
+      }
+      if (bestScore >= 5) headerIdx = best;
+    }
+    if (headerIdx === -1){
+      toast("Header tidak dikenali. Pastikan file memakai template yang sama.");
+      return;
+    }
+
+    const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
+
+    /* --- peta kolom: nama → indeks (fallback ke posisi) --- */
+    const colIdx = this.cfg.columns.map((col, i) => {
+      const found = headers.findIndex(h => norm(h) === norm(col));
+      return found !== -1 ? found : (i < headers.length ? i : -1);
+    });
+
+    /* --- ambil baris data --- */
+    const rows = [];
+    for (let r = headerIdx + 1; r < aoa.length; r++){
+      const raw = aoa[r] || [];
+      const isEmpty = raw.every(c => c === null || c === undefined || String(c).trim() === "");
+      if (isEmpty) continue;
+
+      const obj = {};
+      this.cfg.columns.forEach((col, i) => {
+        const src = colIdx[i];
+        let v = src >= 0 ? raw[src] : null;
+
+        if (DATE_COLS.has(col)){
+          obj[col] = formatDateForTab(v, this.cfg.dateFormat);
+          return;
+        }
+        if (v instanceof Date){ obj[col] = formatDateForTab(v, this.cfg.dateFormat); return; }
+        if (v === null || v === undefined){ obj[col] = ""; return; }
+        if (typeof v === "number"){ obj[col] = v; return; }
+        obj[col] = String(v).trim();
+      });
+
+      /* buang baris kosong */
+      if (!obj["Nomor Dokumen"] && !obj["Part"] && !obj["Nomor Referensi"]) continue;
+      rows.push(obj);
+    }
+
+    this.state.rows = rows;
+    this.buildFilterOptions();
+    this.applyFilter();
+
+    this.el("filter").classList.remove("hidden");
+    this.el("preview").classList.remove("hidden");
+  }
+
+  /* --------------------------------------------------------------------
+     Bangun dropdown filter
+     -------------------------------------------------------------------- */
+  buildFilterOptions(){
+    const map = {
+      fKode:"Kode Perusahaan", fSite:"Site", fTipe:"Tipe Transaksi",
+      fStatus:"Status", fLokasi:"Lokasi Tujuan", fPart:"Part"
+    };
+    Object.entries(map).forEach(([key, col]) => {
+      const sel = this.el(key);
+      const current = sel.value;
+      const vals = [...new Set(
+        this.state.rows.map(r => String(r[col] ?? "").trim()).filter(Boolean)
+      )].sort();
+      sel.innerHTML = `<option value="">— Semua —</option>` +
+        vals.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+      if (vals.includes(current)) sel.value = current;
+    });
+  }
+
+  /* --------------------------------------------------------------------
+     Filter
+     -------------------------------------------------------------------- */
+  applyFilter(){
+    const q      = norm(this.el("fSearch").value);
+    const kode   = this.el("fKode").value;
+    const site   = this.el("fSite").value;
+    const tipe   = this.el("fTipe").value;
+    const status = this.el("fStatus").value;
+    const lokasi = this.el("fLokasi").value;
+    const part   = this.el("fPart").value;
+    const ref    = norm(this.el("fRef").value);
+    const dari   = this.el("fDari").value;
+    const sampai = this.el("fSampai").value;
+
+    this.state.filtered = this.state.rows.filter(r => {
+      if (kode   && String(r["Kode Perusahaan"]) !== kode)   return false;
+      if (site   && String(r["Site"])            !== site)   return false;
+      if (tipe   && String(r["Tipe Transaksi"])  !== tipe)   return false;
+      if (status && String(r["Status"])          !== status) return false;
+      if (lokasi && String(r["Lokasi Tujuan"])   !== lokasi) return false;
+      if (part   && String(r["Part"])            !== part)   return false;
+      if (ref    && !norm(r["Nomor Referensi"]).includes(ref)) return false;
+
+      if (dari || sampai){
+        const d = toDateOnly(r["Dibuat Pada"]);
+        if (!d) return false;
+        if (dari   && d < dari)   return false;
+        if (sampai && d > sampai) return false;
+      }
+      if (q){
+        const hay = this.cfg.columns.map(c => norm(r[c])).join(" | ");
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    this.renderPreview();
+  }
+
+  resetFilter(){
+    ["fSearch","fRef","fDari","fSampai"].forEach(k => this.el(k).value = "");
+    ["fKode","fSite","fTipe","fStatus","fLokasi","fPart"].forEach(k => this.el(k).value = "");
+    this.applyFilter();
+  }
+
+  /* --------------------------------------------------------------------
+     Pratinjau tabel
+     -------------------------------------------------------------------- */
+  renderPreview(){
+    const thead = this.el("thead");
+    const tbody = this.el("tbody");
+
+    thead.innerHTML = this.cfg.columns.map(c =>
+      `<th class="${NUMERIC_COLS.has(c) || c === "No" ? "num" : ""}">${escapeHtml(c)}</th>`
+    ).join("");
+
+    const renumber = this.el("chkRenumber").checked;
+    const rows = this.state.filtered;
+    const shown = rows.slice(0, MAX_PREVIEW_ROWS);
+
+    tbody.innerHTML = shown.map((r, i) => {
+      const cells = this.cfg.columns.map(col => {
+        let v = col === "No" ? (renumber ? i + 1 : (r["No"] ?? "")) : r[col];
+        const isNum = NUMERIC_COLS.has(col) || col === "No";
+        return `<td class="${isNum ? "num" : ""}">${escapeHtml(v === "" || v === null || v === undefined ? "" : v)}</td>`;
+      }).join("");
+      return `<tr>${cells}</tr>`;
+    }).join("");
+
+    this.el("emptyMsg").classList.toggle("hidden", rows.length > 0);
+    this.el("limitNote").textContent = rows.length > MAX_PREVIEW_ROWS
+      ? `Pratinjau dibatasi ${MAX_PREVIEW_ROWS} baris pertama. Semua ${rows.length} baris tetap akan diekspor.`
+      : "";
+
+    this.el("stTotal").textContent    = this.state.rows.length.toLocaleString("id-ID");
+    this.el("stFiltered").textContent = rows.length.toLocaleString("id-ID");
+    this.el("stCols").textContent     = this.cfg.columns.length;
+  }
+
+  /* --------------------------------------------------------------------
+     Export ke Excel
+     -------------------------------------------------------------------- */
+  exportExcel(){
+    if (!this.state.rows.length){ toast("Belum ada data untuk diekspor."); return; }
+
+    const renumber  = this.el("chkRenumber").checked;
+    const withBlank = this.el("chkBlank").checked;
+
+    const aoa = [];
+    if (withBlank) aoa.push([], [], []);           // 3 baris kosong di atas header
+    aoa.push(this.cfg.columns.slice());            // baris header
+
+    this.state.filtered.forEach((r, i) => {
+      aoa.push(this.cfg.columns.map(col => {
+        if (col === "No") return renumber ? i + 1 : (r["No"] ?? "");
+        const v = r[col];
+        if (v === null || v === undefined || v === "") return "";
+        if (NUMERIC_COLS.has(col) && typeof v === "number") return v;
+        if (NUMERIC_COLS.has(col) && v !== "" && !isNaN(Number(v))) return Number(v);
+        return v;
+      }));
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    ws["!cols"] = this.cfg.columns.map(c => ({
+      wch: Math.min(45, Math.max(11, c.length + 4))
+    }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, this.cfg.label);
+
+    const fname = `${this.state.baseName}_${this.cfg.exportTag}_${todayStamp()}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    toast(`[${this.cfg.label}] Berhasil diunduh: ${fname}`);
+  }
+}
+
+/* =========================================================================
+   4) INISIALISASI
+   ========================================================================= */
+const CONTROLLERS = {};
+
+(function init(){
+  /* --- buat tombol tab --- */
+  const tabsBar = $("tabsBar");
+  Object.entries(TAB_CONFIGS).forEach(([id, cfg]) => {
+    const t = document.createElement("div");
+    t.className = "tab" + (id === "tap1" ? " active" : "");
+    t.dataset.tab = id;
+    t.innerHTML = `${cfg.label}<span class="badge">${cfg.badge}</span>`;
+    t.addEventListener("click", () => switchTab(id));
+    tabsBar.appendChild(t);
   });
 
-  /* --- tebak email --- */
-  $("#btnGuess").addEventListener("click", () => {
-    const first = state.filtered[0] || state.rows[0];
-    const nm = first ? String(val(first, "Dibuat Oleh")) : "";
-    const email = guessEmail(nm);
-    if (email) { $("#oUser").value = email; refresh(); }
-    else alert("Nama 'Dibuat Oleh' pada sumber tidak ditemukan.");
+  /* --- buat controller untuk setiap tab --- */
+  Object.entries(TAB_CONFIGS).forEach(([id, cfg]) => {
+    CONTROLLERS[id] = new TabController(id, cfg);
   });
-
-  /* --- reset filter --- */
-  $("#btnReset").addEventListener("click", () => {
-    $$(".refchk").forEach(c => (c.checked = false));
-    $("#fSite").value = ""; $("#fTipe").value = ""; $("#fStatus").value = "";
-    $("#fFrom").value = ""; $("#fTo").value = ""; $("#fCari").value = "";
-    refresh();
-  });
-
-  /* --- export --- */
-  $("#btnExport").addEventListener("click", exportXlsx);
-  $("#btnCopy").addEventListener("click", copyTsv);
-
-  /* --- keyboard: Enter di kolom cari --- */
-  $("#fCari").addEventListener("keydown", e => { if (e.key === "Enter") refresh(); });
 })();
+
+function switchTab(tabId){
+  document.querySelectorAll(".tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.tab === tabId)
+  );
+  document.querySelectorAll(".tab-panel").forEach(p =>
+    p.classList.toggle("hidden", p.id !== `panel-${tabId}`)
+  );
+}
 </script>
 </body>
 </html>
