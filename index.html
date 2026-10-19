@@ -958,40 +958,41 @@
       }
     });
 
-    y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
-
     /* ==========================================================
-       7. PENUTUP + TANDA TANGAN
-       Blok dirapatkan ke bawah — huruf terakhir 2 mm dari tepi
+       7. PENUTUP — langsung di bawah garis tabel paling akhir
        ========================================================== */
+    var tableEndY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : y;
+
     var closeEl = document.querySelectorAll('p.para')[1];
     var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
 
-    var BOTTOM_GAP    = 2;     // mm — jarak huruf terbawah ke tepi kertas
-    var DESCENDER     = 0.7;   // mm — perkiraan turunnya huruf (g, y, p)
-    var GAP_CLOSE_SIG = 8;     // mm — jarak paragraf penutup ke label tanda tangan
-    var SIG_SPACE_MM  = 0;     // mm — ruang kosong di bawah label ttd
-                               //      ubah ke 16.4 bila ingin ruang tanda tangan
-    var closeHeight   = closeLines.length * lineH;
-    var blockHeight   = closeHeight + GAP_CLOSE_SIG + SIG_SPACE_MM + DESCENDER;
+    var CLOSE_GAP_TABLE = 3;     // mm — jarak tabel ke teks penutup (rapat)
+    var BOTTOM_GAP      = 2;     // mm — dasar huruf ttd ke tepi bawah kertas
+    var DESCENDER       = 0.7;   // mm — kompensasi huruf turun (g, y, p)
+    var GAP_SIG         = 12;    // mm — jarak minimal penutup ke label ttd
 
-    var blockStartY = (pageH - BOTTOM_GAP) - blockHeight;
+    var closeHeight = closeLines.length * lineH;
+    var sigBaseY    = pageH - BOTTOM_GAP - DESCENDER;
 
-    if (blockStartY < y + 4) {
+    /* Jika penutup + ttd tidak muat di halaman terakhir tabel → halaman baru */
+    if (tableEndY + CLOSE_GAP_TABLE + closeHeight + GAP_SIG > sigBaseY) {
       doc.addPage();
       y = MT + 10;
-      blockStartY = (pageH - BOTTOM_GAP) - blockHeight;
-      if (blockStartY < y + 4) blockStartY = y + 4;
+    } else {
+      y = tableEndY + CLOSE_GAP_TABLE;
     }
 
+    /* Gambar teks penutup tepat di bawah tabel */
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
     closeLines.forEach(function (ln, i) {
-      doc.text(ln, ML, blockStartY + i * lineH);
+      doc.text(ln, ML, y + i * lineH);
     });
 
-    /* 8. TANDA TANGAN */
-    var sigLabelY = blockStartY + closeHeight + GAP_CLOSE_SIG;
+    /* 8. TANDA TANGAN — di dasar kertas (2 mm) */
+    var closeEndY = y + closeHeight;
+    var sigLabelY = Math.max(sigBaseY, closeEndY + GAP_SIG);
+    if (sigLabelY > sigBaseY) sigLabelY = sigBaseY;
 
     var sigEls = document.querySelectorAll('.signs .s > div[contenteditable]');
     var labels = [];
