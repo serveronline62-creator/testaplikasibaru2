@@ -584,6 +584,7 @@
      MERGE OPERATIONS
      ========================================================== */
 
+  /* Merge & Center / Merge Cells — gabung seluruh area jadi satu sel */
   function doMerge(center) {
     var info = getSelectionInfo(true);
     if (!info) {
@@ -595,10 +596,12 @@
     var newRS = info.maxR - info.minR + 1;
     var newCS = info.maxC - info.minC + 1;
 
+    /* Hapus semua sel terpilih selain target */
     Array.from(selectedCells).forEach(function (td) {
       if (td !== target && td.parentNode) td.parentNode.removeChild(td);
     });
 
+    /* Set span pada target */
     target.rowSpan = newRS;
     target.colSpan = newCS;
     target.setAttribute('rowspan', newRS);
@@ -616,6 +619,7 @@
     recalc();
   }
 
+  /* Merge Across — gabung per baris secara horizontal */
   function doMergeAcross() {
     var info = getSelectionInfo(true);
     if (!info) {
@@ -640,6 +644,7 @@
     recalc();
   }
 
+  /* Unmerge — pisahkan setiap sel gabungan dalam pilihan */
   function doUnmerge() {
     var toUnmerge = [];
     selectedCells.forEach(function (td) {
@@ -670,6 +675,7 @@
       .replace(/\bmerged-center\b/g, '')
       .replace(/\s+/g, ' ').trim();
 
+    /* Salin atribut (tanpa rowspan/colspan/class/style) */
     var attrs = {};
     Array.from(td.attributes).forEach(function (a) {
       if (a.name === 'rowspan' || a.name === 'colspan') return;
@@ -677,6 +683,7 @@
       attrs[a.name] = a.value;
     });
 
+    /* 1) Ganti sel asal dengan `cs` sel baru di baris yang sama */
     var parent = td.parentNode;
     for (var j = 0; j < cs; j++) {
       var newTd = document.createElement('td');
@@ -687,6 +694,7 @@
     }
     parent.removeChild(td);
 
+    /* 2) Selipkan `cs` sel baru di baris r+1..r+rs-1 pada posisi kolom c */
     for (var i = 1; i < rs; i++) {
       var row = tbody.rows[r + i];
       if (!row) continue;
@@ -740,6 +748,7 @@
      EVENT HANDLERS
      ========================================================== */
 
+  /* Input pada sel */
   tbody.addEventListener('input', function (e) {
     var tr = e.target.closest ? e.target.closest('tr') : null;
     if (!tr) return;
@@ -747,6 +756,7 @@
     recalc();
   });
 
+  /* Hapus baris */
   tbody.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.del') : null;
     if (!btn) return;
@@ -754,6 +764,7 @@
     if (tr) { tr.parentNode.removeChild(tr); renumber(); recalc(); }
   });
 
+  /* Mouse down — seleksi sel di Mode Pilih */
   tbody.addEventListener('mousedown', function (e) {
     if (!selectMode) return;
 
@@ -776,16 +787,19 @@
     }
   });
 
+  /* Klik di luar tabel → bersihkan seleksi */
   document.addEventListener('mousedown', function (e) {
     if (!selectMode) return;
     if (e.target.closest && (e.target.closest('#tbody') || e.target.closest('.toolbar'))) return;
     clearSelection();
   });
 
+  /* Esc → bersihkan seleksi */
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && selectMode) clearSelection();
   });
 
+  /* Tombol toolbar */
   document.getElementById('btnMode').addEventListener('click', function () {
     setMode(!selectMode);
   });
@@ -829,6 +843,7 @@
     }
   }
 
+  /* Bangun body PDF dengan dukungan colSpan/rowSpan */
   function buildPdfBody() {
     var grid = buildTbodyGrid();
     var body = [];
@@ -870,14 +885,7 @@
 
     var pageW  = 210;
     var pageH  = 297;
-
-    /* ----------------------------------------------------------
-       MARGIN HALAMAN
-       ML = kiri, MR = kanan, MT = atas, MB = bawah
-       MB = 10 mm = 1 cm  ←  jarak teks ↔ tepi bawah kertas
-       ---------------------------------------------------------- */
-    var ML = 13, MR = 13, MT = 12, MB = 10;   // MB = 1 cm
-
+    var ML = 13, MR = 13, MT = 12, MB = 10;   /* MB = 10 mm = 1 cm */
     var contentW = pageW - ML - MR;
     var centerX  = pageW / 2;
 
@@ -930,9 +938,7 @@
     var totalM3    = document.getElementById('totalM3').textContent.trim();
     var totalColly = document.getElementById('totalColly').textContent.trim();
 
-    /* 6. GAMBAR TABEL
-          margin.bottom = MB (10 mm = 1 cm) → setiap halaman tabel
-          berhenti minimal 1 cm dari tepi bawah kertas. */
+    /* 6. GAMBAR TABEL */
     doc.autoTable({
       startY: y,
       margin: { left: ML, right: MR, top: MT, bottom: MB },
@@ -992,13 +998,14 @@
 
     y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
 
-    /* 7. PENUTUP
-          Cek: jika paragraf penutup + ruang tanda tangan (60 mm) tidak
-          muat dalam sisa halaman − MB (1 cm), pindah halaman baru. */
+    /* 7. PENUTUP */
     var closeEl = document.querySelectorAll('p.para')[1];
     var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
 
-    if (y + closeLines.length * lineH + 60 > pageH - MB) {
+    /* 45 mm cukup untuk label + ruang tanda tangan (~33 mm),
+       supaya blok tanda tangan tidak selalu terdorong ke atas
+       dan tetap aman di atas margin bawah 10 mm. */
+    if (y + closeLines.length * lineH + 45 > pageH - MB) {
       doc.addPage();
       y = MT + 10;
     }
@@ -1008,9 +1015,7 @@
     closeLines.forEach(function (ln, i) { doc.text(ln, ML, y + i * lineH); });
     y += closeLines.length * lineH + 12;
 
-    /* 8. TANDA TANGAN
-          Dengan buffer 60 mm, label tanda tangan selalu berada ≥ (MB + 48) mm
-          dari tepi bawah → jauh lebih aman dari batas 1 cm. */
+    /* 8. TANDA TANGAN */
     var sigEls = document.querySelectorAll('.signs .s > div[contenteditable]');
     var labels = [];
     Array.prototype.forEach.call(sigEls, function (el) { labels.push(el.textContent.trim()); });
@@ -1023,7 +1028,6 @@
       doc.text(label, cx, y, { align: 'center' });
     });
 
-    /* 9. SIMPAN */
     doc.save(buildFileName());
   }
 
