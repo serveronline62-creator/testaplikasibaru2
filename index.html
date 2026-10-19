@@ -179,6 +179,12 @@
     <button type="button" id="btnUnmerge"     disabled title="Pisahkan sel gabungan">⊟ Unmerge</button>
   </div>
 
+  <!-- === TOMBOL ALIGNMENT === -->
+  <div class="tool-group">
+    <button type="button" id="btnAlignLeft"  title="Rata kiri (align left)">⬅ Kiri</button>
+    <button type="button" id="btnAlignRight" title="Rata kanan (align right)">Kanan ➡</button>
+  </div>
+
   <span class="sel-info" id="selInfo">0 sel</span>
 
   <div class="tool-group">
@@ -324,6 +330,7 @@
   var selectMode = false;
   var selectedCells = new Set();
   var anchorCell = null;
+  var lastEditCell = null;   // sel terakhir yang difokus di Mode Edit
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -638,6 +645,8 @@
       .replace(/\bsel\b/g, '')
       .replace(/\bmerged-center\b/g, '')
       .replace(/\s+/g, ' ').trim();
+    /* Simpan alignment inline agar tidak hilang saat unmerge */
+    var baseTextAlign = (td.style && td.style.textAlign) ? td.style.textAlign : '';
 
     var attrs = {};
     Array.from(td.attributes).forEach(function (a) {
@@ -650,6 +659,7 @@
     for (var j = 0; j < cs; j++) {
       var newTd = document.createElement('td');
       if (baseClasses) newTd.className = baseClasses;
+      if (baseTextAlign) newTd.style.textAlign = baseTextAlign;
       Object.keys(attrs).forEach(function (k) { newTd.setAttribute(k, attrs[k]); });
       if (j === 0) newTd.innerHTML = content;
       parent.insertBefore(newTd, td);
@@ -670,6 +680,7 @@
       for (var j2 = 0; j2 < cs; j2++) {
         var newTd2 = document.createElement('td');
         if (baseClasses) newTd2.className = baseClasses;
+        if (baseTextAlign) newTd2.style.textAlign = baseTextAlign;
         Object.keys(attrs).forEach(function (k2) { newTd2.setAttribute(k2, attrs[k2]); });
         if (insertBefore) row.insertBefore(newTd2, insertBefore);
         else row.appendChild(newTd2);
@@ -677,6 +688,42 @@
     }
   }
 
+  /* ==========================================================
+     ALIGNMENT — KIRI / KANAN
+     ========================================================== */
+  function applyAlignment(align) {
+    var targets = [];
+
+    if (selectMode) {
+      /* Mode Pilih: pakai sel yang sedang di-seleksi */
+      selectedCells.forEach(function (td) {
+        if (!td.classList.contains('act')) targets.push(td);
+      });
+    } else {
+      /* Mode Edit: pakai sel yang terakhir difokus / aktif */
+      var cell = lastEditCell;
+      if (!cell || !tbody.contains(cell)) {
+        var active = document.activeElement;
+        cell = active && active.closest ? active.closest('td') : null;
+      }
+      if (cell && tbody.contains(cell) && !cell.classList.contains('act')) {
+        targets.push(cell);
+      }
+    }
+
+    if (targets.length === 0) {
+      alert('Klik dulu di dalam sel tabel (Mode Edit), atau pilih sel di Mode Pilih.');
+      return;
+    }
+
+    targets.forEach(function (td) {
+      td.style.textAlign = align;
+    });
+  }
+
+  /* ==========================================================
+     MODE EDIT / PILIH
+     ========================================================== */
   function setMode(select) {
     selectMode = !!select;
 
@@ -702,6 +749,9 @@
     updateMergeButtonStates();
   }
 
+  /* ==========================================================
+     EVENT HANDLERS
+     ========================================================== */
   tbody.addEventListener('input', function (e) {
     var tr = e.target.closest ? e.target.closest('tr') : null;
     if (!tr) return;
@@ -714,6 +764,14 @@
     if (!btn) return;
     var tr = btn.closest('tr');
     if (tr) { tr.parentNode.removeChild(tr); renumber(); recalc(); }
+  });
+
+  /* Track sel terakhir difokus di Mode Edit (untuk apply alignment) */
+  tbody.addEventListener('focusin', function (e) {
+    var td = e.target.closest ? e.target.closest('td') : null;
+    if (td && !td.classList.contains('act')) {
+      lastEditCell = td;
+    }
   });
 
   tbody.addEventListener('mousedown', function (e) {
@@ -756,6 +814,15 @@
   document.getElementById('btnMergeCells').addEventListener('click',  function () { doMerge(false); });
   document.getElementById('btnMergeAcross').addEventListener('click', function () { doMergeAcross(); });
   document.getElementById('btnUnmerge').addEventListener('click',     function () { doUnmerge(); });
+
+  /* Tombol alignment — preventDefault mousedown agar fokus sel tidak hilang */
+  ['btnAlignLeft', 'btnAlignRight'].forEach(function (id) {
+    document.getElementById(id).addEventListener('mousedown', function (e) {
+      e.preventDefault();
+    });
+  });
+  document.getElementById('btnAlignLeft').addEventListener('click',  function () { applyAlignment('left');  });
+  document.getElementById('btnAlignRight').addEventListener('click', function () { applyAlignment('right'); });
 
   document.getElementById('btnAdd').addEventListener('click', function () {
     tbody.appendChild(makeRow({}));
@@ -809,15 +876,23 @@
         if (g.cs > 1) cellDef.colSpan = g.cs;
         if (g.rs > 1) cellDef.rowSpan = g.rs;
 
+        /* === Tentukan alignment: inline style menang, baru fallback class === */
+        var inlineAlign = (td.style && td.style.textAlign) ? td.style.textAlign : '';
         var halign = 'left';
-        if (td.classList.contains('c') || td.classList.contains('idx')) halign = 'center';
-        else if (td.classList.contains('r') || td.classList.contains('m3cell')) halign = 'right';
+        if (inlineAlign) {
+          halign = inlineAlign;
+        } else if (td.classList.contains('c') || td.classList.contains('idx')) {
+          halign = 'center';
+        } else if (td.classList.contains('r') || td.classList.contains('m3cell')) {
+          halign = 'right';
+        }
 
         var valign = 'top';
         if (td.classList.contains('merged-center')) {
-          halign = 'center';
           valign = 'middle';
+          if (!inlineAlign) halign = 'center';
         }
+
         cellDef.styles = { halign: halign, valign: valign };
         row.push(cellDef);
       }
@@ -838,7 +913,6 @@
 
     var y = MT + 4;
 
-    /* 1. JUDUL */
     doc.setFont('times', 'bold');
     doc.setFontSize(15);
     var title = 'SURAT JALAN';
@@ -847,7 +921,6 @@
     drawSpacedText(doc, title, centerX - titleW / 2, y, spacing);
     y += 10;
 
-    /* 2. META */
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
 
@@ -861,7 +934,6 @@
     doc.text('Hal    : ' + (halEl ? halEl.textContent : '').trim(), ML + contentW * 0.5, y);
     y += 6.5;
 
-    /* 3. TUJUAN */
     doc.text('Kepada Yth,', ML, y);
     y += 4.5;
     doc.setFont('times', 'bold');
@@ -872,20 +944,17 @@
     doc.text('Di Tempat', ML, y);
     y += 7;
 
-    /* 4. PEMBUKA */
     var openEl = document.querySelectorAll('p.para')[0];
     var openLines = doc.splitTextToSize(openEl ? openEl.textContent.trim() : '', contentW);
     var lineH = 4.0;
     openLines.forEach(function (ln, i) { doc.text(ln, ML, y + i * lineH); });
     y += openLines.length * lineH + 3;
 
-    /* 5. DATA TABEL */
     var pdfBody = buildPdfBody();
     var totalQty   = document.getElementById('totalQty').textContent.trim();
     var totalM3    = document.getElementById('totalM3').textContent.trim();
     var totalColly = document.getElementById('totalColly').textContent.trim();
 
-    /* 6. GAMBAR TABEL */
     doc.autoTable({
       startY: y,
       margin: { left: ML, right: MR, top: MT, bottom: MB },
@@ -944,45 +1013,35 @@
     });
 
     /* ==========================================================
-       7. PENUTUP + TANDA TANGAN
-       Blok mengikuti posisi akhir tabel:
-       - Paragraf penutup: 4 mm di bawah garis tabel terakhir
-       - Tanda tangan: 12 mm di bawah paragraf penutup
-       - Jika melebihi batas 2 mm dari tepi bawah → pindah halaman
+       PENUTUP + TANDA TANGAN — mengikuti tabel
        ========================================================== */
     var tableFinalY = (doc.lastAutoTable && doc.lastAutoTable.finalY)
       ? doc.lastAutoTable.finalY
       : y;
 
-    var BOTTOM_GAP    = 2;     // mm — jarak aman huruf terbawah ke tepi kertas
-    var DESCENDER     = 0.7;   // mm — perkiraan turunnya huruf (g, y, p)
-    var GAP_TABLE     = 4;     // mm — jarak tabel ke paragraf penutup (dekat)
-    var GAP_CLOSE_SIG = 12;    // mm — jarak paragraf penutup ke label tanda tangan
+    var BOTTOM_GAP    = 2;
+    var DESCENDER     = 0.7;
+    var GAP_TABLE     = 4;
+    var GAP_CLOSE_SIG = 12;
 
     var closeEl = document.querySelectorAll('p.para')[1];
     var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
     var closeHeight = closeLines.length * lineH;
 
-    /* Posisi mulai blok = tepat di bawah tabel */
     var blockStartY = tableFinalY + GAP_TABLE;
-
-    /* Kalau seluruh blok (penutup + ttd) tidak muat, pindah halaman */
     var blockHeight = closeHeight + GAP_CLOSE_SIG + DESCENDER;
     if (blockStartY + blockHeight > pageH - BOTTOM_GAP) {
       doc.addPage();
       blockStartY = MT + 10;
     }
 
-    /* 7a. Paragraf penutup */
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
     closeLines.forEach(function (ln, i) {
       doc.text(ln, ML, blockStartY + i * lineH);
     });
 
-    /* 8. Tanda tangan — mengikuti paragraf penutup */
     var sigLabelY = blockStartY + closeHeight + GAP_CLOSE_SIG;
-
     if (sigLabelY + DESCENDER > pageH - BOTTOM_GAP) {
       doc.addPage();
       sigLabelY = MT + 10;
