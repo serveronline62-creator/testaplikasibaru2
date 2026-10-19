@@ -135,7 +135,8 @@
 
   .signs{
     display:flex; justify-content:space-between; gap:10px;
-    margin-top:24px; text-align:center;
+    margin-top:0.5cm;          /* 5 mm di bawah paragraf penutup */
+    text-align:center;
   }
   .signs .s{ flex:1; }
   .signs .s .sp{ height:62px; }
@@ -1013,26 +1014,40 @@
     });
 
     /* ==========================================================
-       PENUTUP + TANDA TANGAN — mengikuti tabel
+       PENUTUP + TANDA TANGAN — jarak 0,5 cm (5 mm)
+       Diukur dari DASAR huruf terakhir paragraf penutup ke
+       ATAS huruf kapital label tanda tangan.
        ========================================================== */
     var tableFinalY = (doc.lastAutoTable && doc.lastAutoTable.finalY)
       ? doc.lastAutoTable.finalY
       : y;
 
-    var BOTTOM_GAP    = 2;
-    var DESCENDER     = 0.7;
-    var GAP_TABLE     = 4;
-    var GAP_CLOSE_SIG = 12;
+    var BOTTOM_GAP    = 2;      // margin aman bawah (mm)
+    var DESCENDER     = 0.7;    // bagian huruf di bawah baseline (mm)
+    var GAP_TABLE     = 4;      // jarak tabel → paragraf penutup (mm)
+    var GAP_CLOSE_SIG = 5;      // 0,5 cm = 5 mm → jarak teks penutup ke label TTD
+    var CAP_9PT       = 2.2;    // tinggi huruf kapital 9 pt di atas baseline (mm)
 
     var closeEl = document.querySelectorAll('p.para')[1];
     var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
-    var closeHeight = closeLines.length * lineH;
+    if (!closeLines.length) closeLines = [''];
 
     var blockStartY = tableFinalY + GAP_TABLE;
-    var blockHeight = closeHeight + GAP_CLOSE_SIG + DESCENDER;
+
+    /* baseline baris terakhir paragraf penutup */
+    var closeLastBaseline = blockStartY + (closeLines.length - 1) * lineH;
+    var closeBottom = closeLastBaseline + DESCENDER;   // dasar huruf terakhir
+
+    /* label TTD: tepat 5 mm di bawah dasar teks penutup */
+    var sigLabelY = closeBottom + GAP_CLOSE_SIG + CAP_9PT;
+
+    var blockHeight = (sigLabelY + DESCENDER) - blockStartY;
     if (blockStartY + blockHeight > pageH - BOTTOM_GAP) {
       doc.addPage();
       blockStartY = MT + 10;
+      closeLastBaseline = blockStartY + (closeLines.length - 1) * lineH;
+      closeBottom = closeLastBaseline + DESCENDER;
+      sigLabelY = closeBottom + GAP_CLOSE_SIG + CAP_9PT;
     }
 
     doc.setFont('times', 'normal');
@@ -1041,7 +1056,7 @@
       doc.text(ln, ML, blockStartY + i * lineH);
     });
 
-    var sigLabelY = blockStartY + closeHeight + GAP_CLOSE_SIG;
+    /* Fallback: pastikan label TTD tidak terpotong halaman */
     if (sigLabelY + DESCENDER > pageH - BOTTOM_GAP) {
       doc.addPage();
       sigLabelY = MT + 10;
