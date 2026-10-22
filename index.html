@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Auto Converter</title>
+    <title> Auto Converter</title>
 
     <!-- Library Eksternal -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -215,47 +215,18 @@
             margin: 0 auto;
         }
 
-        /* ============================================================
-           GRID 3x3 — TAP 1 (Label Normal) — TEKS & LABEL DIPERBESAR
-           ============================================================ */
+        /* Grid 3x3 untuk TAP 1 - gambar tidak terpotong */
         .grid-3x3 {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            gap: 3px;              /* sebelumnya 6px → sel lebih besar */
-            padding: 3mm;          /* sebelumnya 6mm → area label lebih luas */
+            gap: 6px;
+            padding: 6mm;
             aspect-ratio: 210 / 297;
             width: 100%;
         }
 
-        /* Card label — border tipis agar area gambar lebih luas */
-        .grid-3x3 .photo-card {
-            min-height: 0;
-            border-width: 2px;     /* sebelumnya 3px */
-            padding: 0;
-        }
-
-        /* Gambar label — tetap utuh (contain) tapi mengisi sel maksimal */
-        .grid-3x3 .photo-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;   /* gambar tidak terpotong */
-            display: block;
-            background-color: #ffffff;
-        }
-
-        /* Placeholder sel kosong — TEKS DIPERBESAR */
-        .grid-3x3 .empty-cell {
-            font-size: 2.4rem;     /* sebelumnya 0.8rem → 3× lebih besar */
-            font-weight: 800;
-            color: #475569;
-            line-height: 1;
-            letter-spacing: -1px;
-        }
-
-        /* ============================================================
-           GRID Custom — TAP 2 (Label Panjang)
-           ============================================================ */
+        /* Grid custom untuk TAP 2 */
         .grid-custom {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -263,6 +234,28 @@
             padding: 6mm;
             width: 100%;
             align-items: start;
+        }
+
+        .photo-card {
+            border: 3px solid #000000;
+            background: #fefefe;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .grid-3x3 .photo-card {
+            min-height: 0;
+        }
+
+        .grid-3x3 .photo-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;  /* gambar utuh tidak terpotong */
+            display: block;
+            background-color: #ffffff;
         }
 
         .grid-custom .photo-card {
@@ -275,17 +268,6 @@
             height: auto;
             display: block;
             object-fit: contain;
-        }
-
-        /* Base .photo-card & .empty-cell */
-        .photo-card {
-            border: 3px solid #000000;
-            background: #fefefe;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            position: relative;
         }
 
         .empty-cell {
@@ -309,8 +291,8 @@
                 width: 100%;
             }
             .grid-3x3 {
-                gap: 2px;          /* lebih rapat */
-                padding: 2mm;      /* sel lebih besar */
+                gap: 4px;
+                padding: 4mm;
             }
             .grid-custom {
                 gap: 4px;
@@ -319,22 +301,16 @@
             .photo-card {
                 border-width: 2px;
             }
-            .grid-3x3 .empty-cell {
-                font-size: 1.8rem; /* placeholder tetap besar di tablet */
-            }
         }
 
         @media screen and (max-width: 480px) {
             .grid-3x3 {
-                gap: 2px;
-                padding: 2mm;
+                gap: 3px;
+                padding: 3mm;
             }
             .grid-custom {
                 gap: 3px;
                 padding: 3mm;
-            }
-            .grid-3x3 .empty-cell {
-                font-size: 1.4rem; /* placeholder tetap besar di HP */
             }
             .btn {
                 padding: 6px 10px;
@@ -487,6 +463,11 @@
     const resetPhotoBtn = document.getElementById('resetPhotoBtn');
     const infoPhoto = document.getElementById('infoPhoto');
 
+    /* ============================================================
+       KONSTANTA KONVERSI PX -> MM (layar 96 DPI)
+       ============================================================ */
+    const PX_TO_MM = 25.4 / 96;
+
     function showToast(msg, isError = false) {
         toast.textContent = msg;
         toast.classList.add('show');
@@ -503,21 +484,30 @@
         }
     }
 
-    async function pdfToImages(file) {
+    /* ============================================================
+       PDF -> GAMBAR  (resolusi render dinaikkan agar teks tajam)
+       ============================================================ */
+    async function pdfToImages(file, scale = 3.2) {
         const arrayBuf = await file.arrayBuffer();
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
         const images = [];
         for (let i = 1; i <= pdfDoc.numPages; i++) {
             const page = await pdfDoc.getPage(i);
-            const viewport = page.getViewport({ scale: 2.8 });
+            const viewport = page.getViewport({ scale: scale });
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            await page.render({ canvasContext: ctx, viewport: viewport, intent: 'print' }).promise;
-            images.push(canvas.toDataURL('image/jpeg', 0.95));
+            await page.render({
+                canvasContext: ctx,
+                viewport: viewport,
+                intent: 'print',
+                background: '#ffffff'
+            }).promise;
+            // kualitas JPEG tinggi -> teks tidak "pecah"
+            images.push(canvas.toDataURL('image/jpeg', 0.98));
         }
         return images;
     }
@@ -527,7 +517,7 @@
             const reader = new FileReader();
             reader.onload = e => resolve(e.target.result);
             reader.onerror = reject;
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(file);   // data asli, tanpa kompresi ulang
         });
     }
 
@@ -543,6 +533,29 @@
             }
         }
         return results;
+    }
+
+    /* ============================================================
+       CACHE DIMENSI GAMBAR
+       ============================================================ */
+    const imgPropCache = new Map();
+
+    function getImageProps(src) {
+        if (imgPropCache.has(src)) return Promise.resolve(imgPropCache.get(src));
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const info = {
+                    w: img.naturalWidth || img.width,
+                    h: img.naturalHeight || img.height,
+                    format: /^data:image\/png/i.test(src) ? 'PNG' : 'JPEG'
+                };
+                imgPropCache.set(src, info);
+                resolve(info);
+            };
+            img.onerror = () => reject(new Error('Gagal membaca gambar'));
+            img.src = src;
+        });
     }
 
     function updateFileInfo(tabType, files) {
@@ -561,7 +574,9 @@
         }
     }
 
-    // RENDER PREVIEW
+    /* ============================================================
+       RENDER PREVIEW
+       ============================================================ */
     function renderPreview() {
         previewDiv.innerHTML = '';
         const images = (activeTab === 'grid') ? imagesGrid : imagesPhoto;
@@ -696,14 +711,118 @@
         showToast('Data direset');
     }
 
-    async function generatePDF(tabType) {
-        const images = (tabType === 'grid') ? imagesGrid : imagesPhoto;
-        if (!images.length) {
+    /* ============================================================
+       ★★★ TAP 1 : PDF HD — GAMBAR ASLI DITEMPEL LANGSUNG ★★★
+       Tidak memakai html2canvas, jadi resolusi gambar TIDAK
+       di-rasterisasi ulang => teks tetap tajam / terbaca jelas.
+       ============================================================ */
+    async function generateGridPDF() {
+        if (!imagesGrid.length) {
             showToast('Tidak ada data', true);
             return;
         }
-        if ((tabType === 'grid' && activeTab !== 'grid') || (tabType === 'photo' && activeTab !== 'photo')) {
-            activeTab = tabType;
+
+        setLoader(true, 'Membuat PDF HD...');
+        downloadGridBtn.disabled = true;
+        resetGridBtn.disabled = true;
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+
+            const PAGE_W = 210;
+            const PAGE_H = 297;
+            const PAD    = 6;                          // padding 6mm (sama dgn preview)
+            const COLS   = 3;
+            const ROWS   = 3;
+            const GAP    = 6 * PX_TO_MM;               // gap 6px  -> mm
+            const BORDER = 3 * PX_TO_MM;               // border 3px -> mm
+            const PER_PAGE = COLS * ROWS;
+
+            const cellW = (PAGE_W - PAD * 2 - GAP * (COLS - 1)) / COLS;
+            const cellH = (PAGE_H - PAD * 2 - GAP * (ROWS - 1)) / ROWS;
+
+            for (let start = 0; start < imagesGrid.length; start += PER_PAGE) {
+                if (start > 0) pdf.addPage();
+
+                const pageImages = imagesGrid.slice(start, start + PER_PAGE);
+
+                for (let i = 0; i < PER_PAGE; i++) {
+                    const col = i % COLS;
+                    const row = Math.floor(i / COLS);
+                    const x = PAD + col * (cellW + GAP);
+                    const y = PAD + row * (cellH + GAP);
+
+                    // --- Bingkai hitam ---
+                    pdf.setDrawColor(0, 0, 0);
+                    pdf.setLineWidth(BORDER);
+                    pdf.rect(x + BORDER / 2, y + BORDER / 2, cellW - BORDER, cellH - BORDER);
+
+                    const src = pageImages[i];
+
+                    // --- Sel kosong ---
+                    if (!src) {
+                        pdf.setDrawColor(180, 190, 200);
+                        pdf.setLineWidth(0.4);
+                        pdf.line(
+                            x + cellW / 2 - 6, y + cellH / 2,
+                            x + cellW / 2 + 6, y + cellH / 2
+                        );
+                        continue;
+                    }
+
+                    const prop = await getImageProps(src);
+
+                    // Area gambar di dalam bingkai
+                    const boxW = cellW - BORDER * 2;
+                    const boxH = cellH - BORDER * 2;
+
+                    // Perilaku object-fit: contain (proporsional, tidak terpotong)
+                    const ratio = Math.min(boxW / prop.w, boxH / prop.h);
+                    const drawW = prop.w * ratio;
+                    const drawH = prop.h * ratio;
+                    const drawX = x + (cellW - drawW) / 2;
+                    const drawY = y + (cellH - drawH) / 2;
+
+                    // >>> Gambar asli (resolusi penuh) ditempel apa adanya <<<
+                    pdf.addImage(
+                        src,
+                        prop.format,
+                        drawX, drawY, drawW, drawH,
+                        undefined,
+                        'SLOW'          // kompresi lossless utk PNG, JPEG tetap asli
+                    );
+                }
+            }
+
+            const date = new Date().toISOString().slice(0, 10);
+            pdf.save(`Label Komponen Bekas_TAP1_HD_${date}.pdf`);
+            showToast('✅ PDF HD berhasil dibuat!');
+        } catch (err) {
+            console.error(err);
+            showToast('Gagal membuat PDF: ' + err.message, true);
+        } finally {
+            setLoader(false);
+            downloadGridBtn.disabled = false;
+            resetGridBtn.disabled = false;
+        }
+    }
+
+    /* ============================================================
+       TAP 2 : tetap memakai html2canvas (layout tinggi dinamis)
+       ============================================================ */
+    async function generatePhotoPDF() {
+        if (!imagesPhoto.length) {
+            showToast('Tidak ada data', true);
+            return;
+        }
+        if (activeTab !== 'photo') {
+            activeTab = 'photo';
             renderPreview();
         }
         const pages = document.querySelectorAll('.a4-page');
@@ -711,19 +830,17 @@
             showToast('Halaman tidak tersedia', true);
             return;
         }
-        
+
         setLoader(true, 'Membuat PDF...');
-        const btn = (tabType === 'grid') ? downloadGridBtn : downloadPhotoBtn;
-        const resetBtn = (tabType === 'grid') ? resetGridBtn : resetPhotoBtn;
-        btn.disabled = true;
-        resetBtn.disabled = true;
-        
+        downloadPhotoBtn.disabled = true;
+        resetPhotoBtn.disabled = true;
+
         try {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = 210;
             const pageHeight = 297;
-            
+
             for (let i = 0; i < pages.length; i++) {
                 const canvas = await html2canvas(pages[i], {
                     scale: 3.5,
@@ -731,32 +848,28 @@
                     backgroundColor: '#ffffff',
                     logging: false
                 });
-                const imgData = canvas.toDataURL('image/jpeg', 0.96);
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 if (i > 0) pdf.addPage();
-                
-                if (tabType === 'photo') {
-                    const imgWidth = pageWidth;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    if (imgHeight > pageHeight) {
-                        const ratio = pageHeight / imgHeight;
-                        pdf.addImage(imgData, 'JPEG', (pageWidth - imgWidth * ratio) / 2, 0, imgWidth * ratio, pageHeight);
-                    } else {
-                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                    }
+
+                const imgWidth = pageWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                if (imgHeight > pageHeight) {
+                    const ratio = pageHeight / imgHeight;
+                    pdf.addImage(imgData, 'JPEG', (pageWidth - imgWidth * ratio) / 2, 0, imgWidth * ratio, pageHeight);
                 } else {
-                    pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
                 }
             }
             const date = new Date().toISOString().slice(0, 10);
-            pdf.save(`Label Komponen Bekas_${tabType === 'grid' ? 'TAP1' : 'TAP2'}_${date}.pdf`);
+            pdf.save(`Label Komponen Bekas_TAP2_${date}.pdf`);
             showToast('✅ PDF berhasil dibuat!');
         } catch (err) {
             console.error(err);
             showToast('Gagal membuat PDF', true);
         } finally {
             setLoader(false);
-            btn.disabled = false;
-            resetBtn.disabled = false;
+            downloadPhotoBtn.disabled = false;
+            resetPhotoBtn.disabled = false;
         }
     }
 
@@ -771,8 +884,8 @@
         if (e.target.files.length) handleUpload([...e.target.files], 'photo');
     });
     
-    downloadGridBtn.addEventListener('click', () => generatePDF('grid'));
-    downloadPhotoBtn.addEventListener('click', () => generatePDF('photo'));
+    downloadGridBtn.addEventListener('click', () => generateGridPDF());
+    downloadPhotoBtn.addEventListener('click', () => generatePhotoPDF());
     resetGridBtn.addEventListener('click', () => resetData('grid'));
     resetPhotoBtn.addEventListener('click', () => resetData('photo'));
     
