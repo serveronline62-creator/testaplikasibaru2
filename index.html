@@ -1,1107 +1,808 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Surat Jalan — Generator</title>
-<style>
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; }
-  body{
-    background:#e5e7eb;
-    font-family:"Times New Roman", Times, serif;
-    color:#111;
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Auto Converter</title>
 
-  .toolbar{
-    position:sticky; top:0; z-index:50;
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-    padding:10px 18px;
-    background:#111827; color:#f9fafb;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    box-shadow:0 2px 10px rgba(0,0,0,.25);
-  }
-  .toolbar .brand{ font-size:14px; font-weight:600; margin-right:auto; line-height:1.2; }
-  .toolbar .brand small{ display:block; font-weight:400; font-size:11px; color:#9ca3af; margin-top:2px; }
-  .toolbar button{
-    font-family:inherit; font-size:13px; font-weight:500;
-    padding:8px 14px; border-radius:7px; border:1px solid #374151;
-    background:#1f2937; color:#e5e7eb; cursor:pointer; transition:.15s;
-  }
-  .toolbar button:hover{ background:#374151; }
-  .toolbar button:disabled{ opacity:.4; cursor:not-allowed; }
-  .toolbar button:disabled:hover{ background:#1f2937; }
-  .toolbar button.primary{ background:#16a34a; border-color:#16a34a; color:#fff; }
-  .toolbar button.primary:hover{ background:#15803d; }
-  .toolbar button.primary:disabled:hover{ background:#16a34a; }
-  .toolbar button.active{ background:#2563eb; border-color:#2563eb; color:#fff; }
-  .tool-group{ display:flex; gap:6px; align-items:center; padding-left:10px; border-left:1px solid #374151; }
-  .sel-info{
-    font-size:11px; font-weight:500;
-    padding:5px 10px; border-radius:6px;
-    background:#1f2937; color:#9ca3af; min-width:64px; text-align:center;
-  }
+    <!-- Library Eksternal -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  .page{
-    width:210mm;
-    min-height:297mm;
-    margin:20px auto 60px;
-    padding:12mm 13mm;
-    background:#fff;
-    box-shadow:0 6px 24px rgba(0,0,0,.18);
-    font-size:9pt;
-    line-height:1.45;
-  }
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  .doc-title{
-    text-align:center;
-    font-size:15pt;
-    font-weight:bold;
-    letter-spacing:2px;
-    margin:0 0 16px;
-  }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #eef2f5;
+            padding: 12px 0 24px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-  .meta{ margin-bottom:14px; }
-  .meta .tgl{ margin-bottom:10px; }
-  .meta .row{ display:flex; gap:24px; }
-  .meta .row > div{ flex:1; }
-  .meta .row > div:first-child{ flex:0 0 52%; }
+        .app-wrapper {
+            width: 100%;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 0 8px;
+        }
 
-  .to{ margin-bottom:10px; }
-  .to .b{ font-weight:bold; }
+        /* Header */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
 
-  p.para{ margin:0 0 10px; text-align:justify; }
+        .logo {
+            height: 32px;
+            object-fit: contain;
+        }
 
-  table{
-    width:100%;
-    border-collapse:collapse;
-    table-layout:fixed;
-    font-size:7.6pt;
-    margin-bottom:8px;
-  }
-  th, td{
-    border:1px solid #000;
-    padding:2px 3px;
-    vertical-align:top;
-    word-wrap:break-word;
-  }
-  thead th{
-    background:#e9e9e9;
-    text-align:center;
-    font-weight:bold;
-    font-size:7.3pt;
-    padding:4px 2px;
-  }
-  td.c{ text-align:center; }
-  td.r{ text-align:right; }
-  td.ket{ white-space:pre-line; font-size:7pt; line-height:1.35; }
-  td.idx{ font-weight:bold; }
-  td.idx[rowspan]{ vertical-align:middle; }
-  td.m3cell{
-    text-align:right;
-    font-variant-numeric:tabular-nums;
-    cursor:default;
-    color:#111;
-  }
-  td.merged-center { text-align:center; vertical-align:middle; }
+        .app-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #2c3e4f;
+        }
 
-  tbody tr{ page-break-inside:avoid; }
-  thead{ display:table-header-group; }
+        /* Tab */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            background: white;
+            padding: 6px;
+            border-radius: 40px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
 
-  tfoot td{
-    font-weight:bold;
-    background:#e9e9e9;
-    text-align:center;
-    padding:4px 2px;
-  }
+        .tab {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6c7a8e;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: all 0.2s;
+            text-align: center;
+        }
 
-  .act{ border:none !important; padding:0 0 0 4px !important; }
-  .act .del{
-    width:17px; height:17px; line-height:15px;
-    border:1px solid #fca5a5; border-radius:4px;
-    background:#fee2e2; color:#b91c1c;
-    font-size:13px; font-family:system-ui,sans-serif;
-    cursor:pointer; padding:0; opacity:.35; transition:.15s;
-  }
-  tr:hover .act .del{ opacity:1; }
+        .tab.active {
+            background: #C62828;
+            color: white;
+        }
 
-  tbody td.sel{
-    background:#dbeafe !important;
-    box-shadow: inset 0 0 0 2px #2563eb;
-  }
-  tbody td.sel:focus{ outline:none; }
+        .tab:hover:not(.active) {
+            background: #f0f2f5;
+            color: #C62828;
+        }
 
-  .signs{
-    display:flex; justify-content:space-between; gap:10px;
-    margin-top:0.5cm;          /* 5 mm di bawah paragraf penutup */
-    text-align:center;
-  }
-  .signs .s{ flex:1; }
-  .signs .s .sp{ height:62px; }
+        /* Panel */
+        .panel {
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: none;
+        }
 
-  [contenteditable="true"]{ transition:background .12s; }
-  [contenteditable="true"]:hover{ background:#f3f4f6; }
-  [contenteditable="true"]:focus{
-    outline:2px solid #93c5fd; outline-offset:-2px; background:#eff6ff;
-  }
+        .panel.active {
+            display: block;
+        }
 
-  @media print{
-    @page{ size:A4; margin:0; }
-    body{ background:#fff; }
-    .toolbar{ display:none !important; }
-    .no-print{ display:none !important; }
-    .page{
-      width:210mm; min-height:0;
-      margin:0; padding:12mm 13mm;
-      box-shadow:none;
-    }
-    [contenteditable="true"]{ background:transparent !important; outline:none !important; }
-    .act{ display:none !important; }
-    tbody td.sel{ background:transparent !important; box-shadow:none !important; }
-  }
-</style>
+        /* Upload box */
+        .upload-box {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 14px;
+            padding: 12px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .upload-box:hover {
+            border-color: #C62828;
+            background: #fff5f5;
+        }
+
+        .upload-icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .upload-text {
+            font-size: 0.7rem;
+            color: #475569;
+        }
+
+        .file-info {
+            font-size: 0.65rem;
+            color: #5b6e8c;
+            background: #f1f5f9;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #C62828;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #B71C1C;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Preview area */
+        .preview-area {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .empty-preview {
+            text-align: center;
+            padding: 30px 20px;
+            color: #94a3b8;
+            background: #f8fafc;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            width: 100%;
+        }
+
+        /* Halaman A4 */
+        .a4-page {
+            width: 100%;
+            max-width: 210mm;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            margin: 0 auto;
+        }
+
+        /* ============================================================
+           GRID 3x3 — TAP 1 (Label Normal) — TEKS & LABEL DIPERBESAR
+           ============================================================ */
+        .grid-3x3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 3px;              /* sebelumnya 6px → sel lebih besar */
+            padding: 3mm;          /* sebelumnya 6mm → area label lebih luas */
+            aspect-ratio: 210 / 297;
+            width: 100%;
+        }
+
+        /* Card label — border tipis agar area gambar lebih luas */
+        .grid-3x3 .photo-card {
+            min-height: 0;
+            border-width: 2px;     /* sebelumnya 3px */
+            padding: 0;
+        }
+
+        /* Gambar label — tetap utuh (contain) tapi mengisi sel maksimal */
+        .grid-3x3 .photo-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;   /* gambar tidak terpotong */
+            display: block;
+            background-color: #ffffff;
+        }
+
+        /* Placeholder sel kosong — TEKS DIPERBESAR */
+        .grid-3x3 .empty-cell {
+            font-size: 2.4rem;     /* sebelumnya 0.8rem → 3× lebih besar */
+            font-weight: 800;
+            color: #475569;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+
+        /* ============================================================
+           GRID Custom — TAP 2 (Label Panjang)
+           ============================================================ */
+        .grid-custom {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 6mm;
+            width: 100%;
+            align-items: start;
+        }
+
+        .grid-custom .photo-card {
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .grid-custom .photo-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        /* Base .photo-card & .empty-cell */
+        .photo-card {
+            border: 3px solid #000000;
+            background: #fefefe;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .empty-cell {
+            background: #f8fafc;
+            border: 3px solid #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media screen and (max-width: 230mm) {
+            .app-wrapper {
+                max-width: 100%;
+                padding: 0 6px;
+            }
+            .a4-page {
+                transform: scale(1);
+                width: 100%;
+            }
+            .grid-3x3 {
+                gap: 2px;          /* lebih rapat */
+                padding: 2mm;      /* sel lebih besar */
+            }
+            .grid-custom {
+                gap: 4px;
+                padding: 4mm;
+            }
+            .photo-card {
+                border-width: 2px;
+            }
+            .grid-3x3 .empty-cell {
+                font-size: 1.8rem; /* placeholder tetap besar di tablet */
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .grid-3x3 {
+                gap: 2px;
+                padding: 2mm;
+            }
+            .grid-custom {
+                gap: 3px;
+                padding: 3mm;
+            }
+            .grid-3x3 .empty-cell {
+                font-size: 1.4rem; /* placeholder tetap besar di HP */
+            }
+            .btn {
+                padding: 6px 10px;
+                font-size: 0.65rem;
+            }
+            .tab {
+                padding: 6px 8px;
+                font-size: 0.7rem;
+            }
+        }
+
+        /* Toast & Loader */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1e293b;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 2000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+
+        .loader.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #C62828;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
-<div class="toolbar no-print">
-  <div class="brand">
-    Surat Jalan Generator
-    <small>M³ otomatis (P × L × T ÷ 1000) — Mode Edit untuk teks, Mode Pilih untuk merge</small>
-  </div>
-
-  <button type="button" id="btnMode" title="Aktifkan Mode Pilih untuk menggabungkan sel">Mode: Edit</button>
-
-  <div class="tool-group">
-    <button type="button" id="btnMergeCenter" disabled title="Gabungkan sel dan rata tengah">⊞ Merge &amp; Center</button>
-    <button type="button" id="btnMergeAcross" disabled title="Gabungkan sel per baris">⇔ Merge Across</button>
-    <button type="button" id="btnMergeCells"  disabled title="Gabungkan sel tanpa ubah perataan">⊞ Merge Cells</button>
-    <button type="button" id="btnUnmerge"     disabled title="Pisahkan sel gabungan">⊟ Unmerge</button>
-  </div>
-
-  <!-- === TOMBOL ALIGNMENT === -->
-  <div class="tool-group">
-    <button type="button" id="btnAlignLeft"  title="Rata kiri (align left)">⬅ Kiri</button>
-    <button type="button" id="btnAlignRight" title="Rata kanan (align right)">Kanan ➡</button>
-  </div>
-
-  <span class="sel-info" id="selInfo">0 sel</span>
-
-  <div class="tool-group">
-    <button type="button" id="btnAdd">+ Tambah Baris</button>
-    <button type="button" id="btnReset">↺ Reset Data PDF</button>
-    <button type="button" class="primary" id="btnDownload">⬇ Download PDF</button>
-  </div>
-</div>
-
-<div class="page" id="page">
-
-  <div class="doc-title">SURAT JALAN</div>
-
-  <div class="meta">
-    <div class="tgl"><span contenteditable="true">Kupang, 21 September 2026</span></div>
-    <div class="row">
-      <div>No&nbsp;&nbsp;: <span contenteditable="true">KPG/SBY/21-09-2026/004</span></div>
-      <div>Hal&nbsp;: <span contenteditable="true">Pengiriman Sparepart Bekas</span></div>
+<div class="app-wrapper">
+    <div class="top-bar">
+        <span class="app-title">Convert Tools PDS KUPANG</span>
+        <img src="https://z-cdn-media.chatglm.cn/files/a0b674d0-3b9b-4d8b-a3a5-4d06cbbe2a88.png?auth_key=1870195860-833d93a4889b4ef49c52d0c4e3a13a73-0-dfae0851ee06920b914c96e9fc3fc540" 
+             alt="Polytron" class="logo">
     </div>
-  </div>
 
-  <div class="to">
-    <div>Kepada Yth,</div>
-    <div class="b" contenteditable="true">IBU Yuli chandrawaty</div>
-    <div contenteditable="true">Di Tempat</div>
-  </div>
+    <div class="tabs">
+        <button class="tab active" data-tab="tab1">TAP 1 ( Label Normal )</button>
+        <button class="tab" data-tab="tab2">TAP 2 ( Label Panjang )</button>
+    </div>
 
-  <p class="para" contenteditable="true">Dengan Hormat, Berkaitan dengan adanya Permintaan Sparepart Bekas Dari ASS KUDUS DAN SAYUNG, di PDS KUPANG Maka dengan ini kami mengirimkan Sparepart Bekas tersebut sbb:</p>
+    <div id="panel1" class="panel active">
+        <div class="upload-box" id="uploadBoxGrid">
+            <div class="upload-icon">📂</div>
+            <div class="upload-text">Upload Gambar / PDF</div>
+            <input type="file" id="fileGrid" multiple accept="image/*,application/pdf" style="display:none">
+        </div>
+        <div id="infoGrid" class="file-info" style="display:none"></div>
+        <div class="button-group">
+            <button id="downloadGridBtn" class="btn btn-primary" disabled>📄 Download PDF</button>
+            <button id="resetGridBtn" class="btn btn-secondary" disabled>🗑️ Reset</button>
+        </div>
+    </div>
 
-  <table id="tbl">
-    <colgroup>
-      <col style="width:7mm">
-      <col style="width:46mm">
-      <col style="width:10mm">
-      <col style="width:18mm">
-      <col style="width:15mm">
-      <col style="width:9mm">
-      <col style="width:74mm">
-      <col style="width:5mm" class="no-print">
-    </colgroup>
-    <thead>
-      <tr>
-        <th>NO</th>
-        <th>NAMA BARANG</th>
-        <th>QTY</th>
-        <th>UKURAN</th>
-        <th>M³</th>
-        <th>Colly</th>
-        <th>KETERANGAN</th>
-        <th class="no-print"></th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-    <tfoot>
-      <tr>
-        <td colspan="2">TOTAL M³</td>
-        <td id="totalQty">-</td>
-        <td></td>
-        <td id="totalM3">0.000</td>
-        <td id="totalColly">-</td>
-        <td colspan="2" style="text-align:left; padding-left:6px;">Data Rincian Sparepart Bekas Terlampir !</td>
-      </tr>
-    </tfoot>
-  </table>
+    <div id="panel2" class="panel">
+        <div class="upload-box" id="uploadBoxPhoto">
+            <div class="upload-icon">📂</div>
+            <div class="upload-text">Upload Gambar / PDF</div>
+            <input type="file" id="filePhoto" multiple accept="image/*,application/pdf" style="display:none">
+        </div>
+        <div id="infoPhoto" class="file-info" style="display:none"></div>
+        <div class="button-group">
+            <button id="downloadPhotoBtn" class="btn btn-primary" disabled>📄 Download PDF</button>
+            <button id="resetPhotoBtn" class="btn btn-secondary" disabled>🗑️ Reset</button>
+        </div>
+    </div>
 
-  <p class="para" contenteditable="true">Demikian Surat Jalan ini kami buat, atas perhatian dan kerja samanya kami ucapkan terima kasih.</p>
-
-  <div class="signs">
-    <div class="s"><div contenteditable="true">Dibuat Oleh,</div><div class="sp"></div></div>
-    <div class="s"><div contenteditable="true">Mengetahui,</div><div class="sp"></div></div>
-    <div class="s"><div contenteditable="true">EXPEDISI,</div><div class="sp"></div></div>
-    <div class="s"><div contenteditable="true">Diterima,</div><div class="sp"></div></div>
-  </div>
-
+    <div id="previewContainer" class="preview-area">
+        <div class="empty-preview">
+            📄 Belum ada data<br> Unggah Foto atau File PDF (Auto-convert). Sistem akan menyusun otomatis ke format A4. By Om Berlin
+        </div>
+    </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<div id="toast" class="toast"></div>
+<div id="loader" class="loader">
+    <div class="spinner"></div>
+    <div style="color:#334155; font-size:0.8rem;">Memproses...</div>
+</div>
 
 <script>
-(function () {
-  'use strict';
+    // Konfigurasi PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  var tbody = document.getElementById('tbody');
+    let imagesGrid = [];
+    let imagesPhoto = [];
+    let activeTab = 'grid';
 
-  var RAW = [
-    ["GLASS PANEL 24 INCHI", "24", "63X47X16", "",
-     "No : KKG/KPG/SV/26/07/001 | TGL : 15/07/2026 | PO : 41900045521\nTanggal Bukti : 15/07/2026 | Nomor Bukti : TRU/KPG/SV/26/07/001"],
-    ["GLASS PANEL 32 INCHI", "20", "88X56X25", "",
-     "No : KKG/KPG/SV/26/07/002 | TGL : 17/07/2026 | PO : 4190004657\nNo : KKG/KPG/SV/26/08/010 | TGL : 10/08/2026 | PO : 4190005318"],
-    ["GLASS PANEL 40 INCHI", "12", "98X64X12", "",
-     "No : KKG/KPG/SV/26/07/003 | TGL : 30/07/2026 | PO : 4190005014\nTanggal Bukti : 30/07/2026 | Nomor Bukti : TRU/KPG/SV/26/07/002"],
-    ["GLASS PANEL 43 INCHI", "16", "110X72X15", "",
-     "No : KKG/KPG/SV/26/08/009 | TGL : 10/08/2026 | PO : 4190005316\nNo : KKG/KPG/SV/26/08/011 | TGL : 21/08/2026 | PO : 4190005665"],
-    ["PANEL ASSY 43 INCHI", "1", "123X56X74", "",
-     "Tanggal Bukti : 21/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/008\nNo : KKG/KPG/SV/26/08/012 | TGL : 21/08/2026 | PO : 4190005668"],
-    ["GLASS PANEL 50 INCHI", "2", "124X84X14", "",
-     "No : KKG/KPG/SV/26/08/007 | TGL : 07/08/2026 | PO : 4190005215\nNo : KKG/KPG/SV/26/08/023 | TGL : 29/08/2026 | PO : 4190005909"],
-    ["MODUL VIDEOBOARD", "4", "66X43X24", "",
-     "Tanggal Bukti : 04/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/001"],
-    ["MODUL AUDIO", "14", "66X43X24", "",
-     "No : KKG/KPG/SV/26/08/004 | TGL : 04/08/2026 | PO : 4190005110\nTanggal Bukti : 04/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/002"],
-    ["MODUL HOME APLIANCE", "2", "49X33X28", "",
-     "No : KKG/KPG/SV/26/08/022 | TGL : 29/08/2026 | PO : 4190005907\nTanggal Bukti : 29/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/010"],
-    ["MOTOR + GEARBOX", "9", "48X46X35", "",
-     "No : KKG/KPG/SV/26/08/002 | TGL : 03/08/2026 | PO : 4190005096"],
-    ["COMPRESSOR", "9", "106X36X29", "",
-     "No : KKG/KPG/SV/26/08/005 | TGL : 04/08/2026 | PO : 4190005122\nNo : KKG/KPG/SV/26/08/006 | TGL : 06/08/2026 | PO : 4190005175"],
-    ["COMPRESSOR", "9", "64X64X30", "",
-     "Tanggal Bukti : 06/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/003"],
-    ["COMPRESSOR", "3", "57X31X35", "",
-     "Tanggal Bukti : 06/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/004"],
-    ["COMPRESSOR", "3", "52X39X36", "",
-     "Tanggal Bukti : 07/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/005"],
-    ["COMPRESSOR", "6", "106X36X29", "",
-     "No : KKG/KPG/SV/26/08/008 | TGL : 07/08/2026 | PO : 4190005225"],
-    ["COMPRESSOR", "7", "106X36X29", "",
-     "Tanggal Bukti : 07/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/006"],
-    ["COMPRESSOR", "6", "56X52X29", "1",
-     "Tanggal Bukti : 07/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/007"],
-    ["COMPRESSOR PAC05VH / A0AU85B10524", "1", "28X20X37", "1",
-     "No : KKG/KPG/SV/26/08/013 | TGL : 21/08/2026 | PO : 4190005686"],
-    ["COMPRESSOR AC", "2", "34X20X49", "1",
-     "No : KKG/KPG/SV/26/08/014 | TGL : 21/08/2026 | PO : 4190005698"],
-    ["COMPRESSOR", "4", "70X37X30", "1",
-     "No : KKG/KPG/SV/26/08/015 | TGL : 22/08/2026 | PO : 4190005717"],
-    ["COMPRESSOR", "7", "60X58X29", "1",
-     "No : KKG/KPG/SV/26/08/016 | TGL : 22/08/2026 | PO : 4190005729"],
-    ["COMPRESSOR+MOTOR+GEARBOX", "7", "88X33X25", "1",
-     "No : KKG/KPG/SV/26/08/017 | TGL : 24/08/2026 | PO : 4190005754"],
-    ["COMPRESSOR + MOTOR", "5", "77X32X25", "1",
-     "Tanggal Bukti : 26/08/2026 | Nomor Bukti : TRU/KPG/SV/26/08/009"],
-    ["COMPRESSOR", "8", "60X60X37", "1",
-     "No : KKG/KPG/SV/26/08/018 | TGL : 28/08/2026 | PO : 4190005883"],
-    ["COMPRESSOR", "2", "83X33X34", "1",
-     "No : KKG/KPG/SV/26/08/019 | TGL : 29/08/2026 | PO : 4190005900\nNo : KKG/KPG/SV/26/08/020 | TGL : 29/08/2026 | PO : 4190005901"]
-  ];
+    const previewDiv = document.getElementById('previewContainer');
+    const emptyState = document.querySelector('.empty-preview');
+    const toast = document.getElementById('toast');
+    const loader = document.getElementById('loader');
 
-  var defaultRows = RAW.map(function (a) {
-    return { name: a[0], qty: a[1], uk: a[2], colly: a[3], ket: a[4] };
-  });
+    const tabBtns = document.querySelectorAll('.tab');
+    const panel1 = document.getElementById('panel1');
+    const panel2 = document.getElementById('panel2');
 
-  var selectMode = false;
-  var selectedCells = new Set();
-  var anchorCell = null;
-  var lastEditCell = null;   // sel terakhir yang difokus di Mode Edit
+    const fileGrid = document.getElementById('fileGrid');
+    const uploadBoxGrid = document.getElementById('uploadBoxGrid');
+    const downloadGridBtn = document.getElementById('downloadGridBtn');
+    const resetGridBtn = document.getElementById('resetGridBtn');
+    const infoGrid = document.getElementById('infoGrid');
 
-  function esc(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+    const filePhoto = document.getElementById('filePhoto');
+    const uploadBoxPhoto = document.getElementById('uploadBoxPhoto');
+    const downloadPhotoBtn = document.getElementById('downloadPhotoBtn');
+    const resetPhotoBtn = document.getElementById('resetPhotoBtn');
+    const infoPhoto = document.getElementById('infoPhoto');
 
-  function num(v) {
-    var s = String(v == null ? '' : v).replace(/\s/g, '');
-    if (!s) return 0;
-    if (s.indexOf(',') > -1 && s.indexOf('.') > -1) {
-      if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
-      else s = s.replace(/,/g, '');
-    } else if (s.indexOf(',') > -1) s = s.replace(',', '.');
-    var n = parseFloat(s);
-    return isNaN(n) ? 0 : n;
-  }
+    function showToast(msg, isError = false) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        toast.style.background = isError ? '#b91c1c' : '#1e293b';
+        setTimeout(() => toast.classList.remove('show'), 2800);
+    }
 
-  function parseM3(uk) {
-    if (!uk) return null;
-    var s = String(uk).trim().toUpperCase().replace(/[×X*]/g, 'X').replace(/,/g, '.');
-    var parts = s.split('X');
-    if (parts.length < 3) return null;
-    var nums = parts.slice(0, 3).map(function (t) {
-      t = t.replace(/[^0-9.]/g, '');
-      var n = parseFloat(t);
-      return isFinite(n) ? n : NaN;
-    });
-    if (nums.some(function (n) { return !isFinite(n) || n <= 0; })) return null;
-    return (nums[0] * nums[1] * nums[2]) / 1000;
-  }
-
-  function makeRow(r) {
-    r = r || {};
-    var tr = document.createElement('tr');
-    var ce = selectMode ? '' : ' contenteditable="true"';
-    tr.innerHTML =
-      '<td class="c idx"></td>' +
-      '<td' + ce + ' data-f="name">' + esc(r.name) + '</td>' +
-      '<td class="c"' + ce + ' data-f="qty">' + esc(r.qty) + '</td>' +
-      '<td class="c"' + ce + ' data-f="uk">' + esc(r.uk) + '</td>' +
-      '<td class="r m3cell" title="Otomatis dari UKURAN (P×L×T÷1000)"></td>' +
-      '<td class="c"' + ce + ' data-f="colly">' + esc(r.colly) + '</td>' +
-      '<td class="ket"' + ce + ' data-f="ket">' + esc(r.ket) + '</td>' +
-      '<td class="act no-print"><button type="button" class="del" title="Hapus baris">&times;</button></td>';
-    updateRowM3(tr);
-    return tr;
-  }
-
-  function updateRowM3(tr) {
-    var ukCell = tr.querySelector('[data-f="uk"]');
-    var m3Cell = tr.querySelector('.m3cell');
-    if (!ukCell || !m3Cell) return;
-    var v = parseM3(ukCell.textContent);
-    if (v === null) { m3Cell.textContent = ''; m3Cell.dataset.m3 = ''; }
-    else { m3Cell.textContent = v.toFixed(3); m3Cell.dataset.m3 = String(v); }
-  }
-
-  function render(rows) {
-    tbody.innerHTML = '';
-    rows.forEach(function (r) { tbody.appendChild(makeRow(r)); });
-    clearSelection();
-    renumber();
-    recalc();
-  }
-
-  function renumber() {
-    var n = 1;
-    Array.prototype.forEach.call(tbody.rows, function (tr) {
-      Array.prototype.forEach.call(tr.cells, function (td) {
-        if (td.classList.contains('idx')) {
-          td.textContent = n++;
+    function setLoader(show, text = 'Memproses...') {
+        if (show) {
+            loader.querySelector('div:last-child').innerText = text;
+            loader.classList.add('active');
+        } else {
+            loader.classList.remove('active');
         }
-      });
-    });
-  }
+    }
 
-  function recalc() {
-    var qty = 0, m3 = 0, colly = 0;
-    Array.prototype.forEach.call(tbody.rows, function (tr) {
-      var qtyEl   = tr.querySelector('[data-f="qty"]');
-      var collyEl = tr.querySelector('[data-f="colly"]');
-      var m3El    = tr.querySelector('.m3cell');
-      if (qtyEl)   qty   += num(qtyEl.textContent);
-      if (collyEl) colly += num(collyEl.textContent);
-      if (m3El && m3El.dataset.m3) m3 += parseFloat(m3El.dataset.m3) || 0;
-    });
-    document.getElementById('totalQty').textContent   = qty || '-';
-    document.getElementById('totalM3').textContent    = m3.toFixed(3);
-    document.getElementById('totalColly').textContent = colly || '-';
-  }
-
-  function buildTbodyGrid() {
-    var rows = Array.from(tbody.rows);
-    var grid = [];
-    rows.forEach(function (tr, r) {
-      if (!grid[r]) grid[r] = [];
-      var c = 0;
-      Array.from(tr.cells).forEach(function (td) {
-        while (grid[r][c]) c++;
-        var rs = td.rowSpan || 1;
-        var cs = td.colSpan || 1;
-        for (var i = 0; i < rs; i++) {
-          if (!grid[r + i]) grid[r + i] = [];
-          for (var j = 0; j < cs; j++) {
-            grid[r + i][c + j] = {
-              cell: td,
-              origin: (i === 0 && j === 0),
-              r: r + i, c: c + j,
-              rs: rs, cs: cs
-            };
-          }
+    async function pdfToImages(file) {
+        const arrayBuf = await file.arrayBuffer();
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+        const images = [];
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+            const page = await pdfDoc.getPage(i);
+            const viewport = page.getViewport({ scale: 2.8 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport: viewport, intent: 'print' }).promise;
+            images.push(canvas.toDataURL('image/jpeg', 0.95));
         }
-        c += cs;
-      });
-    });
-    return grid;
-  }
-
-  function findCellPos(grid, td) {
-    for (var r = 0; r < grid.length; r++) {
-      for (var c = 0; c < grid[r].length; c++) {
-        var g = grid[r][c];
-        if (g && g.cell === td && g.origin) return g;
-      }
+        return images;
     }
-    return null;
-  }
 
-  function selectCell(td) {
-    if (!td || td.classList.contains('act')) return;
-    selectedCells.add(td);
-    td.classList.add('sel');
-    updateMergeButtonStates();
-  }
-
-  function toggleCell(td) {
-    if (!td || td.classList.contains('act')) return;
-    if (selectedCells.has(td)) {
-      selectedCells.delete(td);
-      td.classList.remove('sel');
-    } else {
-      selectedCells.add(td);
-      td.classList.add('sel');
+    function readImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     }
-    updateMergeButtonStates();
-  }
 
-  function clearSelection() {
-    selectedCells.forEach(function (td) { td.classList.remove('sel'); });
-    selectedCells.clear();
-    anchorCell = null;
-    updateMergeButtonStates();
-  }
-
-  function selectRange(anchorTd, currentTd) {
-    var grid = buildTbodyGrid();
-    var a = findCellPos(grid, anchorTd);
-    var b = findCellPos(grid, currentTd);
-    if (!a || !b) return;
-
-    var minR = Math.min(a.r, b.r);
-    var maxR = Math.max(a.r + a.rs - 1, b.r + b.rs - 1);
-    var minC = Math.min(a.c, b.c);
-    var maxC = Math.max(a.c + a.cs - 1, b.c + b.cs - 1);
-
-    clearSelection();
-    for (var r = minR; r <= maxR; r++) {
-      for (var c = minC; c <= maxC; c++) {
-        var g = grid[r] && grid[r][c];
-        if (g && g.origin && !g.cell.classList.contains('act')) {
-          selectedCells.add(g.cell);
-          g.cell.classList.add('sel');
+    async function processFiles(files) {
+        let results = [];
+        for (const file of files) {
+            if (file.type === 'application/pdf') {
+                const pdfImages = await pdfToImages(file);
+                results.push(...pdfImages);
+            } else if (file.type.startsWith('image/')) {
+                const img = await readImage(file);
+                results.push(img);
+            }
         }
-      }
-    }
-    updateMergeButtonStates();
-  }
-
-  function updateMergeButtonStates() {
-    var n = selectedCells.size;
-    var canMerge = n >= 2;
-    document.getElementById('btnMergeCenter').disabled = !canMerge;
-    document.getElementById('btnMergeAcross').disabled = !canMerge;
-    document.getElementById('btnMergeCells').disabled  = !canMerge;
-
-    var canUnmerge = false;
-    selectedCells.forEach(function (td) {
-      if (td.rowSpan > 1 || td.colSpan > 1) canUnmerge = true;
-    });
-    document.getElementById('btnUnmerge').disabled = !canUnmerge;
-
-    document.getElementById('selInfo').textContent = n + ' sel';
-  }
-
-  function getSelectionInfo(requireUnmerged) {
-    if (selectedCells.size < 2) return null;
-
-    var grid = buildTbodyGrid();
-    var positions = [];
-    var arr = Array.from(selectedCells);
-    for (var i = 0; i < arr.length; i++) {
-      var p = findCellPos(grid, arr[i]);
-      if (!p) return null;
-      if (requireUnmerged && (p.rs !== 1 || p.cs !== 1)) return null;
-      positions.push(p);
+        return results;
     }
 
-    var minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
-    positions.forEach(function (p) {
-      minR = Math.min(minR, p.r);
-      maxR = Math.max(maxR, p.r + p.rs - 1);
-      minC = Math.min(minC, p.c);
-      maxC = Math.max(maxC, p.c + p.cs - 1);
-    });
-
-    var covered = new Set();
-    positions.forEach(function (p) {
-      for (var i = 0; i < p.rs; i++) {
-        for (var j = 0; j < p.cs; j++) {
-          covered.add((p.r + i) + ',' + (p.c + j));
+    function updateFileInfo(tabType, files) {
+        let pdfCount = 0, imgCount = 0;
+        for (const f of files) {
+            if (f.type === 'application/pdf') pdfCount++;
+            else if (f.type.startsWith('image/')) imgCount++;
         }
-      }
-    });
-    var total = (maxR - minR + 1) * (maxC - minC + 1);
-    if (covered.size !== total) return null;
-
-    return { grid: grid, minR: minR, maxR: maxR, minC: minC, maxC: maxC };
-  }
-
-  function doMerge(center) {
-    var info = getSelectionInfo(true);
-    if (!info) {
-      alert('Pilih area persegi (minimal 2 sel) yang belum digabung.\nPastikan tidak ada sel gabungan di dalam pilihan.');
-      return;
-    }
-    var grid = info.grid;
-    var target = grid[info.minR][info.minC].cell;
-    var newRS = info.maxR - info.minR + 1;
-    var newCS = info.maxC - info.minC + 1;
-
-    Array.from(selectedCells).forEach(function (td) {
-      if (td !== target && td.parentNode) td.parentNode.removeChild(td);
-    });
-
-    target.rowSpan = newRS;
-    target.colSpan = newCS;
-    target.setAttribute('rowspan', newRS);
-    target.setAttribute('colspan', newCS);
-
-    if (center) {
-      target.classList.add('merged-center');
-      target.style.textAlign = 'center';
-      target.style.verticalAlign = 'middle';
-    }
-
-    clearSelection();
-    selectCell(target);
-    renumber();
-    recalc();
-  }
-
-  function doMergeAcross() {
-    var info = getSelectionInfo(true);
-    if (!info) {
-      alert('Pilih area persegi (minimal 2 sel per baris) yang belum digabung.');
-      return;
-    }
-    var grid = info.grid;
-
-    for (var r = info.minR; r <= info.maxR; r++) {
-      var target = grid[r][info.minC].cell;
-      for (var c = info.minC + 1; c <= info.maxC; c++) {
-        var td = grid[r][c].cell;
-        if (td !== target && td.parentNode) td.parentNode.removeChild(td);
-      }
-      var span = info.maxC - info.minC + 1;
-      target.colSpan = span;
-      target.setAttribute('colspan', span);
-    }
-
-    clearSelection();
-    renumber();
-    recalc();
-  }
-
-  function doUnmerge() {
-    var toUnmerge = [];
-    selectedCells.forEach(function (td) {
-      if (td.rowSpan > 1 || td.colSpan > 1) toUnmerge.push(td);
-    });
-    if (toUnmerge.length === 0) {
-      alert('Tidak ada sel gabungan dalam pilihan.');
-      return;
-    }
-
-    toUnmerge.forEach(function (td) { unmergeCell(td); });
-
-    clearSelection();
-    renumber();
-    recalc();
-  }
-
-  function unmergeCell(td) {
-    var grid = buildTbodyGrid();
-    var pos = findCellPos(grid, td);
-    if (!pos) return;
-    var r = pos.r, c = pos.c, rs = pos.rs, cs = pos.cs;
-    if (rs === 1 && cs === 1) return;
-
-    var content = td.innerHTML;
-    var baseClasses = td.className
-      .replace(/\bsel\b/g, '')
-      .replace(/\bmerged-center\b/g, '')
-      .replace(/\s+/g, ' ').trim();
-    /* Simpan alignment inline agar tidak hilang saat unmerge */
-    var baseTextAlign = (td.style && td.style.textAlign) ? td.style.textAlign : '';
-
-    var attrs = {};
-    Array.from(td.attributes).forEach(function (a) {
-      if (a.name === 'rowspan' || a.name === 'colspan') return;
-      if (a.name === 'class' || a.name === 'style') return;
-      attrs[a.name] = a.value;
-    });
-
-    var parent = td.parentNode;
-    for (var j = 0; j < cs; j++) {
-      var newTd = document.createElement('td');
-      if (baseClasses) newTd.className = baseClasses;
-      if (baseTextAlign) newTd.style.textAlign = baseTextAlign;
-      Object.keys(attrs).forEach(function (k) { newTd.setAttribute(k, attrs[k]); });
-      if (j === 0) newTd.innerHTML = content;
-      parent.insertBefore(newTd, td);
-    }
-    parent.removeChild(td);
-
-    for (var i = 1; i < rs; i++) {
-      var row = tbody.rows[r + i];
-      if (!row) continue;
-
-      var colCounter = 0;
-      var insertBefore = null;
-      for (var k = 0; k < row.cells.length; k++) {
-        if (colCounter >= c) { insertBefore = row.cells[k]; break; }
-        colCounter += row.cells[k].colSpan || 1;
-      }
-
-      for (var j2 = 0; j2 < cs; j2++) {
-        var newTd2 = document.createElement('td');
-        if (baseClasses) newTd2.className = baseClasses;
-        if (baseTextAlign) newTd2.style.textAlign = baseTextAlign;
-        Object.keys(attrs).forEach(function (k2) { newTd2.setAttribute(k2, attrs[k2]); });
-        if (insertBefore) row.insertBefore(newTd2, insertBefore);
-        else row.appendChild(newTd2);
-      }
-    }
-  }
-
-  /* ==========================================================
-     ALIGNMENT — KIRI / KANAN
-     ========================================================== */
-  function applyAlignment(align) {
-    var targets = [];
-
-    if (selectMode) {
-      /* Mode Pilih: pakai sel yang sedang di-seleksi */
-      selectedCells.forEach(function (td) {
-        if (!td.classList.contains('act')) targets.push(td);
-      });
-    } else {
-      /* Mode Edit: pakai sel yang terakhir difokus / aktif */
-      var cell = lastEditCell;
-      if (!cell || !tbody.contains(cell)) {
-        var active = document.activeElement;
-        cell = active && active.closest ? active.closest('td') : null;
-      }
-      if (cell && tbody.contains(cell) && !cell.classList.contains('act')) {
-        targets.push(cell);
-      }
-    }
-
-    if (targets.length === 0) {
-      alert('Klik dulu di dalam sel tabel (Mode Edit), atau pilih sel di Mode Pilih.');
-      return;
-    }
-
-    targets.forEach(function (td) {
-      td.style.textAlign = align;
-    });
-  }
-
-  /* ==========================================================
-     MODE EDIT / PILIH
-     ========================================================== */
-  function setMode(select) {
-    selectMode = !!select;
-
-    var btn = document.getElementById('btnMode');
-    btn.textContent = selectMode ? 'Mode: Pilih' : 'Mode: Edit';
-    btn.classList.toggle('active', selectMode);
-    btn.title = selectMode
-      ? 'Mode Pilih aktif — klik sel untuk memilih, Ctrl/Shift untuk multi-pilih'
-      : 'Klik untuk masuk Mode Pilih (untuk merge)';
-
-    Array.from(tbody.querySelectorAll('[data-f]')).forEach(function (el) {
-      if (selectMode) el.removeAttribute('contenteditable');
-      else el.setAttribute('contenteditable', 'true');
-    });
-
-    if (selectMode) {
-      if (document.activeElement && tbody.contains(document.activeElement)) {
-        document.activeElement.blur();
-      }
-    } else {
-      clearSelection();
-    }
-    updateMergeButtonStates();
-  }
-
-  /* ==========================================================
-     EVENT HANDLERS
-     ========================================================== */
-  tbody.addEventListener('input', function (e) {
-    var tr = e.target.closest ? e.target.closest('tr') : null;
-    if (!tr) return;
-    if (e.target.getAttribute && e.target.getAttribute('data-f') === 'uk') updateRowM3(tr);
-    recalc();
-  });
-
-  tbody.addEventListener('click', function (e) {
-    var btn = e.target.closest ? e.target.closest('.del') : null;
-    if (!btn) return;
-    var tr = btn.closest('tr');
-    if (tr) { tr.parentNode.removeChild(tr); renumber(); recalc(); }
-  });
-
-  /* Track sel terakhir difokus di Mode Edit (untuk apply alignment) */
-  tbody.addEventListener('focusin', function (e) {
-    var td = e.target.closest ? e.target.closest('td') : null;
-    if (td && !td.classList.contains('act')) {
-      lastEditCell = td;
-    }
-  });
-
-  tbody.addEventListener('mousedown', function (e) {
-    if (!selectMode) return;
-
-    var td = e.target.closest ? e.target.closest('td') : null;
-    if (!td || !tbody.contains(td)) return;
-    if (td.classList.contains('act')) return;
-
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      toggleCell(td);
-      anchorCell = td;
-    } else if (e.shiftKey && anchorCell) {
-      e.preventDefault();
-      selectRange(anchorCell, td);
-    } else {
-      e.preventDefault();
-      clearSelection();
-      selectCell(td);
-      anchorCell = td;
-    }
-  });
-
-  document.addEventListener('mousedown', function (e) {
-    if (!selectMode) return;
-    if (e.target.closest && (e.target.closest('#tbody') || e.target.closest('.toolbar'))) return;
-    clearSelection();
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && selectMode) clearSelection();
-  });
-
-  document.getElementById('btnMode').addEventListener('click', function () {
-    setMode(!selectMode);
-  });
-
-  document.getElementById('btnMergeCenter').addEventListener('click', function () { doMerge(true); });
-  document.getElementById('btnMergeCells').addEventListener('click',  function () { doMerge(false); });
-  document.getElementById('btnMergeAcross').addEventListener('click', function () { doMergeAcross(); });
-  document.getElementById('btnUnmerge').addEventListener('click',     function () { doUnmerge(); });
-
-  /* Tombol alignment — preventDefault mousedown agar fokus sel tidak hilang */
-  ['btnAlignLeft', 'btnAlignRight'].forEach(function (id) {
-    document.getElementById(id).addEventListener('mousedown', function (e) {
-      e.preventDefault();
-    });
-  });
-  document.getElementById('btnAlignLeft').addEventListener('click',  function () { applyAlignment('left');  });
-  document.getElementById('btnAlignRight').addEventListener('click', function () { applyAlignment('right'); });
-
-  document.getElementById('btnAdd').addEventListener('click', function () {
-    tbody.appendChild(makeRow({}));
-    clearSelection();
-    renumber();
-    recalc();
-    var cell = tbody.lastElementChild.querySelector('[data-f="name"]');
-    if (cell) cell.focus();
-  });
-
-  document.getElementById('btnReset').addEventListener('click', function () {
-    if (confirm('Kembalikan seluruh isi surat jalan ke data awal (sesuai PDF)?')) {
-      render(defaultRows);
-      setMode(false);
-    }
-  });
-
-  /* ==========================================================
-     DOWNLOAD PDF — jsPDF + autoTable
-     ========================================================== */
-  function buildFileName() {
-    var noEl = document.querySelector('.meta .row > div:first-child span');
-    var noText = noEl ? noEl.textContent.trim() : 'Surat-Jalan';
-    var safe = noText.replace(/[\/\\:*?"<>|]/g, '-').replace(/\s+/g, '-') || 'Surat-Jalan';
-    return 'Surat-Jalan-' + safe + '.pdf';
-  }
-
-  function drawSpacedText(doc, text, startX, y, spacing) {
-    var cx = startX;
-    for (var i = 0; i < text.length; i++) {
-      doc.text(text[i], cx, y);
-      cx += doc.getTextWidth(text[i]) + spacing;
-    }
-  }
-
-  function buildPdfBody() {
-    var grid = buildTbodyGrid();
-    var body = [];
-
-    for (var r = 0; r < grid.length; r++) {
-      var row = [];
-      for (var c = 0; c < 7; c++) {
-        var g = grid[r] && grid[r][c];
-        if (!g) { row.push(''); continue; }
-        if (!g.origin) continue;
-
-        var td = g.cell;
-        if (td.classList.contains('act')) continue;
-
-        var cellDef = { content: td.textContent.trim() };
-        if (g.cs > 1) cellDef.colSpan = g.cs;
-        if (g.rs > 1) cellDef.rowSpan = g.rs;
-
-        /* === Tentukan alignment: inline style menang, baru fallback class === */
-        var inlineAlign = (td.style && td.style.textAlign) ? td.style.textAlign : '';
-        var halign = 'left';
-        if (inlineAlign) {
-          halign = inlineAlign;
-        } else if (td.classList.contains('c') || td.classList.contains('idx')) {
-          halign = 'center';
-        } else if (td.classList.contains('r') || td.classList.contains('m3cell')) {
-          halign = 'right';
+        const text = `📁 ${files.length} file: ${imgCount} gambar, ${pdfCount} PDF`;
+        if (tabType === 'grid') {
+            infoGrid.textContent = text;
+            infoGrid.style.display = 'inline-block';
+        } else {
+            infoPhoto.textContent = text;
+            infoPhoto.style.display = 'inline-block';
         }
+    }
 
-        var valign = 'top';
-        if (td.classList.contains('merged-center')) {
-          valign = 'middle';
-          if (!inlineAlign) halign = 'center';
+    // RENDER PREVIEW
+    function renderPreview() {
+        previewDiv.innerHTML = '';
+        const images = (activeTab === 'grid') ? imagesGrid : imagesPhoto;
+        
+        if (!images.length) {
+            previewDiv.appendChild(emptyState);
+            emptyState.style.display = 'flex';
+            return;
         }
+        emptyState.style.display = 'none';
 
-        cellDef.styles = { halign: halign, valign: valign };
-        row.push(cellDef);
-      }
-      body.push(row);
+        if (activeTab === 'grid') {
+            // TAP 1: 9 gambar per halaman
+            const perPage = 9;
+            for (let i = 0; i < images.length; i += perPage) {
+                const page = document.createElement('div');
+                page.className = 'a4-page';
+                const grid = document.createElement('div');
+                grid.className = 'grid-3x3';
+                const pageImages = images.slice(i, i + perPage);
+                for (const imgSrc of pageImages) {
+                    const box = document.createElement('div');
+                    box.className = 'photo-card';
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    img.style.objectFit = 'contain';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    box.appendChild(img);
+                    grid.appendChild(box);
+                }
+                const remaining = perPage - pageImages.length;
+                for (let r = 0; r < remaining; r++) {
+                    const empty = document.createElement('div');
+                    empty.className = 'photo-card empty-cell';
+                    empty.innerHTML = '—';
+                    grid.appendChild(empty);
+                }
+                page.appendChild(grid);
+                previewDiv.appendChild(page);
+            }
+        } else {
+            // TAP 2: 3 gambar per halaman
+            const perPage = 3;
+            for (let i = 0; i < images.length; i += perPage) {
+                const page = document.createElement('div');
+                page.className = 'a4-page';
+                const grid = document.createElement('div');
+                grid.className = 'grid-custom';
+                const pageImages = images.slice(i, i + perPage);
+                for (const imgSrc of pageImages) {
+                    const box = document.createElement('div');
+                    box.className = 'photo-card';
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.style.objectFit = 'contain';
+                    box.appendChild(img);
+                    grid.appendChild(box);
+                }
+                const remaining = perPage - pageImages.length;
+                for (let r = 0; r < remaining; r++) {
+                    const empty = document.createElement('div');
+                    empty.className = 'photo-card empty-cell';
+                    empty.innerHTML = '∅';
+                    grid.appendChild(empty);
+                }
+                page.appendChild(grid);
+                previewDiv.appendChild(page);
+            }
+        }
     }
-    return body;
-  }
 
-  function generatePDF() {
-    var jsPDF = window.jspdf.jsPDF;
-    var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    async function handleUpload(files, tabType) {
+        if (!files.length) return;
+        updateFileInfo(tabType, files);
+        setLoader(true, 'Memproses file...');
+        try {
+            const allImages = await processFiles(files);
+            if (!allImages.length) throw new Error('Tidak ada gambar valid');
+            
+            if (tabType === 'grid') {
+                imagesGrid = allImages;
+                downloadGridBtn.disabled = false;
+                resetGridBtn.disabled = false;
+                activeTab = 'grid';
+            } else {
+                imagesPhoto = allImages;
+                downloadPhotoBtn.disabled = false;
+                resetPhotoBtn.disabled = false;
+                activeTab = 'photo';
+            }
+            renderPreview();
+            showToast(`✅ ${allImages.length} halaman/gambar siap`);
+        } catch (err) {
+            showToast(`❌ Gagal: ${err.message}`, true);
+            if (tabType === 'grid') {
+                imagesGrid = [];
+                downloadGridBtn.disabled = true;
+                resetGridBtn.disabled = true;
+                infoGrid.style.display = 'none';
+            } else {
+                imagesPhoto = [];
+                downloadPhotoBtn.disabled = true;
+                resetPhotoBtn.disabled = true;
+                infoPhoto.style.display = 'none';
+            }
+            renderPreview();
+        } finally {
+            setLoader(false);
+        }
+    }
 
-    var pageW  = 210;
-    var pageH  = 297;
-    var ML = 13, MR = 13, MT = 12, MB = 12;
-    var contentW = pageW - ML - MR;
-    var centerX  = pageW / 2;
+    function resetData(tabType) {
+        if (!confirm('Hapus semua data?')) return;
+        if (tabType === 'grid') {
+            imagesGrid = [];
+            fileGrid.value = '';
+            downloadGridBtn.disabled = true;
+            resetGridBtn.disabled = true;
+            infoGrid.style.display = 'none';
+            if (activeTab === 'grid') renderPreview();
+        } else {
+            imagesPhoto = [];
+            filePhoto.value = '';
+            downloadPhotoBtn.disabled = true;
+            resetPhotoBtn.disabled = true;
+            infoPhoto.style.display = 'none';
+            if (activeTab === 'photo') renderPreview();
+        }
+        showToast('Data direset');
+    }
 
-    var y = MT + 4;
+    async function generatePDF(tabType) {
+        const images = (tabType === 'grid') ? imagesGrid : imagesPhoto;
+        if (!images.length) {
+            showToast('Tidak ada data', true);
+            return;
+        }
+        if ((tabType === 'grid' && activeTab !== 'grid') || (tabType === 'photo' && activeTab !== 'photo')) {
+            activeTab = tabType;
+            renderPreview();
+        }
+        const pages = document.querySelectorAll('.a4-page');
+        if (!pages.length) {
+            showToast('Halaman tidak tersedia', true);
+            return;
+        }
+        
+        setLoader(true, 'Membuat PDF...');
+        const btn = (tabType === 'grid') ? downloadGridBtn : downloadPhotoBtn;
+        const resetBtn = (tabType === 'grid') ? resetGridBtn : resetPhotoBtn;
+        btn.disabled = true;
+        resetBtn.disabled = true;
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = 210;
+            const pageHeight = 297;
+            
+            for (let i = 0; i < pages.length; i++) {
+                const canvas = await html2canvas(pages[i], {
+                    scale: 3.5,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 0.96);
+                if (i > 0) pdf.addPage();
+                
+                if (tabType === 'photo') {
+                    const imgWidth = pageWidth;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    if (imgHeight > pageHeight) {
+                        const ratio = pageHeight / imgHeight;
+                        pdf.addImage(imgData, 'JPEG', (pageWidth - imgWidth * ratio) / 2, 0, imgWidth * ratio, pageHeight);
+                    } else {
+                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+                    }
+                } else {
+                    pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+                }
+            }
+            const date = new Date().toISOString().slice(0, 10);
+            pdf.save(`Label Komponen Bekas_${tabType === 'grid' ? 'TAP1' : 'TAP2'}_${date}.pdf`);
+            showToast('✅ PDF berhasil dibuat!');
+        } catch (err) {
+            console.error(err);
+            showToast('Gagal membuat PDF', true);
+        } finally {
+            setLoader(false);
+            btn.disabled = false;
+            resetBtn.disabled = false;
+        }
+    }
 
-    doc.setFont('times', 'bold');
-    doc.setFontSize(15);
-    var title = 'SURAT JALAN';
-    var spacing = 0.7;
-    var titleW = doc.getTextWidth(title) + spacing * (title.length - 1);
-    drawSpacedText(doc, title, centerX - titleW / 2, y, spacing);
-    y += 10;
-
-    doc.setFont('times', 'normal');
-    doc.setFontSize(9);
-
-    var dateEl = document.querySelector('.meta .tgl span');
-    doc.text(dateEl ? dateEl.textContent.trim() : '', ML, y);
-    y += 6.5;
-
-    var noEl  = document.querySelector('.meta .row > div:first-child span');
-    var halEl = document.querySelector('.meta .row > div:last-child span');
-    doc.text('No     : ' + (noEl  ? noEl.textContent  : '').trim(),  ML, y);
-    doc.text('Hal    : ' + (halEl ? halEl.textContent : '').trim(), ML + contentW * 0.5, y);
-    y += 6.5;
-
-    doc.text('Kepada Yth,', ML, y);
-    y += 4.5;
-    doc.setFont('times', 'bold');
-    var toEl = document.querySelector('.to .b');
-    doc.text(toEl ? toEl.textContent.trim() : '', ML, y);
-    y += 4.5;
-    doc.setFont('times', 'normal');
-    doc.text('Di Tempat', ML, y);
-    y += 7;
-
-    var openEl = document.querySelectorAll('p.para')[0];
-    var openLines = doc.splitTextToSize(openEl ? openEl.textContent.trim() : '', contentW);
-    var lineH = 4.0;
-    openLines.forEach(function (ln, i) { doc.text(ln, ML, y + i * lineH); });
-    y += openLines.length * lineH + 3;
-
-    var pdfBody = buildPdfBody();
-    var totalQty   = document.getElementById('totalQty').textContent.trim();
-    var totalM3    = document.getElementById('totalM3').textContent.trim();
-    var totalColly = document.getElementById('totalColly').textContent.trim();
-
-    doc.autoTable({
-      startY: y,
-      margin: { left: ML, right: MR, top: MT, bottom: MB },
-      head: [['NO', 'NAMA BARANG', 'QTY', 'UKURAN', 'M³', 'Colly', 'KETERANGAN']],
-      body: pdfBody,
-      foot: [[
-        { content: 'TOTAL M³', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } },
-        { content: totalQty,   styles: { halign: 'center', fontStyle: 'bold' } },
-        { content: '',         styles: {} },
-        { content: totalM3,    styles: { halign: 'right',  fontStyle: 'bold' } },
-        { content: totalColly, styles: { halign: 'center', fontStyle: 'bold' } },
-        { content: 'Data Rincian Sparepart Bekas Terlampir !', styles: { halign: 'left', fontStyle: 'bold' } }
-      ]],
-      showHead: 'everyPage',
-      showFoot: 'lastPage',
-      rowPageBreak: 'avoid',
-      theme: 'grid',
-      styles: {
-        font: 'times',
-        fontSize: 7.6,
-        cellPadding: { top: 1.2, right: 1.2, bottom: 1.2, left: 1.2 },
-        lineColor: [0, 0, 0],
-        lineWidth: 0.15,
-        textColor: [0, 0, 0],
-        valign: 'top',
-        overflow: 'linebreak',
-        lineHeightFactor: 1.25
-      },
-      headStyles: {
-        fillColor: [233, 233, 233],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        halign: 'center',
-        valign: 'middle',
-        fontSize: 7.3,
-        cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 }
-      },
-      footStyles: {
-        fillColor: [233, 233, 233],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        halign: 'center',
-        valign: 'middle',
-        fontSize: 7.6,
-        cellPadding: { top: 2, right: 1.2, bottom: 2, left: 1.2 }
-      },
-      columnStyles: {
-        0: { cellWidth: 7,  halign: 'center' },
-        1: { cellWidth: 46, halign: 'left'   },
-        2: { cellWidth: 10, halign: 'center' },
-        3: { cellWidth: 18, halign: 'center' },
-        4: { cellWidth: 15, halign: 'right'  },
-        5: { cellWidth: 9,  halign: 'center' },
-        6: { cellWidth: 79, halign: 'left', fontSize: 7 }
-      }
+    // Event Listeners
+    uploadBoxGrid.addEventListener('click', () => fileGrid.click());
+    uploadBoxPhoto.addEventListener('click', () => filePhoto.click());
+    
+    fileGrid.addEventListener('change', (e) => {
+        if (e.target.files.length) handleUpload([...e.target.files], 'grid');
     });
-
-    /* ==========================================================
-       PENUTUP + TANDA TANGAN — jarak 0,5 cm (5 mm)
-       Diukur dari DASAR huruf terakhir paragraf penutup ke
-       ATAS huruf kapital label tanda tangan.
-       ========================================================== */
-    var tableFinalY = (doc.lastAutoTable && doc.lastAutoTable.finalY)
-      ? doc.lastAutoTable.finalY
-      : y;
-
-    var BOTTOM_GAP    = 2;      // margin aman bawah (mm)
-    var DESCENDER     = 0.7;    // bagian huruf di bawah baseline (mm)
-    var GAP_TABLE     = 4;      // jarak tabel → paragraf penutup (mm)
-    var GAP_CLOSE_SIG = 5;      // 0,5 cm = 5 mm → jarak teks penutup ke label TTD
-    var CAP_9PT       = 2.2;    // tinggi huruf kapital 9 pt di atas baseline (mm)
-
-    var closeEl = document.querySelectorAll('p.para')[1];
-    var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
-    if (!closeLines.length) closeLines = [''];
-
-    var blockStartY = tableFinalY + GAP_TABLE;
-
-    /* baseline baris terakhir paragraf penutup */
-    var closeLastBaseline = blockStartY + (closeLines.length - 1) * lineH;
-    var closeBottom = closeLastBaseline + DESCENDER;   // dasar huruf terakhir
-
-    /* label TTD: tepat 5 mm di bawah dasar teks penutup */
-    var sigLabelY = closeBottom + GAP_CLOSE_SIG + CAP_9PT;
-
-    var blockHeight = (sigLabelY + DESCENDER) - blockStartY;
-    if (blockStartY + blockHeight > pageH - BOTTOM_GAP) {
-      doc.addPage();
-      blockStartY = MT + 10;
-      closeLastBaseline = blockStartY + (closeLines.length - 1) * lineH;
-      closeBottom = closeLastBaseline + DESCENDER;
-      sigLabelY = closeBottom + GAP_CLOSE_SIG + CAP_9PT;
-    }
-
-    doc.setFont('times', 'normal');
-    doc.setFontSize(9);
-    closeLines.forEach(function (ln, i) {
-      doc.text(ln, ML, blockStartY + i * lineH);
+    filePhoto.addEventListener('change', (e) => {
+        if (e.target.files.length) handleUpload([...e.target.files], 'photo');
     });
-
-    /* Fallback: pastikan label TTD tidak terpotong halaman */
-    if (sigLabelY + DESCENDER > pageH - BOTTOM_GAP) {
-      doc.addPage();
-      sigLabelY = MT + 10;
+    
+    downloadGridBtn.addEventListener('click', () => generatePDF('grid'));
+    downloadPhotoBtn.addEventListener('click', () => generatePDF('photo'));
+    resetGridBtn.addEventListener('click', () => resetData('grid'));
+    resetPhotoBtn.addEventListener('click', () => resetData('photo'));
+    
+    function switchTab(tabId) {
+        if (tabId === 'tab1') {
+            activeTab = 'grid';
+            panel1.classList.add('active');
+            panel2.classList.remove('active');
+            tabBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-tab') === 'tab1');
+            });
+        } else {
+            activeTab = 'photo';
+            panel2.classList.add('active');
+            panel1.classList.remove('active');
+            tabBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-tab') === 'tab2');
+            });
+        }
+        renderPreview();
     }
-
-    var sigEls = document.querySelectorAll('.signs .s > div[contenteditable]');
-    var labels = [];
-    Array.prototype.forEach.call(sigEls, function (el) { labels.push(el.textContent.trim()); });
-    var sigW = contentW / labels.length;
-
-    labels.forEach(function (label, i) {
-      var cx = ML + sigW * i + sigW / 2;
-      doc.text(label, cx, sigLabelY, { align: 'center' });
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            switchTab(tabId);
+        });
     });
-
-    doc.save(buildFileName());
-  }
-
-  document.getElementById('btnDownload').addEventListener('click', function () {
-    if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
-      alert('Library PDF (jsPDF / jsPDF-AutoTable) gagal dimuat dari CDN.\n\nPastikan koneksi internet aktif, lalu muat ulang halaman ini.');
-      return;
-    }
-    var btn = this;
-    var origHTML = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Membuat PDF...';
-
-    setTimeout(function () {
-      try {
-        generatePDF();
-      } catch (err) {
-        console.error('PDF error:', err);
-        alert('Gagal membuat PDF: ' + (err && err.message ? err.message : err));
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = origHTML;
-      }
-    }, 40);
-  });
-
-  /* ---------- INIT ---------- */
-  render(defaultRows);
-  updateMergeButtonStates();
-})();
+    
+    renderPreview();
 </script>
 </body>
 </html>
