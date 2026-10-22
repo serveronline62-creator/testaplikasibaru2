@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title> Auto Converter</title>
+    <title>Auto Converter</title>
 
     <!-- Library Eksternal -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11,11 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -34,7 +30,6 @@
             padding: 0 8px;
         }
 
-        /* Header */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -46,18 +41,9 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        .logo {
-            height: 32px;
-            object-fit: contain;
-        }
+        .logo { height: 32px; object-fit: contain; }
+        .app-title { font-size: 0.85rem; font-weight: 600; color: #2c3e4f; }
 
-        .app-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #2c3e4f;
-        }
-
-        /* Tab */
         .tabs {
             display: flex;
             gap: 6px;
@@ -82,17 +68,9 @@
             text-align: center;
         }
 
-        .tab.active {
-            background: #C62828;
-            color: white;
-        }
+        .tab.active { background: #C62828; color: white; }
+        .tab:hover:not(.active) { background: #f0f2f5; color: #C62828; }
 
-        .tab:hover:not(.active) {
-            background: #f0f2f5;
-            color: #C62828;
-        }
-
-        /* Panel */
         .panel {
             background: white;
             border-radius: 20px;
@@ -102,11 +80,8 @@
             display: none;
         }
 
-        .panel.active {
-            display: block;
-        }
+        .panel.active { display: block; }
 
-        /* Upload box */
         .upload-box {
             background: #f8fafc;
             border: 2px dashed #cbd5e1;
@@ -118,20 +93,9 @@
             margin-bottom: 12px;
         }
 
-        .upload-box:hover {
-            border-color: #C62828;
-            background: #fff5f5;
-        }
-
-        .upload-icon {
-            font-size: 1.5rem;
-            margin-bottom: 4px;
-        }
-
-        .upload-text {
-            font-size: 0.7rem;
-            color: #475569;
-        }
+        .upload-box:hover { border-color: #C62828; background: #fff5f5; }
+        .upload-icon { font-size: 1.5rem; margin-bottom: 4px; }
+        .upload-text { font-size: 0.7rem; color: #475569; }
 
         .file-info {
             font-size: 0.65rem;
@@ -143,11 +107,27 @@
             margin-bottom: 10px;
         }
 
-        .button-group {
+        .layout-select {
             display: flex;
-            gap: 10px;
-            margin-top: 6px;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 0.7rem;
+            color: #334155;
         }
+
+        .layout-select select {
+            padding: 6px 10px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+        }
+
+        .button-group { display: flex; gap: 10px; margin-top: 6px; }
 
         .btn {
             padding: 8px 14px;
@@ -162,30 +142,12 @@
             gap: 6px;
         }
 
-        .btn-primary {
-            background: #C62828;
-            color: white;
-        }
+        .btn-primary { background: #C62828; color: white; }
+        .btn-primary:hover { background: #B71C1C; }
+        .btn-secondary { background: #e2e8f0; color: #334155; }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .btn-primary:hover {
-            background: #B71C1C;
-        }
-
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #334155;
-        }
-
-        .btn-secondary:hover {
-            background: #cbd5e1;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Preview area */
         .preview-area {
             width: 100%;
             display: flex;
@@ -205,7 +167,6 @@
             width: 100%;
         }
 
-        /* Halaman A4 */
         .a4-page {
             width: 100%;
             max-width: 210mm;
@@ -215,7 +176,7 @@
             margin: 0 auto;
         }
 
-        /* Grid 3x3 untuk TAP 1 - gambar tidak terpotong */
+        /* Grid 3x3 */
         .grid-3x3 {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -226,7 +187,17 @@
             width: 100%;
         }
 
-        /* Grid custom untuk TAP 2 */
+        /* Grid 2x2 — teks/gambar lebih besar */
+        .grid-2x2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 6px;
+            padding: 6mm;
+            aspect-ratio: 210 / 297;
+            width: 100%;
+        }
+
         .grid-custom {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -246,14 +217,14 @@
             position: relative;
         }
 
-        .grid-3x3 .photo-card {
-            min-height: 0;
-        }
+        .grid-3x3 .photo-card,
+        .grid-2x2 .photo-card { min-height: 0; }
 
-        .grid-3x3 .photo-card img {
+        .grid-3x3 .photo-card img,
+        .grid-2x2 .photo-card img {
             width: 100%;
             height: 100%;
-            object-fit: contain;  /* gambar utuh tidak terpotong */
+            object-fit: contain;
             display: block;
             background-color: #ffffff;
         }
@@ -280,49 +251,19 @@
             font-size: 0.8rem;
         }
 
-        /* Responsive */
         @media screen and (max-width: 230mm) {
-            .app-wrapper {
-                max-width: 100%;
-                padding: 0 6px;
-            }
-            .a4-page {
-                transform: scale(1);
-                width: 100%;
-            }
-            .grid-3x3 {
-                gap: 4px;
-                padding: 4mm;
-            }
-            .grid-custom {
-                gap: 4px;
-                padding: 4mm;
-            }
-            .photo-card {
-                border-width: 2px;
-            }
+            .app-wrapper { max-width: 100%; padding: 0 6px; }
+            .a4-page { transform: scale(1); width: 100%; }
+            .grid-3x3, .grid-2x2, .grid-custom { gap: 4px; padding: 4mm; }
+            .photo-card { border-width: 2px; }
         }
 
         @media screen and (max-width: 480px) {
-            .grid-3x3 {
-                gap: 3px;
-                padding: 3mm;
-            }
-            .grid-custom {
-                gap: 3px;
-                padding: 3mm;
-            }
-            .btn {
-                padding: 6px 10px;
-                font-size: 0.65rem;
-            }
-            .tab {
-                padding: 6px 8px;
-                font-size: 0.7rem;
-            }
+            .grid-3x3, .grid-2x2, .grid-custom { gap: 3px; padding: 3mm; }
+            .btn { padding: 6px 10px; font-size: 0.65rem; }
+            .tab { padding: 6px 8px; font-size: 0.7rem; }
         }
 
-        /* Toast & Loader */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -348,10 +289,8 @@
 
         .loader {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(255,255,255,0.95);
             display: flex;
             justify-content: center;
@@ -364,14 +303,10 @@
             transition: 0.2s;
         }
 
-        .loader.active {
-            visibility: visible;
-            opacity: 1;
-        }
+        .loader.active { visibility: visible; opacity: 1; }
 
         .spinner {
-            width: 32px;
-            height: 32px;
+            width: 32px; height: 32px;
             border: 3px solid #e2e8f0;
             border-top: 3px solid #C62828;
             border-radius: 50%;
@@ -386,13 +321,13 @@
 <div class="app-wrapper">
     <div class="top-bar">
         <span class="app-title">Convert Tools PDS KUPANG</span>
-        <img src="https://z-cdn-media.chatglm.cn/files/a0b674d0-3b9b-4d8b-a3a5-4d06cbbe2a88.png?auth_key=1870195860-833d93a4889b4ef49c52d0c4e3a13a73-0-dfae0851ee06920b914c96e9fc3fc540" 
+        <img src="https://z-cdn-media.chatglm.cn/files/a0b674d0-3b9b-4d8b-a3a5-4d06cbbe2a88.png?auth_key=1870195860-833d93a4889b4ef49c52d0c4e3a13a73-0-dfae0851ee06920b914c96e9fc3fc540"
              alt="Polytron" class="logo">
     </div>
 
     <div class="tabs">
-        <button class="tab active" data-tab="tab1">TAP 1 ( Label Normal )</button>
-        <button class="tab" data-tab="tab2">TAP 2 ( Label Panjang )</button>
+        <button class="tab active" data-tab="tab1">TAP 1 (Label Normal)</button>
+        <button class="tab" data-tab="tab2">TAP 2 (Label Panjang)</button>
     </div>
 
     <div id="panel1" class="panel active">
@@ -401,6 +336,15 @@
             <div class="upload-text">Upload Gambar / PDF</div>
             <input type="file" id="fileGrid" multiple accept="image/*,application/pdf" style="display:none">
         </div>
+
+        <div class="layout-select">
+            <label for="gridLayout">Ukuran Teks / Label:</label>
+            <select id="gridLayout">
+                <option value="3">Normal — 3×3 (9 label)</option>
+                <option value="2">Besar — 2×2 (4 label)</option>
+            </select>
+        </div>
+
         <div id="infoGrid" class="file-info" style="display:none"></div>
         <div class="button-group">
             <button id="downloadGridBtn" class="btn btn-primary" disabled>📄 Download PDF</button>
@@ -423,7 +367,8 @@
 
     <div id="previewContainer" class="preview-area">
         <div class="empty-preview">
-            📄 Belum ada data<br> Unggah Foto atau File PDF (Auto-convert). Sistem akan menyusun otomatis ke format A4. By Om Berlin
+            📄 Belum ada data<br>
+            Unggah Foto atau File PDF (Auto-convert). Sistem akan menyusun otomatis ke format A4. By Om Berlin
         </div>
     </div>
 </div>
@@ -435,12 +380,12 @@
 </div>
 
 <script>
-    // Konfigurasi PDF.js
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     let imagesGrid = [];
     let imagesPhoto = [];
     let activeTab = 'grid';
+    let gridLayout = 3; // 3 = 3x3, 2 = 2x2
 
     const previewDiv = document.getElementById('previewContainer');
     const emptyState = document.querySelector('.empty-preview');
@@ -456,6 +401,7 @@
     const downloadGridBtn = document.getElementById('downloadGridBtn');
     const resetGridBtn = document.getElementById('resetGridBtn');
     const infoGrid = document.getElementById('infoGrid');
+    const gridLayoutSelect = document.getElementById('gridLayout');
 
     const filePhoto = document.getElementById('filePhoto');
     const uploadBoxPhoto = document.getElementById('uploadBoxPhoto');
@@ -463,9 +409,6 @@
     const resetPhotoBtn = document.getElementById('resetPhotoBtn');
     const infoPhoto = document.getElementById('infoPhoto');
 
-    /* ============================================================
-       KONSTANTA KONVERSI PX -> MM (layar 96 DPI)
-       ============================================================ */
     const PX_TO_MM = 25.4 / 96;
 
     function showToast(msg, isError = false) {
@@ -484,9 +427,6 @@
         }
     }
 
-    /* ============================================================
-       PDF -> GAMBAR  (resolusi render dinaikkan agar teks tajam)
-       ============================================================ */
     async function pdfToImages(file, scale = 3.2) {
         const arrayBuf = await file.arrayBuffer();
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
@@ -506,7 +446,6 @@
                 intent: 'print',
                 background: '#ffffff'
             }).promise;
-            // kualitas JPEG tinggi -> teks tidak "pecah"
             images.push(canvas.toDataURL('image/jpeg', 0.98));
         }
         return images;
@@ -517,7 +456,7 @@
             const reader = new FileReader();
             reader.onload = e => resolve(e.target.result);
             reader.onerror = reject;
-            reader.readAsDataURL(file);   // data asli, tanpa kompresi ulang
+            reader.readAsDataURL(file);
         });
     }
 
@@ -535,9 +474,6 @@
         return results;
     }
 
-    /* ============================================================
-       CACHE DIMENSI GAMBAR
-       ============================================================ */
     const imgPropCache = new Map();
 
     function getImageProps(src) {
@@ -574,13 +510,10 @@
         }
     }
 
-    /* ============================================================
-       RENDER PREVIEW
-       ============================================================ */
     function renderPreview() {
         previewDiv.innerHTML = '';
         const images = (activeTab === 'grid') ? imagesGrid : imagesPhoto;
-        
+
         if (!images.length) {
             previewDiv.appendChild(emptyState);
             emptyState.style.display = 'flex';
@@ -589,25 +522,26 @@
         emptyState.style.display = 'none';
 
         if (activeTab === 'grid') {
-            // TAP 1: 9 gambar per halaman
-            const perPage = 9;
+            const cols = gridLayout;
+            const perPage = cols * cols;
+            const gridClass = cols === 3 ? 'grid-3x3' : 'grid-2x2';
+
             for (let i = 0; i < images.length; i += perPage) {
                 const page = document.createElement('div');
                 page.className = 'a4-page';
                 const grid = document.createElement('div');
-                grid.className = 'grid-3x3';
+                grid.className = gridClass;
                 const pageImages = images.slice(i, i + perPage);
+
                 for (const imgSrc of pageImages) {
                     const box = document.createElement('div');
                     box.className = 'photo-card';
                     const img = document.createElement('img');
                     img.src = imgSrc;
-                    img.style.objectFit = 'contain';
-                    img.style.width = '100%';
-                    img.style.height = '100%';
                     box.appendChild(img);
                     grid.appendChild(box);
                 }
+
                 const remaining = perPage - pageImages.length;
                 for (let r = 0; r < remaining; r++) {
                     const empty = document.createElement('div');
@@ -615,11 +549,11 @@
                     empty.innerHTML = '—';
                     grid.appendChild(empty);
                 }
+
                 page.appendChild(grid);
                 previewDiv.appendChild(page);
             }
         } else {
-            // TAP 2: 3 gambar per halaman
             const perPage = 3;
             for (let i = 0; i < images.length; i += perPage) {
                 const page = document.createElement('div');
@@ -627,6 +561,7 @@
                 const grid = document.createElement('div');
                 grid.className = 'grid-custom';
                 const pageImages = images.slice(i, i + perPage);
+
                 for (const imgSrc of pageImages) {
                     const box = document.createElement('div');
                     box.className = 'photo-card';
@@ -638,6 +573,7 @@
                     box.appendChild(img);
                     grid.appendChild(box);
                 }
+
                 const remaining = perPage - pageImages.length;
                 for (let r = 0; r < remaining; r++) {
                     const empty = document.createElement('div');
@@ -645,6 +581,7 @@
                     empty.innerHTML = '∅';
                     grid.appendChild(empty);
                 }
+
                 page.appendChild(grid);
                 previewDiv.appendChild(page);
             }
@@ -658,7 +595,7 @@
         try {
             const allImages = await processFiles(files);
             if (!allImages.length) throw new Error('Tidak ada gambar valid');
-            
+
             if (tabType === 'grid') {
                 imagesGrid = allImages;
                 downloadGridBtn.disabled = false;
@@ -712,9 +649,7 @@
     }
 
     /* ============================================================
-       ★★★ TAP 1 : PDF HD — GAMBAR ASLI DITEMPEL LANGSUNG ★★★
-       Tidak memakai html2canvas, jadi resolusi gambar TIDAK
-       di-rasterisasi ulang => teks tetap tajam / terbaca jelas.
+       TAP 1 : PDF HD — mendukung layout 3×3 / 2×2
        ============================================================ */
     async function generateGridPDF() {
         if (!imagesGrid.length) {
@@ -737,11 +672,11 @@
 
             const PAGE_W = 210;
             const PAGE_H = 297;
-            const PAD    = 6;                          // padding 6mm (sama dgn preview)
-            const COLS   = 3;
-            const ROWS   = 3;
-            const GAP    = 6 * PX_TO_MM;               // gap 6px  -> mm
-            const BORDER = 3 * PX_TO_MM;               // border 3px -> mm
+            const PAD = 6;
+            const COLS = gridLayout;
+            const ROWS = gridLayout;
+            const GAP = 6 * PX_TO_MM;
+            const BORDER = 3 * PX_TO_MM;
             const PER_PAGE = COLS * ROWS;
 
             const cellW = (PAGE_W - PAD * 2 - GAP * (COLS - 1)) / COLS;
@@ -749,7 +684,6 @@
 
             for (let start = 0; start < imagesGrid.length; start += PER_PAGE) {
                 if (start > 0) pdf.addPage();
-
                 const pageImages = imagesGrid.slice(start, start + PER_PAGE);
 
                 for (let i = 0; i < PER_PAGE; i++) {
@@ -758,14 +692,14 @@
                     const x = PAD + col * (cellW + GAP);
                     const y = PAD + row * (cellH + GAP);
 
-                    // --- Bingkai hitam ---
+                    // Bingkai hitam
                     pdf.setDrawColor(0, 0, 0);
                     pdf.setLineWidth(BORDER);
                     pdf.rect(x + BORDER / 2, y + BORDER / 2, cellW - BORDER, cellH - BORDER);
 
                     const src = pageImages[i];
 
-                    // --- Sel kosong ---
+                    // Sel kosong
                     if (!src) {
                         pdf.setDrawColor(180, 190, 200);
                         pdf.setLineWidth(0.4);
@@ -778,30 +712,29 @@
 
                     const prop = await getImageProps(src);
 
-                    // Area gambar di dalam bingkai
                     const boxW = cellW - BORDER * 2;
                     const boxH = cellH - BORDER * 2;
 
-                    // Perilaku object-fit: contain (proporsional, tidak terpotong)
+                    // object-fit: contain
                     const ratio = Math.min(boxW / prop.w, boxH / prop.h);
                     const drawW = prop.w * ratio;
                     const drawH = prop.h * ratio;
                     const drawX = x + (cellW - drawW) / 2;
                     const drawY = y + (cellH - drawH) / 2;
 
-                    // >>> Gambar asli (resolusi penuh) ditempel apa adanya <<<
+                    // Gambar asli resolusi penuh
                     pdf.addImage(
                         src,
                         prop.format,
                         drawX, drawY, drawW, drawH,
                         undefined,
-                        'SLOW'          // kompresi lossless utk PNG, JPEG tetap asli
+                        'SLOW'
                     );
                 }
             }
 
             const date = new Date().toISOString().slice(0, 10);
-            pdf.save(`Label Komponen Bekas_TAP1_HD_${date}.pdf`);
+            pdf.save(`Label Komponen Bekas_TAP1_${gridLayout}x${gridLayout}_HD_${date}.pdf`);
             showToast('✅ PDF HD berhasil dibuat!');
         } catch (err) {
             console.error(err);
@@ -814,7 +747,7 @@
     }
 
     /* ============================================================
-       TAP 2 : tetap memakai html2canvas (layout tinggi dinamis)
+       TAP 2 : tetap memakai html2canvas
        ============================================================ */
     async function generatePhotoPDF() {
         if (!imagesPhoto.length) {
@@ -860,6 +793,7 @@
                     pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
                 }
             }
+
             const date = new Date().toISOString().slice(0, 10);
             pdf.save(`Label Komponen Bekas_TAP2_${date}.pdf`);
             showToast('✅ PDF berhasil dibuat!');
@@ -876,19 +810,25 @@
     // Event Listeners
     uploadBoxGrid.addEventListener('click', () => fileGrid.click());
     uploadBoxPhoto.addEventListener('click', () => filePhoto.click());
-    
+
     fileGrid.addEventListener('change', (e) => {
         if (e.target.files.length) handleUpload([...e.target.files], 'grid');
     });
     filePhoto.addEventListener('change', (e) => {
         if (e.target.files.length) handleUpload([...e.target.files], 'photo');
     });
-    
+
     downloadGridBtn.addEventListener('click', () => generateGridPDF());
     downloadPhotoBtn.addEventListener('click', () => generatePhotoPDF());
     resetGridBtn.addEventListener('click', () => resetData('grid'));
     resetPhotoBtn.addEventListener('click', () => resetData('photo'));
-    
+
+    gridLayoutSelect.addEventListener('change', (e) => {
+        gridLayout = parseInt(e.target.value, 10);
+        if (activeTab === 'grid') renderPreview();
+        showToast(`Layout TAP 1: ${gridLayout}×${gridLayout}`);
+    });
+
     function switchTab(tabId) {
         if (tabId === 'tab1') {
             activeTab = 'grid';
@@ -907,14 +847,14 @@
         }
         renderPreview();
     }
-    
+
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
             switchTab(tabId);
         });
     });
-    
+
     renderPreview();
 </script>
 </body>
