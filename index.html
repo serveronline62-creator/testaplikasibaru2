@@ -50,6 +50,42 @@
   .drop-sub{color:var(--muted);font-size:.85rem}
   .drop-formats{color:#5b6684;font-size:.76rem;margin-top:10px}
 
+  #stage{margin-top:18px;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:14px;padding:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .stage-preview{
+    width:100px;flex-shrink:0;aspect-ratio:9/16;background:#000;
+    border-radius:10px;overflow:hidden;position:relative;
+  }
+  .stage-preview video{width:100%;height:100%;object-fit:cover;display:block}
+  .stage-info{flex:1;min-width:220px}
+  .stage-name{font-weight:700;font-size:1rem;margin-bottom:4px;
+    word-break:break-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stage-meta{color:var(--muted);font-size:.82rem;margin-bottom:14px}
+  .stage-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+  .btn{
+    padding:11px 22px;border:none;border-radius:10px;font-size:.92rem;
+    font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;box-shadow:0 4px 14px rgba(124,92,255,.35);
+  }
+  .btn.primary:hover:not(:disabled){
+    transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,92,255,.5);
+  }
+  .btn.ghost{
+    background:transparent;color:var(--muted);border:1px solid var(--border);
+  }
+  .btn.ghost:hover:not(:disabled){border-color:var(--accent);color:var(--text)}
+
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{display:inline-block;width:14px;height:14px;
+    border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+    border-radius:50%;animation:spin .7s linear infinite}
+
   .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
     gap:14px;margin-top:18px}
   .option label{display:block;font-size:.75rem;color:var(--muted);
@@ -57,6 +93,7 @@
   .option input{width:100%;background:var(--panel-2);border:1px solid var(--border);
     color:var(--text);padding:9px 11px;border-radius:9px;font-size:.92rem;outline:none}
   .option input:focus{border-color:var(--accent)}
+  .option input:disabled{opacity:.5}
 
   #progress-wrap{margin-top:18px}
   .progress-head{display:flex;justify-content:space-between;margin-bottom:8px;font-size:.88rem}
@@ -91,26 +128,22 @@
 
   #debug{margin-top:16px;background:#020617;border:1px solid #1e293b;
     border-radius:10px;padding:12px;font-family:ui-monospace,monospace;
-    font-size:.75rem;color:#94a3b8;max-height:160px;overflow:auto;display:none}
+    font-size:.75rem;color:#94a3b8;max-height:200px;overflow:auto;display:none}
   #debug.show{display:block}
   #debug .line{padding:1px 0}
   #debug .err{color:#fca5a5}
   #debug .ok{color:#86efac}
+  #debug .info{color:#93c5fd}
 
   .hidden{display:none !important}
   footer{text-align:center;color:var(--muted);font-size:.78rem;
     margin-top:32px;line-height:1.7}
-
-  #file-info{display:none;background:var(--panel-2);border:1px solid var(--border);
-    border-radius:10px;padding:12px 16px;margin-top:14px;font-size:.85rem}
-  #file-info.show{display:block}
-  #file-info b{color:#a5b4fc}
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <div class="badge" id="status">⚙️ Engine belum dimuat — akan dimuat saat upload</div>
+    <div class="badge" id="status">⚙️ Siap — pilih video untuk mulai</div>
     <h1>🎬 ReelsForge</h1>
     <p>Upload video panjang → otomatis dipecah jadi klip vertikal 9:16 untuk Reels / Shorts / TikTok</p>
   </header>
@@ -126,15 +159,31 @@
       <div class="drop-formats">MP4 · MOV · MKV · WEBM · Maks 400 MB · Rekomendasi &lt; 10 menit</div>
     </div>
 
-    <div id="file-info"></div>
+    <div id="stage" class="hidden">
+      <div class="stage-preview">
+        <video id="preview" muted playsinline preload="metadata"></video>
+      </div>
+      <div class="stage-info">
+        <div class="stage-name" id="stage-name">—</div>
+        <div class="stage-meta" id="stage-meta">—</div>
+        <div class="stage-actions">
+          <button id="start-btn" class="btn primary" type="button">
+            ▶ Mulai Edit Otomatis
+          </button>
+          <button id="change-btn" class="btn ghost" type="button">
+            🔄 Ganti Video
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div class="options">
       <div class="option">
-        <label>Durasi minimum (detik)</label>
+        <label for="min-dur">Durasi minimum (detik)</label>
         <input type="number" id="min-dur" value="15" min="5" max="120">
       </div>
       <div class="option">
-        <label>Durasi maksimum (detik)</label>
+        <label for="max-dur">Durasi maksimum (detik)</label>
         <input type="number" id="max-dur" value="60" min="10" max="180">
       </div>
       <div class="option">
@@ -166,476 +215,581 @@
   </footer>
 </div>
 
-<script>
+<script type="module">
 /* ══════════════════════════════════════════════════════════════════
-   ReelsForge — robust single-file client
-   Prinsip utama: UI dipasang dulu, engine ffmpeg dimuat lazy.
+   ReelsForge — robust single-file client (ESM only)
+   Menggunakan:
+     • @ffmpeg/ffmpeg  (via esm.sh, fallback jsdelivr)
+     • @ffmpeg/util    (via esm.sh, fallback jsdelivr)
+     • @ffmpeg/core    (ESM build, via jsdelivr)
    ══════════════════════════════════════════════════════════════════ */
-(function () {
-  'use strict';
 
-  // ─── DOM refs ──────────────────────────────────────────────────
-  const $ = (id) => document.getElementById(id);
-  const dropZone    = $('drop');
-  const fileInput   = $('file');
-  const fileInfoBox = $('file-info');
-  const progressWrap= $('progress-wrap');
-  const progressBar = $('progress-bar');
-  const progressPct = $('progress-pct');
-  const progressTxt = $('progress-text');
-  const resultsWrap = $('results');
-  const clipsGrid   = $('clips');
-  const errorBox    = $('error');
-  const warningBox  = $('warning');
-  const statusBadge = $('status');
-  const debugBox    = $('debug');
-  const minDurInput = $('min-dur');
-  const maxDurInput = $('max-dur');
+// ─── DOM refs ──────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const dropZone    = $('drop');
+const fileInput   = $('file');
+const stagePanel  = $('stage');
+const previewEl   = $('preview');
+const stageName   = $('stage-name');
+const stageMeta   = $('stage-meta');
+const startBtn    = $('start-btn');
+const changeBtn   = $('change-btn');
+const progressWrap= $('progress-wrap');
+const progressBar = $('progress-bar');
+const progressPct = $('progress-pct');
+const progressTxt = $('progress-text');
+const resultsWrap = $('results');
+const clipsGrid   = $('clips');
+const errorBox    = $('error');
+const warningBox  = $('warning');
+const statusBadge = $('status');
+const debugBox    = $('debug');
+const minDurInput = $('min-dur');
+const maxDurInput = $('max-dur');
 
-  // ─── State ─────────────────────────────────────────────────────
-  let ffmpeg = null;
-  let engineReady = false;
-  let engineLoading = null;
-  let busy = false;
-  let silenceStart = null;
-  let silences = [];
-  let captureSilence = false;
-  let lastProgressTime = null;
+// ─── State ─────────────────────────────────────────────────────
+let ffmpeg = null;
+let FFmpegClass = null;
+let utilModule = null;
+let engineReady = false;
+let engineLoading = null;
+let busy = false;
+let stagedFile = null;
+let previewURL = null;
+let silenceStart = null;
+let silences = [];
+let captureSilence = false;
+let lastProgressTime = null;
 
-  // ─── Debug logging ─────────────────────────────────────────────
-  function dbg(msg, kind) {
-    debugBox.classList.add('show');
-    const line = document.createElement('div');
-    line.className = 'line' + (kind ? ' ' + kind : '');
-    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-    debugBox.appendChild(line);
-    debugBox.scrollTop = debugBox.scrollHeight;
-    while (debugBox.children.length > 80) debugBox.removeChild(debugBox.firstChild);
+// ─── Debug logging ─────────────────────────────────────────────
+function dbg(msg, kind) {
+  debugBox.classList.add('show');
+  const line = document.createElement('div');
+  line.className = 'line' + (kind ? ' ' + kind : '');
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  debugBox.appendChild(line);
+  debugBox.scrollTop = debugBox.scrollHeight;
+  while (debugBox.children.length > 100) debugBox.removeChild(debugBox.firstChild);
+}
+
+// ─── Status helpers ────────────────────────────────────────────
+function setStatus(kind, text) {
+  statusBadge.className = 'badge ' + kind;
+  statusBadge.textContent = text;
+}
+function setProgress(pct, text) {
+  progressWrap.classList.remove('hidden');
+  progressBar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  progressPct.textContent = Math.floor(pct) + '%';
+  if (text) progressTxt.textContent = text;
+}
+function showError(msg) {
+  errorBox.textContent = '❌ ' + msg;
+  errorBox.classList.remove('hidden');
+  dbg('ERROR: ' + msg, 'err');
+}
+function clearError() {
+  errorBox.classList.add('hidden');
+  errorBox.textContent = '';
+}
+
+// ─── Environment check ─────────────────────────────────────────
+if (location.protocol === 'file:') {
+  warningBox.innerHTML =
+    '⚠️ <b>Halaman dibuka via <code>file://</code></b>. Browser memblokir WebAssembly worker ' +
+    'dan module import dalam konteks file. Sajikan via HTTP: ' +
+    '<code>python3 -m http.server 8000</code> lalu buka <code>http://localhost:8000</code>.';
+  warningBox.classList.remove('hidden');
+}
+if (typeof SharedArrayBuffer === 'undefined') {
+  dbg('SharedArrayBuffer tidak tersedia — multi-thread worker akan dinonaktifkan', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ESM Loader dengan fallback ganda
+   ═══════════════════════════════════════════════════════════════ */
+const FFMPEG_SOURCES = [
+  'https://esm.sh/@ffmpeg/ffmpeg@0.12.10',
+  'https://esm.run/@ffmpeg/ffmpeg@0.12.10',
+  'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js',
+];
+const UTIL_SOURCES = [
+  'https://esm.sh/@ffmpeg/util@0.12.1',
+  'https://esm.run/@ffmpeg/util@0.12.1',
+  'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js',
+];
+
+async function tryImport(name, urls, requiredFns) {
+  let lastErr = null;
+  for (const url of urls) {
+    try {
+      dbg(`Import ${name} ← ${url}`);
+      const mod = await import(/* @vite-ignore */ url);
+      // Validasi minimal
+      const missing = requiredFns.filter((fn) => !(fn in mod));
+      if (missing.length) {
+        throw new Error(`Modul ${name} tidak mengekspor: ${missing.join(', ')}`);
+      }
+      dbg(`✔ ${name} berhasil dimuat dari ${new URL(url).host}`, 'ok');
+      return mod;
+    } catch (e) {
+      lastErr = e;
+      dbg(`✖ ${url} → ${e.message}`, 'err');
+    }
   }
+  throw new Error(
+    `Semua sumber ${name} gagal. Penyebab terakhir: ${lastErr && lastErr.message}`
+  );
+}
 
-  // ─── Status helpers ────────────────────────────────────────────
-  function setStatus(kind, text) {
-    statusBadge.className = 'badge ' + kind;
-    statusBadge.textContent = text;
+async function ensureLibs() {
+  if (FFmpegClass && utilModule) return;
+
+  const [ffmpegMod, utilMod] = await Promise.all([
+    tryImport('@ffmpeg/ffmpeg', FFMPEG_SOURCES, ['FFmpeg']),
+    tryImport('@ffmpeg/util', UTIL_SOURCES, ['toBlobURL', 'fetchFile']),
+  ]);
+
+  FFmpegClass = ffmpegMod.FFmpeg;
+  utilModule = utilMod;
+
+  if (typeof FFmpegClass !== 'function') {
+    throw new Error('FFmpeg bukan kelas yang valid.');
   }
+  dbg('Semua modul ESM siap', 'ok');
+}
 
-  function setProgress(pct, text) {
-    progressWrap.classList.remove('hidden');
-    progressBar.style.width = Math.min(100, Math.max(0, pct)) + '%';
-    progressPct.textContent = Math.floor(pct) + '%';
-    if (text) progressTxt.textContent = text;
+/* ═══════════════════════════════════════════════════════════════
+   Handle log events dari ffmpeg
+   ═══════════════════════════════════════════════════════════════ */
+function handleLog({ message }) {
+  if (captureSilence) {
+    const s = message.match(/silence_start:\s*([\d.]+)/);
+    const e = message.match(/silence_end:\s*([\d.]+)/);
+    if (s) silenceStart = parseFloat(s[1]);
+    if (e && silenceStart !== null) {
+      silences.push([silenceStart, parseFloat(e[1])]);
+      silenceStart = null;
+    }
+  } else {
+    const m = message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+    if (m) lastProgressTime = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
   }
+}
 
-  function showError(msg) {
-    errorBox.textContent = '❌ ' + msg;
-    errorBox.classList.remove('hidden');
-    dbg('ERROR: ' + msg, 'err');
-  }
+/* ═══════════════════════════════════════════════════════════════
+   Lazy Engine Loader
+   ═══════════════════════════════════════════════════════════════ */
+const CORE_BASES = [
+  'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm',
+  'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm',
+];
 
-  function clearError() {
-    errorBox.classList.add('hidden');
-    errorBox.textContent = '';
-  }
+async function ensureEngine() {
+  if (engineReady) return ffmpeg;
+  if (engineLoading) return engineLoading;
 
-  // ─── Environment check ─────────────────────────────────────────
-  if (location.protocol === 'file:') {
-    warningBox.innerHTML =
-      '⚠️ <b>Halaman dibuka via <code>file://</code></b>. Browser akan memblokir WebAssembly worker. ' +
-      'Sajikan via HTTP: <code>python3 -m http.server</code> (atau <code>npx serve</code>).';
-    warningBox.classList.remove('hidden');
-  }
+  engineLoading = (async () => {
+    setStatus('loading', '⏳ Memuat library ffmpeg (ESM)…');
+    setProgress(2, 'Memuat modul ffmpeg dari CDN…');
+    await ensureLibs();
 
-  // ─── Robust script loader with CDN fallback ────────────────────
-  function loadScript(url) {
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = url;
-      s.async = true;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error('Gagal memuat: ' + url));
-      document.head.appendChild(s);
-    });
-  }
+    ffmpeg = new FFmpegClass();
+    ffmpeg.on('log', handleLog);
+    if (typeof ffmpeg.on === 'function') {
+      ffmpeg.on('progress', ({ progress }) => {
+        // Progress event opsional — kita pakai log parsing sebagai utama
+      });
+    }
 
-  async function loadLibsFromAnyCDN(urls, checkFn, label) {
-    for (const url of urls) {
+    const { toBlobURL } = utilModule;
+
+    setProgress(5, 'Mengunduh core ffmpeg.wasm (~30 MB, sekali saja)…');
+    let coreURL = null, wasmURL = null, lastErr = null;
+    for (const base of CORE_BASES) {
       try {
-        dbg('Mencoba ' + label + ' ← ' + url);
-        await loadScript(url);
-        if (checkFn()) { dbg('✔ ' + label + ' dari ' + new URL(url).host, 'ok'); return; }
-        dbg('✖ ' + url + ' tidak mengekspos global yang diharapkan', 'err');
+        dbg('Core ← ' + base);
+        coreURL = await toBlobURL(base + '/ffmpeg-core.js', 'text/javascript');
+        wasmURL = await toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm');
+        dbg('✔ Core dari ' + new URL(base).host, 'ok');
+        break;
       } catch (e) {
-        dbg('✖ ' + e.message, 'err');
+        lastErr = e;
+        dbg('✖ ' + base + ' → ' + e.message, 'err');
       }
     }
-    throw new Error('Semua CDN gagal untuk ' + label + ' (mungkin diblokir adblocker / firewall)');
-  }
-
-  async function ensureLibs() {
-    if (window.FFmpegWASM && window.FFmpegUtil) return;
-
-    const ffmpegUrls = [
-      'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
-      'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
-      'https://cdn.skypack.dev/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
-    ];
-    const utilUrls = [
-      'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js',
-      'https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js',
-    ];
-
-    if (!window.FFmpegUtil) {
-      await loadLibsFromAnyCDN(utilUrls, () => !!window.FFmpegUtil, '@ffmpeg/util');
-    }
-    if (!window.FFmpegWASM) {
-      await loadLibsFromAnyCDN(ffmpegUrls, () => !!window.FFmpegWASM, '@ffmpeg/ffmpeg');
-    }
-  }
-
-  // ─── Handle log events from ffmpeg ─────────────────────────────
-  function handleLog({ message }) {
-    // Silence detection parsing
-    if (captureSilence) {
-      const s = message.match(/silence_start:\s*([\d.]+)/);
-      const e = message.match(/silence_end:\s*([\d.]+)/);
-      if (s) silenceStart = parseFloat(s[1]);
-      if (e && silenceStart !== null) {
-        silences.push([silenceStart, parseFloat(e[1])]);
-        silenceStart = null;
-      }
-    }
-    // Per-clip render progress
-    if (!captureSilence) {
-      const m = message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
-      if (m) lastProgressTime = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
-    }
-  }
-
-  // ─── Lazy engine loader ────────────────────────────────────────
-  async function ensureEngine() {
-    if (engineReady) return ffmpeg;
-    if (engineLoading) return engineLoading;
-
-    engineLoading = (async () => {
-      setStatus('loading', '⏳ Memuat library ffmpeg…');
-      setProgress(1, 'Memuat library ffmpeg dari CDN…');
-      await ensureLibs();
-
-      const { FFmpeg } = window.FFmpegWASM;
-      const { toBlobURL } = window.FFmpegUtil;
-
-      ffmpeg = new FFmpeg();
-      ffmpeg.on('log', handleLog);
-
-      setStatus('loading', '⏳ Mengunduh core ffmpeg (~30 MB)…');
-      setProgress(3, 'Mengunduh core ffmpeg.wasm (~30 MB, sekali saja)…');
-
-      const coreBases = [
-        'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd',
-        'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd',
-      ];
-      let coreURL = null, wasmURL = null, lastErr = null;
-      for (const base of coreBases) {
-        try {
-          dbg('Mengunduh core dari ' + base);
-          coreURL = await toBlobURL(base + '/ffmpeg-core.js', 'text/javascript');
-          wasmURL = await toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm');
-          dbg('✔ Core terunduh dari ' + new URL(base).host, 'ok');
-          break;
-        } catch (e) {
-          lastErr = e;
-          dbg('✖ Core gagal dari ' + base + ': ' + e.message, 'err');
-        }
-      }
-      if (!coreURL) throw new Error('Gagal mengunduh core ffmpeg: ' + (lastErr && lastErr.message));
-
-      setProgress(10, 'Menginisialisasi WebAssembly worker…');
-      await ffmpeg.load({ coreURL, wasmURL });
-
-      engineReady = true;
-      setStatus('ready', '✅ Engine siap');
-      dbg('Engine ffmpeg siap', 'ok');
-      return ffmpeg;
-    })();
-
-    try {
-      return await engineLoading;
-    } catch (e) {
-      engineLoading = null;
-      setStatus('error', '❌ Engine gagal dimuat');
-      throw e;
-    }
-  }
-
-  // ─── Media helpers ─────────────────────────────────────────────
-  function getVideoDuration(file) {
-    return new Promise((resolve) => {
-      const v = document.createElement('video');
-      v.preload = 'metadata';
-      v.muted = true;
-      v.onloadedmetadata = () => {
-        const d = v.duration;
-        URL.revokeObjectURL(v.src);
-        resolve(isFinite(d) ? d : 0);
-      };
-      v.onerror = () => resolve(0);
-      v.src = URL.createObjectURL(file);
-    });
-  }
-
-  // ─── Silence detection ─────────────────────────────────────────
-  async function detectSilences(duration) {
-    captureSilence = true;
-    silences = [];
-    silenceStart = null;
-    try {
-      await ffmpeg.exec([
-        '-i', 'input.mp4',
-        '-vn',
-        '-af', 'silencedetect=noise=-35dB:d=0.8',
-        '-f', 'null', '-',
-      ]);
-    } catch (e) {
-      dbg('silencedetect gagal (mungkin tanpa audio): ' + e.message, 'err');
-    } finally {
-      captureSilence = false;
-    }
-    if (silenceStart !== null) silences.push([silenceStart, duration]);
-
-    const speech = [];
-    let cursor = 0;
-    for (const [s, e] of silences) {
-      if (s - cursor > 0.6) speech.push([cursor, s]);
-      cursor = Math.max(cursor, e);
-    }
-    if (cursor < duration - 0.6) speech.push([cursor, duration]);
-    return speech;
-  }
-
-  function groupIntoClips(speech, minDur, maxDur, targetDur) {
-    if (!speech.length) return null;
-    const clips = [];
-    let cur = null;
-    for (const [s, e] of speech) {
-      if (!cur) cur = [s, e];
-      else if (e - cur[0] <= maxDur) cur[1] = e;
-      else { clips.push(cur); cur = [s, e]; }
-      if (cur[1] - cur[0] >= targetDur) { clips.push(cur); cur = null; }
-    }
-    if (cur) {
-      if (cur[1] - cur[0] >= minDur || clips.length === 0) clips.push(cur);
-      else if (clips.length) clips[clips.length - 1][1] = cur[1];
-    }
-    return clips;
-  }
-
-  // ─── Render a single 9:16 clip ─────────────────────────────────
-  async function renderClip(start, dur, outName, onProgress) {
-    const W = 720, H = 1280;
-    const filter =
-      `[0:v]split=2[orig][copy];` +
-      `[copy]scale=${W}:${H}:force_original_aspect_ratio=increase,` +
-      `crop=${W}:${H},boxblur=20:20[bg];` +
-      `[orig]scale=${W}:${H}:force_original_aspect_ratio=decrease[fg];` +
-      `[bg][fg]overlay=(W-w)/2:(H-h)/2[out]`;
-
-    lastProgressTime = 0;
-    const timer = setInterval(() => {
-      if (lastProgressTime !== null && dur > 0) {
-        onProgress(Math.min(1, lastProgressTime / dur));
-      }
-    }, 300);
-
-    try {
-      await ffmpeg.exec([
-        '-ss', String(start),
-        '-i', 'input.mp4',
-        '-t', String(dur),
-        '-filter_complex', filter,
-        '-map', '[out]',
-        '-map', '0:a?',
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        '-crf', '24',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-movflags', '+faststart',
-        '-r', '30',
-        outName,
-      ]);
-    } finally {
-      clearInterval(timer);
+    if (!coreURL || !wasmURL) {
+      throw new Error(
+        'Gagal unduh core ffmpeg ESM. Penyebab: ' + (lastErr && lastErr.message)
+      );
     }
 
-    const data = await ffmpeg.readFile(outName);
-    return new Blob([data], { type: 'video/mp4' });
+    setProgress(10, 'Menginisialisasi WebAssembly worker…');
+    await ffmpeg.load({ coreURL, wasmURL });
+
+    engineReady = true;
+    setStatus('ready', '✅ Engine siap');
+    dbg('Engine siap', 'ok');
+    return ffmpeg;
+  })();
+
+  try {
+    return await engineLoading;
+  } catch (e) {
+    engineLoading = null;
+    setStatus('error', '❌ Engine gagal dimuat');
+    throw e;
   }
+}
 
-  // ─── Gallery ───────────────────────────────────────────────────
-  function addClipToGallery(blob, index, start, dur) {
-    const url = URL.createObjectURL(blob);
-    const card = document.createElement('div');
-    card.className = 'clip-card';
-    card.innerHTML =
-      '<video src="' + url + '" controls preload="metadata" playsinline></video>' +
-      '<div class="clip-info">' +
-        '<div class="clip-title">Klip ' + index + '</div>' +
-        '<div class="clip-meta">' + dur.toFixed(1) + ' dtk · mulai ' + start.toFixed(1) +
-          's · ' + (blob.size / 1024 / 1024).toFixed(1) + ' MB</div>' +
-        '<a class="dl-btn" href="' + url + '" download="reels-clip-' + index + '.mp4">⬇ Unduh MP4</a>' +
-      '</div>';
-    clipsGrid.appendChild(card);
-  }
-
-  // ─── Main pipeline ─────────────────────────────────────────────
-  async function processVideo(file) {
-    if (busy) return;
-    busy = true;
-    dropZone.classList.add('busy');
-    clearError();
-    resultsWrap.classList.add('hidden');
-    clipsGrid.innerHTML = '';
-
-    try {
-      // 0) Tampilkan info file & validasi
-      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-      fileInfoBox.innerHTML =
-        '<b>📄 ' + escapeHtml(file.name) + '</b> · ' + sizeMB + ' MB · ' + escapeHtml(file.type || '?');
-      fileInfoBox.classList.add('show');
-
-      if (!file.type.startsWith('video/') && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
-        throw new Error('File bukan video (tipe: ' + (file.type || 'unknown') + ')');
-      }
-      if (file.size > 400 * 1024 * 1024) {
-        throw new Error('File terlalu besar (' + sizeMB + ' MB). Maksimum 400 MB.');
-      }
-
-      dbg('Mulai proses: ' + file.name + ' (' + sizeMB + ' MB)');
-      setProgress(0, 'File diterima: ' + file.name);
-
-      // 1) Baca durasi (murni DOM, tanpa ffmpeg)
-      setProgress(1, 'Membaca metadata video…');
-      const duration = await getVideoDuration(file);
-      if (!duration || duration < 5) {
-        throw new Error('Durasi tidak terdeteksi atau video < 5 detik. ' +
-          'Format mungkin tidak didukung browser.');
-      }
-      dbg('Durasi: ' + duration.toFixed(1) + 's');
-
-      // 2) Muat engine (lazy)
-      if (!engineReady) {
-        setProgress(2, 'Memuat engine ffmpeg.wasm (unduh ~30 MB sekali saja)…');
-        await ensureEngine();
-      }
-
-      // 3) Tulis file ke virtual FS
-      setProgress(12, 'Menulis video ke memori browser…');
-      const { fetchFile } = window.FFmpegUtil;
-      await ffmpeg.writeFile('input.mp4', await fetchFile(file));
-      dbg('Video ditulis ke FS virtual');
-
-      // 4) Deteksi segmen
-      setProgress(15, 'Mendeteksi segmen bicara (silencedetect)…');
-      const speech = await detectSilences(duration);
-      dbg('Segmen ucapan terdeteksi: ' + speech.length);
-
-      const minDur = Math.max(5, parseFloat(minDurInput.value) || 15);
-      const maxDur = Math.max(minDur + 5, parseFloat(maxDurInput.value) || 60);
-      const targetDur = Math.min(30, maxDur);
-
-      let clips = groupIntoClips(speech, minDur, maxDur, targetDur);
-      if (!clips || !clips.length) {
-        dbg('Fallback: split rata per ' + targetDur + 's');
-        clips = [];
-        for (let t = 0; t < duration; t += targetDur) {
-          clips.push([t, Math.min(t + targetDur, duration)]);
-        }
-      }
-      if (clips.length > 10) clips = clips.slice(0, 10);
-      if (!clips.length) throw new Error('Tidak ada klip yang bisa dibuat.');
-
-      // 5) Render tiap klip
-      setProgress(20, 'Merender ' + clips.length + ' klip 9:16…');
-      let rendered = 0;
-
-      for (let i = 0; i < clips.length; i++) {
-        const [s, e] = clips[i];
-        const dur = e - s;
-        if (dur < 3) continue;
-
-        const basePct = 20 + (i / clips.length) * 75;
-        const blob = await renderClip(s, dur, 'clip' + i + '.mp4', (frac) => {
-          setProgress(
-            basePct + (frac / clips.length) * 75,
-            'Merender klip ' + (i + 1) + '/' + clips.length + '… (' + Math.floor(frac * 100) + '%)'
-          );
-        });
-
-        rendered++;
-        addClipToGallery(blob, rendered, s, dur);
-        dbg('Klip ' + rendered + ' selesai (' + (blob.size / 1024 / 1024).toFixed(1) + ' MB)', 'ok');
-
-        try { await ffmpeg.deleteFile('clip' + i + '.mp4'); } catch (_) {}
-        setProgress(20 + ((i + 1) / clips.length) * 75, 'Klip ' + (i + 1) + '/' + clips.length + ' selesai');
-      }
-
-      if (rendered === 0) throw new Error('Tidak ada klip yang berhasil dirender.');
-
-      setProgress(100, '✅ ' + rendered + ' klip siap diunduh!');
-      resultsWrap.classList.remove('hidden');
-      setTimeout(() => progressWrap.classList.add('hidden'), 1500);
-
-    } catch (err) {
-      console.error(err);
-      showError(err.message || String(err));
-      progressWrap.classList.add('hidden');
-    } finally {
-      try { if (ffmpeg) await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
-      busy = false;
-      dropZone.classList.remove('busy');
-      fileInput.value = '';
-    }
-  }
-
-  function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // ─── EVENT LISTENERS — dipasang SEKARANG, sebelum engine ────
-  // ═══════════════════════════════════════════════════════════════
-  dbg('UI siap. Engine akan dimuat saat Anda memilih video.');
-
-  dropZone.addEventListener('click', () => {
-    if (!busy) fileInput.click();
+/* ═══════════════════════════════════════════════════════════════
+   Media helpers
+   ═══════════════════════════════════════════════════════════════ */
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    v.onloadedmetadata = () => {
+      const d = v.duration;
+      URL.revokeObjectURL(v.src);
+      resolve(isFinite(d) ? d : 0);
+    };
+    v.onerror = () => resolve(0);
+    v.src = URL.createObjectURL(file);
   });
+}
 
-  ['dragover', 'dragenter'].forEach((ev) =>
-    dropZone.addEventListener(ev, (e) => {
-      e.preventDefault();
-      if (!busy) dropZone.classList.add('dragover');
-    })
-  );
-  ['dragleave', 'drop'].forEach((ev) =>
-    dropZone.addEventListener(ev, () => dropZone.classList.remove('dragover'))
-  );
-  dropZone.addEventListener('drop', (e) => {
+/* ═══════════════════════════════════════════════════════════════
+   Silence detection
+   ═══════════════════════════════════════════════════════════════ */
+async function detectSilences(duration) {
+  captureSilence = true;
+  silences = [];
+  silenceStart = null;
+  try {
+    await ffmpeg.exec([
+      '-i', 'input.mp4',
+      '-vn',
+      '-af', 'silencedetect=noise=-35dB:d=0.8',
+      '-f', 'null', '-',
+    ]);
+  } catch (e) {
+    dbg('silencedetect gagal (mungkin tanpa audio): ' + e.message, 'err');
+  } finally {
+    captureSilence = false;
+  }
+  if (silenceStart !== null) silences.push([silenceStart, duration]);
+
+  const speech = [];
+  let cursor = 0;
+  for (const [s, e] of silences) {
+    if (s - cursor > 0.6) speech.push([cursor, s]);
+    cursor = Math.max(cursor, e);
+  }
+  if (cursor < duration - 0.6) speech.push([cursor, duration]);
+  return speech;
+}
+
+function groupIntoClips(speech, minDur, maxDur, targetDur) {
+  if (!speech.length) return null;
+  const clips = [];
+  let cur = null;
+  for (const [s, e] of speech) {
+    if (!cur) cur = [s, e];
+    else if (e - cur[0] <= maxDur) cur[1] = e;
+    else {
+      clips.push(cur);
+      cur = [s, e];
+    }
+    if (cur[1] - cur[0] >= targetDur) {
+      clips.push(cur);
+      cur = null;
+    }
+  }
+  if (cur) {
+    if (cur[1] - cur[0] >= minDur || clips.length === 0) clips.push(cur);
+    else if (clips.length) clips[clips.length - 1][1] = cur[1];
+  }
+  return clips;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Render clip ke 9:16 dengan background blur
+   ═══════════════════════════════════════════════════════════════ */
+async function renderClip(start, dur, outName, onProgress) {
+  const W = 720, H = 1280;
+  const filter =
+    `[0:v]split=2[orig][copy];` +
+    `[copy]scale=${W}:${H}:force_original_aspect_ratio=increase,` +
+    `crop=${W}:${H},boxblur=20:20[bg];` +
+    `[orig]scale=${W}:${H}:force_original_aspect_ratio=decrease[fg];` +
+    `[bg][fg]overlay=(W-w)/2:(H-h)/2[out]`;
+
+  lastProgressTime = 0;
+  const timer = setInterval(() => {
+    if (lastProgressTime !== null && dur > 0) {
+      onProgress(Math.min(1, lastProgressTime / dur));
+    }
+  }, 300);
+
+  try {
+    await ffmpeg.exec([
+      '-ss', String(start),
+      '-i', 'input.mp4',
+      '-t', String(dur),
+      '-filter_complex', filter,
+      '-map', '[out]',
+      '-map', '0:a?',
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '24',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      '-r', '30',
+      outName,
+    ]);
+  } finally {
+    clearInterval(timer);
+  }
+
+  const data = await ffmpeg.readFile(outName);
+  return new Blob([data], { type: 'video/mp4' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Gallery
+   ═══════════════════════════════════════════════════════════════ */
+function addClipToGallery(blob, index, start, dur) {
+  const url = URL.createObjectURL(blob);
+  const card = document.createElement('div');
+  card.className = 'clip-card';
+  card.innerHTML =
+    '<video src="' + url + '" controls preload="metadata" playsinline></video>' +
+    '<div class="clip-info">' +
+      '<div class="clip-title">Klip ' + index + '</div>' +
+      '<div class="clip-meta">' + dur.toFixed(1) + ' dtk · mulai ' + start.toFixed(1) +
+        's · ' + (blob.size / 1024 / 1024).toFixed(1) + ' MB</div>' +
+      '<a class="dl-btn" href="' + url + '" download="reels-clip-' + index + '.mp4">⬇ Unduh MP4</a>' +
+    '</div>';
+  clipsGrid.appendChild(card);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE FILE
+   ═══════════════════════════════════════════════════════════════ */
+function stageFile(file) {
+  clearError();
+  resultsWrap.classList.add('hidden');
+  clipsGrid.innerHTML = '';
+  progressWrap.classList.add('hidden');
+
+  if (!file.type.startsWith('video/') && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
+    showError('File bukan video (tipe: ' + (file.type || 'unknown') + ')');
+    return;
+  }
+  if (file.size > 400 * 1024 * 1024) {
+    showError(
+      'File terlalu besar (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Maksimum 400 MB.'
+    );
+    return;
+  }
+
+  if (previewURL) {
+    URL.revokeObjectURL(previewURL);
+    previewURL = null;
+  }
+
+  stagedFile = file;
+  previewURL = URL.createObjectURL(file);
+  previewEl.src = previewURL;
+  previewEl.load();
+
+  stageName.textContent = '📄 ' + file.name;
+  stageMeta.textContent =
+    (file.size / 1024 / 1024).toFixed(1) + ' MB · ' +
+    (file.type || 'video') + ' · siap diproses';
+
+  stagePanel.classList.remove('hidden');
+  startBtn.disabled = false;
+  changeBtn.disabled = false;
+  startBtn.innerHTML = '▶ Mulai Edit Otomatis';
+
+  setStatus('ready', '✅ Video siap — klik "Mulai Edit Otomatis"');
+  dbg('File di-stage: ' + file.name);
+}
+
+function resetStage() {
+  if (previewURL) {
+    URL.revokeObjectURL(previewURL);
+    previewURL = null;
+  }
+  previewEl.removeAttribute('src');
+  previewEl.load();
+  stagedFile = null;
+  stagePanel.classList.add('hidden');
+  progressWrap.classList.add('hidden');
+  clearError();
+  setStatus('ready', '⚙️ Siap — pilih video untuk mulai');
+  fileInput.value = '';
+  dbg('Stage direset');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RUN PIPELINE
+   ═══════════════════════════════════════════════════════════════ */
+async function runPipeline() {
+  if (busy || !stagedFile) return;
+  busy = true;
+  dropZone.classList.add('busy');
+  startBtn.disabled = true;
+  changeBtn.disabled = true;
+  startBtn.innerHTML = '<span class="spin"></span> Memproses…';
+  clearError();
+  resultsWrap.classList.add('hidden');
+  clipsGrid.innerHTML = '';
+
+  try {
+    const file = stagedFile;
+    dbg('▶ Pipeline dimulai: ' + file.name);
+
+    // 1) Durasi
+    setProgress(1, 'Membaca metadata video…');
+    const duration = await getVideoDuration(file);
+    if (!duration || duration < 5) {
+      throw new Error(
+        'Durasi tidak terdeteksi atau < 5 detik. Format mungkin tidak didukung browser.'
+      );
+    }
+    dbg('Durasi: ' + duration.toFixed(1) + 's');
+
+    // 2) Load engine
+    if (!engineReady) await ensureEngine();
+
+    // 3) Tulis ke FS virtual
+    setProgress(12, 'Menulis video ke memori browser…');
+    const { fetchFile } = utilModule;
+    const fileData = await fetchFile(file);
+    await ffmpeg.writeFile('input.mp4', fileData);
+    dbg('Video ditulis ke FS virtual (' + (fileData.length / 1024 / 1024).toFixed(1) + ' MB)');
+
+    // 4) Deteksi segmen
+    setProgress(15, 'Mendeteksi segmen bicara…');
+    const speech = await detectSilences(duration);
+    dbg('Segmen ucapan: ' + speech.length);
+
+    const minDur = Math.max(5, parseFloat(minDurInput.value) || 15);
+    const maxDur = Math.max(minDur + 5, parseFloat(maxDurInput.value) || 60);
+    const targetDur = Math.min(30, maxDur);
+
+    let clips = groupIntoClips(speech, minDur, maxDur, targetDur);
+    if (!clips || !clips.length) {
+      dbg('Fallback: split rata per ' + targetDur + 's');
+      clips = [];
+      for (let t = 0; t < duration; t += targetDur) {
+        clips.push([t, Math.min(t + targetDur, duration)]);
+      }
+    }
+    if (clips.length > 10) clips = clips.slice(0, 10);
+    if (!clips.length) throw new Error('Tidak ada klip yang bisa dibuat.');
+
+    // 5) Render tiap klip
+    setProgress(20, 'Merender ' + clips.length + ' klip 9:16…');
+    let rendered = 0;
+
+    for (let i = 0; i < clips.length; i++) {
+      const [s, e] = clips[i];
+      const dur = e - s;
+      if (dur < 3) continue;
+
+      const basePct = 20 + (i / clips.length) * 75;
+      const blob = await renderClip(s, dur, 'clip' + i + '.mp4', (frac) => {
+        setProgress(
+          basePct + (frac / clips.length) * 75,
+          'Merender klip ' + (i + 1) + '/' + clips.length + '… (' + Math.floor(frac * 100) + '%)'
+        );
+      });
+
+      rendered++;
+      addClipToGallery(blob, rendered, s, dur);
+      dbg('Klip ' + rendered + ' selesai (' + (blob.size / 1024 / 1024).toFixed(1) + ' MB)', 'ok');
+
+      try {
+        await ffmpeg.deleteFile('clip' + i + '.mp4');
+      } catch (_) {}
+
+      setProgress(
+        20 + ((i + 1) / clips.length) * 75,
+        'Klip ' + (i + 1) + '/' + clips.length + ' selesai'
+      );
+    }
+
+    if (rendered === 0) throw new Error('Tidak ada klip yang berhasil dirender.');
+
+    setProgress(100, '✅ ' + rendered + ' klip siap diunduh!');
+    resultsWrap.classList.remove('hidden');
+    setStatus('ready', '✅ ' + rendered + ' klip siap');
+    setTimeout(() => progressWrap.classList.add('hidden'), 1500);
+
+  } catch (err) {
+    console.error(err);
+    showError(err.message || String(err));
+    progressWrap.classList.add('hidden');
+    setStatus('error', '❌ Gagal');
+  } finally {
+    try {
+      if (ffmpeg) await ffmpeg.deleteFile('input.mp4');
+    } catch (_) {}
+    busy = false;
+    dropZone.classList.remove('busy');
+    startBtn.disabled = false;
+    changeBtn.disabled = false;
+    startBtn.innerHTML = '▶ Mulai Edit Otomatis';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EVENT LISTENERS
+   ═══════════════════════════════════════════════════════════════ */
+dbg('UI siap. Pilih video lalu klik "Mulai Edit Otomatis".');
+
+dropZone.addEventListener('click', () => {
+  if (!busy) fileInput.click();
+});
+
+['dragover', 'dragenter'].forEach((ev) =>
+  dropZone.addEventListener(ev, (e) => {
     e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (busy) return;
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) processVideo(f);
-    else showError('Tidak ada file yang terdeteksi pada drop.');
-  });
+    if (!busy) dropZone.classList.add('dragover');
+  })
+);
+['dragleave', 'drop'].forEach((ev) =>
+  dropZone.addEventListener(ev, () => dropZone.classList.remove('dragover'))
+);
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (busy) return;
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) stageFile(f);
+  else showError('Tidak ada file pada drop.');
+});
 
-  fileInput.addEventListener('change', () => {
-    const f = fileInput.files && fileInput.files[0];
-    if (f) processVideo(f);
-  });
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files && fileInput.files[0];
+  if (f) stageFile(f);
+});
 
-})();
+startBtn.addEventListener('click', runPipeline);
+changeBtn.addEventListener('click', resetStage);
+
+// Pre-flight check (opsional, tidak menunggu)
+window.addEventListener('error', (e) => {
+  if (e.message && /import|module|fetch/i.test(e.message)) {
+    dbg('Global error: ' + e.message, 'err');
+  }
+});
 </script>
 </body>
 </html>
