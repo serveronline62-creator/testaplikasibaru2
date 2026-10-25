@@ -5,139 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ReelsForge — Video → Reels Otomatis</title>
 <style>
-  :root {
-    --bg:#0b1020; --panel:#151b2e; --panel-2:#1e2740;
-    --border:#2a3450; --text:#e5e9f0; --muted:#8b96b3;
-    --accent:#7c5cff; --accent-2:#a855f7;
-  }
+  :root{--bg:#0b1020;--panel:#151b2e;--panel-2:#1e2740;--border:#2a3450;--text:#e5e9f0;--muted:#8b96b3;--accent:#7c5cff;--accent-2:#a855f7}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:radial-gradient(1200px 600px at 50% -100px,#1e1e4a 0%,var(--bg) 60%);
-    color:var(--text);min-height:100vh;padding:32px 16px 60px;
-  }
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -100px,#1e1e4a 0%,var(--bg) 60%);color:var(--text);min-height:100vh;padding:32px 16px 60px}
   .container{max-width:1080px;margin:0 auto}
   header{text-align:center;margin-bottom:28px}
-  header h1{
-    font-size:2.4rem;font-weight:800;letter-spacing:-.5px;
-    background:linear-gradient(90deg,#a855f7,#6366f1,#22d3ee);
-    -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px;
-  }
+  header h1{font-size:2.4rem;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,#a855f7,#6366f1,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px}
   header p{color:var(--muted);font-size:.95rem}
-  .badge{
-    display:inline-block;padding:5px 14px;border-radius:999px;
-    background:var(--panel-2);font-size:.78rem;color:var(--muted);
-    margin-bottom:10px;border:1px solid var(--border);transition:all .2s;
-  }
+  .badge{display:inline-block;padding:5px 14px;border-radius:999px;background:var(--panel-2);font-size:.78rem;color:var(--muted);margin-bottom:10px;border:1px solid var(--border);transition:all .2s}
   .badge.ready{background:#14532d;color:#86efac;border-color:#166534}
   .badge.error{background:#7f1d1d;color:#fecaca;border-color:#991b1b}
   .badge.loading{background:#422006;color:#fcd34d;border-color:#92400e}
-
-  .warning{background:#422006;border:1px solid #92400e;color:#fcd34d;
-    padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:.85rem;line-height:1.5}
+  .warning{background:#422006;border:1px solid #92400e;color:#fcd34d;padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:.85rem;line-height:1.5}
   .warning code{background:#000;padding:2px 6px;border-radius:4px;font-size:.78rem}
-
-  .card{background:var(--panel);border:1px solid var(--border);
-    border-radius:18px;padding:24px;margin-bottom:18px}
-
-  #drop{border:2px dashed var(--border);border-radius:16px;padding:50px 24px;
-    text-align:center;cursor:pointer;transition:all .2s;background:var(--panel-2)}
-  #drop:hover,#drop.dragover{border-color:var(--accent);
-    box-shadow:0 0 0 4px rgba(124,92,255,.15);transform:translateY(-1px)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:18px}
+  #drop{border:2px dashed var(--border);border-radius:16px;padding:50px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel-2)}
+  #drop:hover,#drop.dragover{border-color:var(--accent);box-shadow:0 0 0 4px rgba(124,92,255,.15);transform:translateY(-1px)}
   #drop.busy{opacity:.55;pointer-events:none}
   .drop-icon{font-size:2.6rem;display:block;margin-bottom:10px}
   .drop-title{font-size:1.1rem;font-weight:600;margin-bottom:4px}
   .drop-sub{color:var(--muted);font-size:.85rem}
   .drop-formats{color:#5b6684;font-size:.76rem;margin-top:10px}
-
-  #stage{margin-top:18px;background:var(--panel-2);border:1px solid var(--border);
-    border-radius:14px;padding:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-  .stage-preview{
-    width:100px;flex-shrink:0;aspect-ratio:9/16;background:#000;
-    border-radius:10px;overflow:hidden;position:relative;
-  }
+  #stage{margin-top:18px;background:var(--panel-2);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .stage-preview{width:100px;flex-shrink:0;aspect-ratio:9/16;background:#000;border-radius:10px;overflow:hidden;position:relative}
   .stage-preview video{width:100%;height:100%;object-fit:cover;display:block}
   .stage-info{flex:1;min-width:220px}
-  .stage-name{font-weight:700;font-size:1rem;margin-bottom:4px;
-    word-break:break-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stage-name{font-weight:700;font-size:1rem;margin-bottom:4px;word-break:break-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .stage-meta{color:var(--muted);font-size:.82rem;margin-bottom:14px}
   .stage-actions{display:flex;gap:10px;flex-wrap:wrap}
-
-  .btn{
-    padding:11px 22px;border:none;border-radius:10px;font-size:.92rem;
-    font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;
-    display:inline-flex;align-items:center;gap:8px;
-  }
+  .btn{padding:11px 22px;border:none;border-radius:10px;font-size:.92rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-  .btn.primary{
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));
-    color:#fff;box-shadow:0 4px 14px rgba(124,92,255,.35);
-  }
-  .btn.primary:hover:not(:disabled){
-    transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,92,255,.5);
-  }
-  .btn.ghost{
-    background:transparent;color:var(--muted);border:1px solid var(--border);
-  }
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 4px 14px rgba(124,92,255,.35)}
+  .btn.primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,92,255,.5)}
+  .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
   .btn.ghost:hover:not(:disabled){border-color:var(--accent);color:var(--text)}
-
   @keyframes spin{to{transform:rotate(360deg)}}
-  .spin{display:inline-block;width:14px;height:14px;
-    border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
-    border-radius:50%;animation:spin .7s linear infinite}
-
-  .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:14px;margin-top:18px}
-  .option label{display:block;font-size:.75rem;color:var(--muted);
-    margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-  .option input{width:100%;background:var(--panel-2);border:1px solid var(--border);
-    color:var(--text);padding:9px 11px;border-radius:9px;font-size:.92rem;outline:none}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:18px}
+  .option label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+  .option input{width:100%;background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:9px;font-size:.92rem;outline:none}
   .option input:focus{border-color:var(--accent)}
   .option input:disabled{opacity:.5}
-
   #progress-wrap{margin-top:18px}
   .progress-head{display:flex;justify-content:space-between;margin-bottom:8px;font-size:.88rem}
   .progress-head .pct{color:var(--accent);font-weight:700}
   .bar{height:11px;background:var(--panel-2);border-radius:999px;overflow:hidden}
-  #progress-bar{height:100%;width:0%;
-    background:linear-gradient(90deg,var(--accent),var(--accent-2),#22d3ee);
-    background-size:200% 100%;border-radius:999px;transition:width .35s ease;
-    animation:shimmer 2s linear infinite}
+  #progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2),#22d3ee);background-size:200% 100%;border-radius:999px;transition:width .35s ease;animation:shimmer 2s linear infinite}
   @keyframes shimmer{0%{background-position:0% 0}100%{background-position:200% 0}}
   #progress-text{color:var(--muted);font-size:.84rem;margin-top:8px;white-space:pre-line}
-
   #results h2{margin-bottom:16px;font-size:1.25rem}
   #clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
-  .clip-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;
-    overflow:hidden;display:flex;flex-direction:column;transition:.2s}
-  .clip-card:hover{transform:translateY(-2px);border-color:var(--accent);
-    box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .clip-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:.2s}
+  .clip-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.4)}
   .clip-card video{width:100%;aspect-ratio:9/16;background:#000;object-fit:cover;display:block}
   .clip-info{padding:12px}
   .clip-title{font-weight:700;font-size:.92rem;margin-bottom:3px}
   .clip-meta{font-size:.73rem;color:var(--muted);margin-bottom:10px}
-  .dl-btn{display:block;text-align:center;
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));
-    color:white;text-decoration:none;padding:9px;border-radius:9px;
-    font-size:.84rem;font-weight:600;transition:.2s}
+  .dl-btn{display:block;text-align:center;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:white;text-decoration:none;padding:9px;border-radius:9px;font-size:.84rem;font-weight:600;transition:.2s}
   .dl-btn:hover{opacity:.85}
-
-  #error{background:#450a0a;border:1px solid #7f1d1d;color:#fecaca;
-    padding:14px 18px;border-radius:12px;margin-top:16px;font-size:.88rem;
-    white-space:pre-wrap;font-family:ui-monospace,monospace}
-
-  #debug{margin-top:16px;background:#020617;border:1px solid #1e293b;
-    border-radius:10px;padding:12px;font-family:ui-monospace,monospace;
-    font-size:.75rem;color:#94a3b8;max-height:200px;overflow:auto;display:none}
+  #error{background:#450a0a;border:1px solid #7f1d1d;color:#fecaca;padding:14px 18px;border-radius:12px;margin-top:16px;font-size:.88rem;white-space:pre-wrap;font-family:ui-monospace,monospace}
+  #debug{margin-top:16px;background:#020617;border:1px solid #1e293b;border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:.75rem;color:#94a3b8;max-height:220px;overflow:auto;display:none}
   #debug.show{display:block}
   #debug .line{padding:1px 0}
   #debug .err{color:#fca5a5}
   #debug .ok{color:#86efac}
   #debug .info{color:#93c5fd}
-
   .hidden{display:none !important}
-  footer{text-align:center;color:var(--muted);font-size:.78rem;
-    margin-top:32px;line-height:1.7}
+  footer{text-align:center;color:var(--muted);font-size:.78rem;margin-top:32px;line-height:1.7}
 </style>
 </head>
 <body>
@@ -160,43 +94,25 @@
     </div>
 
     <div id="stage" class="hidden">
-      <div class="stage-preview">
-        <video id="preview" muted playsinline preload="metadata"></video>
-      </div>
+      <div class="stage-preview"><video id="preview" muted playsinline preload="metadata"></video></div>
       <div class="stage-info">
         <div class="stage-name" id="stage-name">—</div>
         <div class="stage-meta" id="stage-meta">—</div>
         <div class="stage-actions">
-          <button id="start-btn" class="btn primary" type="button">
-            ▶ Mulai Edit Otomatis
-          </button>
-          <button id="change-btn" class="btn ghost" type="button">
-            🔄 Ganti Video
-          </button>
+          <button id="start-btn" class="btn primary" type="button">▶ Mulai Edit Otomatis</button>
+          <button id="change-btn" class="btn ghost" type="button">🔄 Ganti Video</button>
         </div>
       </div>
     </div>
 
     <div class="options">
-      <div class="option">
-        <label for="min-dur">Durasi minimum (detik)</label>
-        <input type="number" id="min-dur" value="15" min="5" max="120">
-      </div>
-      <div class="option">
-        <label for="max-dur">Durasi maksimum (detik)</label>
-        <input type="number" id="max-dur" value="60" min="10" max="180">
-      </div>
-      <div class="option">
-        <label>Resolusi output</label>
-        <input type="text" value="720 × 1280 (9:16)" disabled>
-      </div>
+      <div class="option"><label for="min-dur">Durasi minimum (detik)</label><input type="number" id="min-dur" value="15" min="5" max="120"></div>
+      <div class="option"><label for="max-dur">Durasi maksimum (detik)</label><input type="number" id="max-dur" value="60" min="10" max="180"></div>
+      <div class="option"><label>Resolusi output</label><input type="text" value="720 × 1280 (9:16)" disabled></div>
     </div>
 
     <div id="progress-wrap" class="hidden">
-      <div class="progress-head">
-        <span id="progress-text">Menyiapkan…</span>
-        <span class="pct" id="progress-pct">0%</span>
-      </div>
+      <div class="progress-head"><span id="progress-text">Menyiapkan…</span><span class="pct" id="progress-pct">0%</span></div>
       <div class="bar"><div id="progress-bar"></div></div>
     </div>
 
@@ -204,181 +120,119 @@
     <div id="debug"></div>
   </div>
 
-  <div id="results" class="card hidden">
-    <h2>✅ Klip Anda Siap</h2>
-    <div id="clips"></div>
-  </div>
+  <div id="results" class="card hidden"><h2>✅ Klip Anda Siap</h2><div id="clips"></div></div>
 
-  <footer>
-    Semua pemrosesan berjalan lokal di browser Anda · Powered by ffmpeg.wasm<br>
-    Jika halaman lambat, coba video lebih pendek atau turunkan durasi maksimum.
-  </footer>
+  <footer>Semua pemrosesan berjalan lokal di browser Anda · Powered by ffmpeg.wasm</footer>
 </div>
 
 <script type="module">
 /* ══════════════════════════════════════════════════════════════════
-   ReelsForge — robust single-file client (ESM only)
-   Menggunakan:
-     • @ffmpeg/ffmpeg  (via esm.sh, fallback jsdelivr)
-     • @ffmpeg/util    (via esm.sh, fallback jsdelivr)
-     • @ffmpeg/core    (ESM build, via jsdelivr)
+   ReelsForge — FINAL: semua library ffmpeg LOCAL (same-origin)
+   Tidak ada lagi CDN untuk ffmpeg/worker → URL selalu valid.
    ══════════════════════════════════════════════════════════════════ */
 
-// ─── DOM refs ──────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
-const dropZone    = $('drop');
-const fileInput   = $('file');
-const stagePanel  = $('stage');
-const previewEl   = $('preview');
-const stageName   = $('stage-name');
-const stageMeta   = $('stage-meta');
-const startBtn    = $('start-btn');
-const changeBtn   = $('change-btn');
-const progressWrap= $('progress-wrap');
-const progressBar = $('progress-bar');
-const progressPct = $('progress-pct');
-const progressTxt = $('progress-text');
-const resultsWrap = $('results');
-const clipsGrid   = $('clips');
-const errorBox    = $('error');
-const warningBox  = $('warning');
-const statusBadge = $('status');
-const debugBox    = $('debug');
-const minDurInput = $('min-dur');
-const maxDurInput = $('max-dur');
+const dropZone=$('drop'), fileInput=$('file'), stagePanel=$('stage'), previewEl=$('preview');
+const stageName=$('stage-name'), stageMeta=$('stage-meta'), startBtn=$('start-btn'), changeBtn=$('change-btn');
+const progressWrap=$('progress-wrap'), progressBar=$('progress-bar'), progressPct=$('progress-pct'), progressTxt=$('progress-text');
+const resultsWrap=$('results'), clipsGrid=$('clips'), errorBox=$('error'), warningBox=$('warning');
+const statusBadge=$('status'), debugBox=$('debug'), minDurInput=$('min-dur'), maxDurInput=$('max-dur');
 
-// ─── State ─────────────────────────────────────────────────────
-let ffmpeg = null;
-let FFmpegClass = null;
-let utilModule = null;
-let engineReady = false;
-let engineLoading = null;
-let busy = false;
-let stagedFile = null;
-let previewURL = null;
-let silenceStart = null;
-let silences = [];
-let captureSilence = false;
-let lastProgressTime = null;
+let ffmpeg=null, FFmpegClass=null, utilModule=null;
+let engineReady=false, engineLoading=null, busy=false;
+let stagedFile=null, previewURL=null;
+let silenceStart=null, silences=[], captureSilence=false, lastProgressTime=null;
 
-// ─── Debug logging ─────────────────────────────────────────────
-function dbg(msg, kind) {
+// ─── Debug ─────────────────────────────────────────────────────
+function dbg(msg, kind){
   debugBox.classList.add('show');
-  const line = document.createElement('div');
-  line.className = 'line' + (kind ? ' ' + kind : '');
-  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-  debugBox.appendChild(line);
-  debugBox.scrollTop = debugBox.scrollHeight;
-  while (debugBox.children.length > 100) debugBox.removeChild(debugBox.firstChild);
+  const line=document.createElement('div');
+  line.className='line'+(kind?' '+kind:'');
+  line.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
+  debugBox.appendChild(line); debugBox.scrollTop=debugBox.scrollHeight;
+  while(debugBox.children.length>120) debugBox.removeChild(debugBox.firstChild);
 }
+function setStatus(kind,text){ statusBadge.className='badge '+kind; statusBadge.textContent=text; }
+function setProgress(pct,text){ progressWrap.classList.remove('hidden'); progressBar.style.width=Math.min(100,Math.max(0,pct))+'%'; progressPct.textContent=Math.floor(pct)+'%'; if(text) progressTxt.textContent=text; }
+function showError(msg){ errorBox.textContent='❌ '+msg; errorBox.classList.remove('hidden'); dbg('ERROR: '+msg,'err'); }
+function clearError(){ errorBox.classList.add('hidden'); errorBox.textContent=''; }
 
-// ─── Status helpers ────────────────────────────────────────────
-function setStatus(kind, text) {
-  statusBadge.className = 'badge ' + kind;
-  statusBadge.textContent = text;
-}
-function setProgress(pct, text) {
-  progressWrap.classList.remove('hidden');
-  progressBar.style.width = Math.min(100, Math.max(0, pct)) + '%';
-  progressPct.textContent = Math.floor(pct) + '%';
-  if (text) progressTxt.textContent = text;
-}
-function showError(msg) {
-  errorBox.textContent = '❌ ' + msg;
-  errorBox.classList.remove('hidden');
-  dbg('ERROR: ' + msg, 'err');
-}
-function clearError() {
-  errorBox.classList.add('hidden');
-  errorBox.textContent = '';
-}
-
-// ─── Environment check ─────────────────────────────────────────
+// ─── Environment pre-check ─────────────────────────────────────
 if (location.protocol === 'file:') {
   warningBox.innerHTML =
-    '⚠️ <b>Halaman dibuka via <code>file://</code></b>. Browser memblokir WebAssembly worker ' +
-    'dan module import dalam konteks file. Sajikan via HTTP: ' +
-    '<code>python3 -m http.server 8000</code> lalu buka <code>http://localhost:8000</code>.';
+    '⚠️ <b>Halaman dibuka via <code>file://</code></b>. Worker & modul ESM tidak akan bisa dimuat. ' +
+    'Jalankan: <code>python3 -m http.server 8000</code> lalu buka <code>http://localhost:8000</code>.';
   warningBox.classList.remove('hidden');
-}
-if (typeof SharedArrayBuffer === 'undefined') {
-  dbg('SharedArrayBuffer tidak tersedia — multi-thread worker akan dinonaktifkan', 'info');
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ESM Loader dengan fallback ganda
+   Pre-flight check: pastikan file lokal ada
    ═══════════════════════════════════════════════════════════════ */
-const FFMPEG_SOURCES = [
-  'https://esm.sh/@ffmpeg/ffmpeg@0.12.10',
-  'https://esm.run/@ffmpeg/ffmpeg@0.12.10',
-  'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js',
-];
-const UTIL_SOURCES = [
-  'https://esm.sh/@ffmpeg/util@0.12.1',
-  'https://esm.run/@ffmpeg/util@0.12.1',
-  'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js',
-];
-
-async function tryImport(name, urls, requiredFns) {
-  let lastErr = null;
-  for (const url of urls) {
+async function ensureLocalFiles() {
+  const files = [
+    './ffmpeg/index.js',
+    './ffmpeg/worker.js',
+    './ffmpeg/const.js',
+    './ffmpeg/errors.js',
+    './util/index.js',
+  ];
+  const missing = [];
+  for (const f of files) {
     try {
-      dbg(`Import ${name} ← ${url}`);
-      const mod = await import(/* @vite-ignore */ url);
-      // Validasi minimal
-      const missing = requiredFns.filter((fn) => !(fn in mod));
-      if (missing.length) {
-        throw new Error(`Modul ${name} tidak mengekspor: ${missing.join(', ')}`);
-      }
-      dbg(`✔ ${name} berhasil dimuat dari ${new URL(url).host}`, 'ok');
-      return mod;
+      const r = await fetch(f, { method: 'HEAD' });
+      if (!r.ok) missing.push(f + ' (HTTP ' + r.status + ')');
     } catch (e) {
-      lastErr = e;
-      dbg(`✖ ${url} → ${e.message}`, 'err');
+      missing.push(f + ' (network error)');
     }
   }
-  throw new Error(
-    `Semua sumber ${name} gagal. Penyebab terakhir: ${lastErr && lastErr.message}`
-  );
+  if (missing.length) {
+    throw new Error(
+      'File library lokal tidak ditemukan:\n  ' + missing.join('\n  ') +
+      '\n\nJalankan skrip setup di README untuk mengunduh file ke folder ./ffmpeg/ dan ./util/'
+    );
+  }
+  dbg('✔ Semua file lokal tersedia', 'ok');
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ESM import dari file lokal (same-origin — tidak ada masalah URL)
+   ═══════════════════════════════════════════════════════════════ */
 async function ensureLibs() {
   if (FFmpegClass && utilModule) return;
 
-  const [ffmpegMod, utilMod] = await Promise.all([
-    tryImport('@ffmpeg/ffmpeg', FFMPEG_SOURCES, ['FFmpeg']),
-    tryImport('@ffmpeg/util', UTIL_SOURCES, ['toBlobURL', 'fetchFile']),
-  ]);
+  await ensureLocalFiles();
+
+  dbg('Mengimpor ./ffmpeg/index.js…');
+  const ffmpegMod = await import('./ffmpeg/index.js');
+  dbg('Mengimpor ./util/index.js…');
+  const utilMod = await import('./util/index.js');
+
+  if (typeof ffmpegMod.FFmpeg !== 'function') {
+    throw new Error('./ffmpeg/index.js tidak mengekspor kelas FFmpeg.');
+  }
+  if (typeof utilMod.toBlobURL !== 'function' || typeof utilMod.fetchFile !== 'function') {
+    throw new Error('./util/index.js tidak mengekspor toBlobURL/fetchFile.');
+  }
 
   FFmpegClass = ffmpegMod.FFmpeg;
   utilModule = utilMod;
-
-  if (typeof FFmpegClass !== 'function') {
-    throw new Error('FFmpeg bukan kelas yang valid.');
-  }
-  dbg('Semua modul ESM siap', 'ok');
+  dbg('✔ Semua library lokal siap', 'ok');
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Handle log events dari ffmpeg
-   ═══════════════════════════════════════════════════════════════ */
 function handleLog({ message }) {
   if (captureSilence) {
     const s = message.match(/silence_start:\s*([\d.]+)/);
     const e = message.match(/silence_end:\s*([\d.]+)/);
     if (s) silenceStart = parseFloat(s[1]);
-    if (e && silenceStart !== null) {
-      silences.push([silenceStart, parseFloat(e[1])]);
-      silenceStart = null;
-    }
+    if (e && silenceStart !== null) { silences.push([silenceStart, parseFloat(e[1])]); silenceStart = null; }
   } else {
     const m = message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
-    if (m) lastProgressTime = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+    if (m) lastProgressTime = (+m[1])*3600 + (+m[2])*60 + parseFloat(m[3]);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Lazy Engine Loader
+   Engine loader — core wasm dari CDN, worker & lib LOKAL
    ═══════════════════════════════════════════════════════════════ */
 const CORE_BASES = [
   'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm',
@@ -390,22 +244,17 @@ async function ensureEngine() {
   if (engineLoading) return engineLoading;
 
   engineLoading = (async () => {
-    setStatus('loading', '⏳ Memuat library ffmpeg (ESM)…');
-    setProgress(2, 'Memuat modul ffmpeg dari CDN…');
+    setStatus('loading', '⏳ Memuat library ffmpeg…');
+    setProgress(2, 'Memuat library dari folder lokal…');
     await ensureLibs();
 
     ffmpeg = new FFmpegClass();
     ffmpeg.on('log', handleLog);
-    if (typeof ffmpeg.on === 'function') {
-      ffmpeg.on('progress', ({ progress }) => {
-        // Progress event opsional — kita pakai log parsing sebagai utama
-      });
-    }
 
     const { toBlobURL } = utilModule;
 
     setProgress(5, 'Mengunduh core ffmpeg.wasm (~30 MB, sekali saja)…');
-    let coreURL = null, wasmURL = null, lastErr = null;
+    let coreURL=null, wasmURL=null, lastErr=null;
     for (const base of CORE_BASES) {
       try {
         dbg('Core ← ' + base);
@@ -413,19 +262,20 @@ async function ensureEngine() {
         wasmURL = await toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm');
         dbg('✔ Core dari ' + new URL(base).host, 'ok');
         break;
-      } catch (e) {
-        lastErr = e;
-        dbg('✖ ' + base + ' → ' + e.message, 'err');
-      }
+      } catch (e) { lastErr = e; dbg('✖ ' + base + ' → ' + e.message, 'err'); }
     }
-    if (!coreURL || !wasmURL) {
-      throw new Error(
-        'Gagal unduh core ffmpeg ESM. Penyebab: ' + (lastErr && lastErr.message)
-      );
+    if (!coreURL || !wasmURL) throw new Error('Gagal unduh core: ' + (lastErr && lastErr.message));
+
+    setProgress(10, 'Menginisialisasi worker…');
+
+    // classWorkerURL = URL absolut ke ./ffmpeg/worker.js (same-origin)
+    const classWorkerURL = new URL('./ffmpeg/worker.js', window.location.href).href;
+    dbg('classWorkerURL = ' + classWorkerURL);
+    if (!/^https?:/i.test(classWorkerURL)) {
+      throw new Error('classWorkerURL harus http(s) — pastikan halaman diakses via HTTP, bukan file://');
     }
 
-    setProgress(10, 'Menginisialisasi WebAssembly worker…');
-    await ffmpeg.load({ coreURL, wasmURL });
+    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
 
     engineReady = true;
     setStatus('ready', '✅ Engine siap');
@@ -433,9 +283,8 @@ async function ensureEngine() {
     return ffmpeg;
   })();
 
-  try {
-    return await engineLoading;
-  } catch (e) {
+  try { return await engineLoading; }
+  catch (e) {
     engineLoading = null;
     setStatus('error', '❌ Engine gagal dimuat');
     throw e;
@@ -445,351 +294,168 @@ async function ensureEngine() {
 /* ═══════════════════════════════════════════════════════════════
    Media helpers
    ═══════════════════════════════════════════════════════════════ */
-function getVideoDuration(file) {
-  return new Promise((resolve) => {
-    const v = document.createElement('video');
-    v.preload = 'metadata';
-    v.muted = true;
-    v.onloadedmetadata = () => {
-      const d = v.duration;
-      URL.revokeObjectURL(v.src);
-      resolve(isFinite(d) ? d : 0);
-    };
-    v.onerror = () => resolve(0);
-    v.src = URL.createObjectURL(file);
+function getVideoDuration(file){
+  return new Promise(resolve=>{
+    const v=document.createElement('video'); v.preload='metadata'; v.muted=true;
+    v.onloadedmetadata=()=>{ const d=v.duration; URL.revokeObjectURL(v.src); resolve(isFinite(d)?d:0); };
+    v.onerror=()=>resolve(0); v.src=URL.createObjectURL(file);
   });
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Silence detection
-   ═══════════════════════════════════════════════════════════════ */
-async function detectSilences(duration) {
-  captureSilence = true;
-  silences = [];
-  silenceStart = null;
-  try {
-    await ffmpeg.exec([
-      '-i', 'input.mp4',
-      '-vn',
-      '-af', 'silencedetect=noise=-35dB:d=0.8',
-      '-f', 'null', '-',
-    ]);
-  } catch (e) {
-    dbg('silencedetect gagal (mungkin tanpa audio): ' + e.message, 'err');
-  } finally {
-    captureSilence = false;
-  }
-  if (silenceStart !== null) silences.push([silenceStart, duration]);
-
-  const speech = [];
-  let cursor = 0;
-  for (const [s, e] of silences) {
-    if (s - cursor > 0.6) speech.push([cursor, s]);
-    cursor = Math.max(cursor, e);
-  }
-  if (cursor < duration - 0.6) speech.push([cursor, duration]);
+async function detectSilences(duration){
+  captureSilence=true; silences=[]; silenceStart=null;
+  try { await ffmpeg.exec(['-i','input.mp4','-vn','-af','silencedetect=noise=-35dB:d=0.8','-f','null','-']); }
+  catch(e){ dbg('silencedetect gagal: '+e.message,'err'); }
+  finally { captureSilence=false; }
+  if(silenceStart!==null) silences.push([silenceStart,duration]);
+  const speech=[]; let cursor=0;
+  for(const [s,e] of silences){ if(s-cursor>0.6) speech.push([cursor,s]); cursor=Math.max(cursor,e); }
+  if(cursor<duration-0.6) speech.push([cursor,duration]);
   return speech;
 }
 
-function groupIntoClips(speech, minDur, maxDur, targetDur) {
-  if (!speech.length) return null;
-  const clips = [];
-  let cur = null;
-  for (const [s, e] of speech) {
-    if (!cur) cur = [s, e];
-    else if (e - cur[0] <= maxDur) cur[1] = e;
-    else {
-      clips.push(cur);
-      cur = [s, e];
-    }
-    if (cur[1] - cur[0] >= targetDur) {
-      clips.push(cur);
-      cur = null;
-    }
+function groupIntoClips(speech,minDur,maxDur,targetDur){
+  if(!speech.length) return null;
+  const clips=[]; let cur=null;
+  for(const [s,e] of speech){
+    if(!cur) cur=[s,e];
+    else if(e-cur[0]<=maxDur) cur[1]=e;
+    else { clips.push(cur); cur=[s,e]; }
+    if(cur[1]-cur[0]>=targetDur){ clips.push(cur); cur=null; }
   }
-  if (cur) {
-    if (cur[1] - cur[0] >= minDur || clips.length === 0) clips.push(cur);
-    else if (clips.length) clips[clips.length - 1][1] = cur[1];
-  }
+  if(cur){ if(cur[1]-cur[0]>=minDur||clips.length===0) clips.push(cur); else if(clips.length) clips[clips.length-1][1]=cur[1]; }
   return clips;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Render clip ke 9:16 dengan background blur
-   ═══════════════════════════════════════════════════════════════ */
-async function renderClip(start, dur, outName, onProgress) {
-  const W = 720, H = 1280;
-  const filter =
-    `[0:v]split=2[orig][copy];` +
-    `[copy]scale=${W}:${H}:force_original_aspect_ratio=increase,` +
-    `crop=${W}:${H},boxblur=20:20[bg];` +
-    `[orig]scale=${W}:${H}:force_original_aspect_ratio=decrease[fg];` +
+async function renderClip(start,dur,outName,onProgress){
+  const W=720,H=1280;
+  const filter=
+    `[0:v]split=2[orig][copy];`+
+    `[copy]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=20:20[bg];`+
+    `[orig]scale=${W}:${H}:force_original_aspect_ratio=decrease[fg];`+
     `[bg][fg]overlay=(W-w)/2:(H-h)/2[out]`;
-
-  lastProgressTime = 0;
-  const timer = setInterval(() => {
-    if (lastProgressTime !== null && dur > 0) {
-      onProgress(Math.min(1, lastProgressTime / dur));
-    }
-  }, 300);
-
+  lastProgressTime=0;
+  const timer=setInterval(()=>{ if(lastProgressTime!==null&&dur>0) onProgress(Math.min(1,lastProgressTime/dur)); },300);
   try {
-    await ffmpeg.exec([
-      '-ss', String(start),
-      '-i', 'input.mp4',
-      '-t', String(dur),
-      '-filter_complex', filter,
-      '-map', '[out]',
-      '-map', '0:a?',
-      '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-crf', '24',
-      '-c:a', 'aac',
-      '-b:a', '128k',
-      '-movflags', '+faststart',
-      '-r', '30',
-      outName,
-    ]);
-  } finally {
-    clearInterval(timer);
-  }
-
-  const data = await ffmpeg.readFile(outName);
-  return new Blob([data], { type: 'video/mp4' });
+    await ffmpeg.exec(['-ss',String(start),'-i','input.mp4','-t',String(dur),'-filter_complex',filter,'-map','[out]','-map','0:a?','-c:v','libx264','-preset','ultrafast','-crf','24','-c:a','aac','-b:a','128k','-movflags','+faststart','-r','30',outName]);
+  } finally { clearInterval(timer); }
+  const data=await ffmpeg.readFile(outName);
+  return new Blob([data],{type:'video/mp4'});
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Gallery
-   ═══════════════════════════════════════════════════════════════ */
-function addClipToGallery(blob, index, start, dur) {
-  const url = URL.createObjectURL(blob);
-  const card = document.createElement('div');
-  card.className = 'clip-card';
-  card.innerHTML =
-    '<video src="' + url + '" controls preload="metadata" playsinline></video>' +
-    '<div class="clip-info">' +
-      '<div class="clip-title">Klip ' + index + '</div>' +
-      '<div class="clip-meta">' + dur.toFixed(1) + ' dtk · mulai ' + start.toFixed(1) +
-        's · ' + (blob.size / 1024 / 1024).toFixed(1) + ' MB</div>' +
-      '<a class="dl-btn" href="' + url + '" download="reels-clip-' + index + '.mp4">⬇ Unduh MP4</a>' +
-    '</div>';
+function addClipToGallery(blob,index,start,dur){
+  const url=URL.createObjectURL(blob);
+  const card=document.createElement('div');
+  card.className='clip-card';
+  card.innerHTML='<video src="'+url+'" controls preload="metadata" playsinline></video>'+
+    '<div class="clip-info"><div class="clip-title">Klip '+index+'</div>'+
+    '<div class="clip-meta">'+dur.toFixed(1)+' dtk · mulai '+start.toFixed(1)+'s · '+(blob.size/1024/1024).toFixed(1)+' MB</div>'+
+    '<a class="dl-btn" href="'+url+'" download="reels-clip-'+index+'.mp4">⬇ Unduh MP4</a></div>';
   clipsGrid.appendChild(card);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   STAGE FILE
-   ═══════════════════════════════════════════════════════════════ */
-function stageFile(file) {
-  clearError();
-  resultsWrap.classList.add('hidden');
-  clipsGrid.innerHTML = '';
-  progressWrap.classList.add('hidden');
-
-  if (!file.type.startsWith('video/') && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
-    showError('File bukan video (tipe: ' + (file.type || 'unknown') + ')');
-    return;
-  }
-  if (file.size > 400 * 1024 * 1024) {
-    showError(
-      'File terlalu besar (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Maksimum 400 MB.'
-    );
-    return;
-  }
-
-  if (previewURL) {
-    URL.revokeObjectURL(previewURL);
-    previewURL = null;
-  }
-
-  stagedFile = file;
-  previewURL = URL.createObjectURL(file);
-  previewEl.src = previewURL;
-  previewEl.load();
-
-  stageName.textContent = '📄 ' + file.name;
-  stageMeta.textContent =
-    (file.size / 1024 / 1024).toFixed(1) + ' MB · ' +
-    (file.type || 'video') + ' · siap diproses';
-
-  stagePanel.classList.remove('hidden');
-  startBtn.disabled = false;
-  changeBtn.disabled = false;
-  startBtn.innerHTML = '▶ Mulai Edit Otomatis';
-
-  setStatus('ready', '✅ Video siap — klik "Mulai Edit Otomatis"');
-  dbg('File di-stage: ' + file.name);
+function stageFile(file){
+  clearError(); resultsWrap.classList.add('hidden'); clipsGrid.innerHTML=''; progressWrap.classList.add('hidden');
+  if(!file.type.startsWith('video/')&&!/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)){ showError('File bukan video.'); return; }
+  if(file.size>400*1024*1024){ showError('File terlalu besar ('+(file.size/1024/1024).toFixed(1)+' MB). Maks 400 MB.'); return; }
+  if(previewURL){ URL.revokeObjectURL(previewURL); previewURL=null; }
+  stagedFile=file; previewURL=URL.createObjectURL(file); previewEl.src=previewURL; previewEl.load();
+  stageName.textContent='📄 '+file.name;
+  stageMeta.textContent=(file.size/1024/1024).toFixed(1)+' MB · '+(file.type||'video')+' · siap diproses';
+  stagePanel.classList.remove('hidden'); startBtn.disabled=false; changeBtn.disabled=false;
+  startBtn.innerHTML='▶ Mulai Edit Otomatis';
+  setStatus('ready','✅ Video siap — klik "Mulai Edit Otomatis"');
+  dbg('File di-stage: '+file.name);
 }
 
-function resetStage() {
-  if (previewURL) {
-    URL.revokeObjectURL(previewURL);
-    previewURL = null;
-  }
-  previewEl.removeAttribute('src');
-  previewEl.load();
-  stagedFile = null;
-  stagePanel.classList.add('hidden');
-  progressWrap.classList.add('hidden');
-  clearError();
-  setStatus('ready', '⚙️ Siap — pilih video untuk mulai');
-  fileInput.value = '';
+function resetStage(){
+  if(previewURL){ URL.revokeObjectURL(previewURL); previewURL=null; }
+  previewEl.removeAttribute('src'); previewEl.load();
+  stagedFile=null; stagePanel.classList.add('hidden'); progressWrap.classList.add('hidden'); clearError();
+  setStatus('ready','⚙️ Siap — pilih video untuk mulai'); fileInput.value='';
   dbg('Stage direset');
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   RUN PIPELINE
-   ═══════════════════════════════════════════════════════════════ */
-async function runPipeline() {
-  if (busy || !stagedFile) return;
-  busy = true;
-  dropZone.classList.add('busy');
-  startBtn.disabled = true;
-  changeBtn.disabled = true;
-  startBtn.innerHTML = '<span class="spin"></span> Memproses…';
-  clearError();
-  resultsWrap.classList.add('hidden');
-  clipsGrid.innerHTML = '';
+async function runPipeline(){
+  if(busy||!stagedFile) return;
+  busy=true; dropZone.classList.add('busy'); startBtn.disabled=true; changeBtn.disabled=true;
+  startBtn.innerHTML='<span class="spin"></span> Memproses…';
+  clearError(); resultsWrap.classList.add('hidden'); clipsGrid.innerHTML='';
 
   try {
-    const file = stagedFile;
-    dbg('▶ Pipeline dimulai: ' + file.name);
+    const file=stagedFile;
+    dbg('▶ Pipeline dimulai: '+file.name);
 
-    // 1) Durasi
-    setProgress(1, 'Membaca metadata video…');
-    const duration = await getVideoDuration(file);
-    if (!duration || duration < 5) {
-      throw new Error(
-        'Durasi tidak terdeteksi atau < 5 detik. Format mungkin tidak didukung browser.'
-      );
+    setProgress(1,'Membaca metadata video…');
+    const duration=await getVideoDuration(file);
+    if(!duration||duration<5) throw new Error('Durasi tidak terdeteksi atau < 5 detik.');
+    dbg('Durasi: '+duration.toFixed(1)+'s');
+
+    if(!engineReady) await ensureEngine();
+
+    setProgress(12,'Menulis video ke memori browser…');
+    const { fetchFile }=utilModule;
+    const fileData=await fetchFile(file);
+    await ffmpeg.writeFile('input.mp4',fileData);
+    dbg('Video ditulis ke FS virtual');
+
+    setProgress(15,'Mendeteksi segmen bicara…');
+    const speech=await detectSilences(duration);
+    dbg('Segmen ucapan: '+speech.length);
+
+    const minDur=Math.max(5,parseFloat(minDurInput.value)||15);
+    const maxDur=Math.max(minDur+5,parseFloat(maxDurInput.value)||60);
+    const targetDur=Math.min(30,maxDur);
+
+    let clips=groupIntoClips(speech,minDur,maxDur,targetDur);
+    if(!clips||!clips.length){
+      dbg('Fallback: split rata per '+targetDur+'s');
+      clips=[]; for(let t=0;t<duration;t+=targetDur) clips.push([t,Math.min(t+targetDur,duration)]);
     }
-    dbg('Durasi: ' + duration.toFixed(1) + 's');
+    if(clips.length>10) clips=clips.slice(0,10);
+    if(!clips.length) throw new Error('Tidak ada klip yang bisa dibuat.');
 
-    // 2) Load engine
-    if (!engineReady) await ensureEngine();
-
-    // 3) Tulis ke FS virtual
-    setProgress(12, 'Menulis video ke memori browser…');
-    const { fetchFile } = utilModule;
-    const fileData = await fetchFile(file);
-    await ffmpeg.writeFile('input.mp4', fileData);
-    dbg('Video ditulis ke FS virtual (' + (fileData.length / 1024 / 1024).toFixed(1) + ' MB)');
-
-    // 4) Deteksi segmen
-    setProgress(15, 'Mendeteksi segmen bicara…');
-    const speech = await detectSilences(duration);
-    dbg('Segmen ucapan: ' + speech.length);
-
-    const minDur = Math.max(5, parseFloat(minDurInput.value) || 15);
-    const maxDur = Math.max(minDur + 5, parseFloat(maxDurInput.value) || 60);
-    const targetDur = Math.min(30, maxDur);
-
-    let clips = groupIntoClips(speech, minDur, maxDur, targetDur);
-    if (!clips || !clips.length) {
-      dbg('Fallback: split rata per ' + targetDur + 's');
-      clips = [];
-      for (let t = 0; t < duration; t += targetDur) {
-        clips.push([t, Math.min(t + targetDur, duration)]);
-      }
-    }
-    if (clips.length > 10) clips = clips.slice(0, 10);
-    if (!clips.length) throw new Error('Tidak ada klip yang bisa dibuat.');
-
-    // 5) Render tiap klip
-    setProgress(20, 'Merender ' + clips.length + ' klip 9:16…');
-    let rendered = 0;
-
-    for (let i = 0; i < clips.length; i++) {
-      const [s, e] = clips[i];
-      const dur = e - s;
-      if (dur < 3) continue;
-
-      const basePct = 20 + (i / clips.length) * 75;
-      const blob = await renderClip(s, dur, 'clip' + i + '.mp4', (frac) => {
-        setProgress(
-          basePct + (frac / clips.length) * 75,
-          'Merender klip ' + (i + 1) + '/' + clips.length + '… (' + Math.floor(frac * 100) + '%)'
-        );
+    setProgress(20,'Merender '+clips.length+' klip 9:16…');
+    let rendered=0;
+    for(let i=0;i<clips.length;i++){
+      const [s,e]=clips[i]; const dur=e-s; if(dur<3) continue;
+      const basePct=20+(i/clips.length)*75;
+      const blob=await renderClip(s,dur,'clip'+i+'.mp4',(frac)=>{
+        setProgress(basePct+(frac/clips.length)*75,'Merender klip '+(i+1)+'/'+clips.length+'… ('+Math.floor(frac*100)+'%)');
       });
-
-      rendered++;
-      addClipToGallery(blob, rendered, s, dur);
-      dbg('Klip ' + rendered + ' selesai (' + (blob.size / 1024 / 1024).toFixed(1) + ' MB)', 'ok');
-
-      try {
-        await ffmpeg.deleteFile('clip' + i + '.mp4');
-      } catch (_) {}
-
-      setProgress(
-        20 + ((i + 1) / clips.length) * 75,
-        'Klip ' + (i + 1) + '/' + clips.length + ' selesai'
-      );
+      rendered++; addClipToGallery(blob,rendered,s,dur);
+      dbg('Klip '+rendered+' selesai ('+(blob.size/1024/1024).toFixed(1)+' MB)','ok');
+      try{ await ffmpeg.deleteFile('clip'+i+'.mp4'); }catch(_){}
+      setProgress(20+((i+1)/clips.length)*75,'Klip '+(i+1)+'/'+clips.length+' selesai');
     }
+    if(rendered===0) throw new Error('Tidak ada klip yang berhasil dirender.');
+    setProgress(100,'✅ '+rendered+' klip siap diunduh!');
+    resultsWrap.classList.remove('hidden'); setStatus('ready','✅ '+rendered+' klip siap');
+    setTimeout(()=>progressWrap.classList.add('hidden'),1500);
 
-    if (rendered === 0) throw new Error('Tidak ada klip yang berhasil dirender.');
-
-    setProgress(100, '✅ ' + rendered + ' klip siap diunduh!');
-    resultsWrap.classList.remove('hidden');
-    setStatus('ready', '✅ ' + rendered + ' klip siap');
-    setTimeout(() => progressWrap.classList.add('hidden'), 1500);
-
-  } catch (err) {
-    console.error(err);
-    showError(err.message || String(err));
-    progressWrap.classList.add('hidden');
-    setStatus('error', '❌ Gagal');
+  } catch(err){
+    console.error(err); showError(err.message||String(err)); progressWrap.classList.add('hidden'); setStatus('error','❌ Gagal');
   } finally {
-    try {
-      if (ffmpeg) await ffmpeg.deleteFile('input.mp4');
-    } catch (_) {}
-    busy = false;
-    dropZone.classList.remove('busy');
-    startBtn.disabled = false;
-    changeBtn.disabled = false;
-    startBtn.innerHTML = '▶ Mulai Edit Otomatis';
+    try{ if(ffmpeg) await ffmpeg.deleteFile('input.mp4'); }catch(_){}
+    busy=false; dropZone.classList.remove('busy'); startBtn.disabled=false; changeBtn.disabled=false;
+    startBtn.innerHTML='▶ Mulai Edit Otomatis';
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   EVENT LISTENERS
-   ═══════════════════════════════════════════════════════════════ */
+// ─── Event listeners ───────────────────────────────────────────
 dbg('UI siap. Pilih video lalu klik "Mulai Edit Otomatis".');
 
-dropZone.addEventListener('click', () => {
-  if (!busy) fileInput.click();
+dropZone.addEventListener('click',()=>{ if(!busy) fileInput.click(); });
+['dragover','dragenter'].forEach(ev=>dropZone.addEventListener(ev,e=>{ e.preventDefault(); if(!busy) dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,()=>dropZone.classList.remove('dragover')));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault(); dropZone.classList.remove('dragover'); if(busy) return;
+  const f=e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(f) stageFile(f); else showError('Tidak ada file pada drop.');
 });
-
-['dragover', 'dragenter'].forEach((ev) =>
-  dropZone.addEventListener(ev, (e) => {
-    e.preventDefault();
-    if (!busy) dropZone.classList.add('dragover');
-  })
-);
-['dragleave', 'drop'].forEach((ev) =>
-  dropZone.addEventListener(ev, () => dropZone.classList.remove('dragover'))
-);
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if (busy) return;
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
-  if (f) stageFile(f);
-  else showError('Tidak ada file pada drop.');
-});
-
-fileInput.addEventListener('change', () => {
-  const f = fileInput.files && fileInput.files[0];
-  if (f) stageFile(f);
-});
-
-startBtn.addEventListener('click', runPipeline);
-changeBtn.addEventListener('click', resetStage);
-
-// Pre-flight check (opsional, tidak menunggu)
-window.addEventListener('error', (e) => {
-  if (e.message && /import|module|fetch/i.test(e.message)) {
-    dbg('Global error: ' + e.message, 'err');
-  }
-});
+fileInput.addEventListener('change',()=>{ const f=fileInput.files&&fileInput.files[0]; if(f) stageFile(f); });
+startBtn.addEventListener('click',runPipeline);
+changeBtn.addEventListener('click',resetStage);
 </script>
 </body>
 </html>
