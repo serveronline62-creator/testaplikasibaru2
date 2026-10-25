@@ -1,31 +1,4 @@
 <!DOCTYPE html>
-<!--
-═══════════════════════════════════════════════════════════════════════
-  ReelsForge — Single-File Video → Reels Generator (Client-Side)
-
-  ⚠️  PENTING — Halaman ini WAJIB disajikan dengan header:
-        Cross-Origin-Opener-Policy: same-origin
-        Cross-Origin-Embedder-Policy: require-corp
-      Tanpa header ini, ffmpeg.wasm tidak akan berjalan.
-
-  Cara cepat menyajikan (pilih salah satu):
-
-  ── Python 3 ──
-  python3 -c "import http.server as h; H=h.SimpleHTTPRequestHandler
-  class X(H):
-    def end_headers(self):
-        self.send_header('Cross-Origin-Opener-Policy','same-origin')
-        self.send_header('Cross-Origin-Embedder-Policy','require-corp')
-        super().end_headers()
-  h.HTTPServer(('',8000),X).serve_forever()"
-  → buka http://localhost:8000
-
-  ── Node.js (npx) ──
-  npx http-server -p 8000 -c-1 --cors
-  → TAMBAHKAN header COOP/COEP via service seperti:
-     Cloudflare Pages / Netlify _headers / Vercel vercel.json
-═══════════════════════════════════════════════════════════════════════
--->
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -33,244 +6,127 @@
 <title>ReelsForge — Video → Reels Otomatis</title>
 <style>
   :root {
-    --bg: #0b1020;
-    --panel: #151b2e;
-    --panel-2: #1e2740;
-    --border: #2a3450;
-    --text: #e5e9f0;
-    --muted: #8b96b3;
-    --accent: #7c5cff;
-    --accent-2: #a855f7;
-    --success: #22c55e;
-    --danger: #ef4444;
+    --bg:#0b1020; --panel:#151b2e; --panel-2:#1e2740;
+    --border:#2a3450; --text:#e5e9f0; --muted:#8b96b3;
+    --accent:#7c5cff; --accent-2:#a855f7;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: radial-gradient(1200px 600px at 50% -100px, #1e1e4a 0%, var(--bg) 60%);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 32px 16px 60px;
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -100px,#1e1e4a 0%,var(--bg) 60%);
+    color:var(--text);min-height:100vh;padding:32px 16px 60px;
   }
-  .container { max-width: 1080px; margin: 0 auto; }
+  .container{max-width:1080px;margin:0 auto}
+  header{text-align:center;margin-bottom:28px}
+  header h1{
+    font-size:2.4rem;font-weight:800;letter-spacing:-.5px;
+    background:linear-gradient(90deg,#a855f7,#6366f1,#22d3ee);
+    -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px;
+  }
+  header p{color:var(--muted);font-size:.95rem}
+  .badge{
+    display:inline-block;padding:5px 14px;border-radius:999px;
+    background:var(--panel-2);font-size:.78rem;color:var(--muted);
+    margin-bottom:10px;border:1px solid var(--border);transition:all .2s;
+  }
+  .badge.ready{background:#14532d;color:#86efac;border-color:#166534}
+  .badge.error{background:#7f1d1d;color:#fecaca;border-color:#991b1b}
+  .badge.loading{background:#422006;color:#fcd34d;border-color:#92400e}
 
-  header { text-align: center; margin-bottom: 36px; }
-  header h1 {
-    font-size: 2.4rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(90deg, #a855f7, #6366f1, #22d3ee);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin-bottom: 8px;
-  }
-  header p { color: var(--muted); font-size: 1rem; }
+  .warning{background:#422006;border:1px solid #92400e;color:#fcd34d;
+    padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:.85rem;line-height:1.5}
+  .warning code{background:#000;padding:2px 6px;border-radius:4px;font-size:.78rem}
 
-  .badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: var(--panel-2);
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-bottom: 12px;
-    border: 1px solid var(--border);
-  }
+  .card{background:var(--panel);border:1px solid var(--border);
+    border-radius:18px;padding:24px;margin-bottom:18px}
 
-  .warning {
-    background: #422006;
-    border: 1px solid #92400e;
-    color: #fcd34d;
-    padding: 14px 18px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
+  #drop{border:2px dashed var(--border);border-radius:16px;padding:50px 24px;
+    text-align:center;cursor:pointer;transition:all .2s;background:var(--panel-2)}
+  #drop:hover,#drop.dragover{border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(124,92,255,.15);transform:translateY(-1px)}
+  #drop.busy{opacity:.55;pointer-events:none}
+  .drop-icon{font-size:2.6rem;display:block;margin-bottom:10px}
+  .drop-title{font-size:1.1rem;font-weight:600;margin-bottom:4px}
+  .drop-sub{color:var(--muted);font-size:.85rem}
+  .drop-formats{color:#5b6684;font-size:.76rem;margin-top:10px}
 
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 28px;
-    margin-bottom: 20px;
-  }
+  .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;margin-top:18px}
+  .option label{display:block;font-size:.75rem;color:var(--muted);
+    margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+  .option input{width:100%;background:var(--panel-2);border:1px solid var(--border);
+    color:var(--text);padding:9px 11px;border-radius:9px;font-size:.92rem;outline:none}
+  .option input:focus{border-color:var(--accent)}
 
-  /* Drop zone */
-  #drop {
-    border: 2px dashed var(--border);
-    border-radius: 16px;
-    padding: 60px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: var(--panel-2);
-    position: relative;
-  }
-  #drop:hover, #drop.dragover {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
-    transform: translateY(-1px);
-  }
-  #drop.busy {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-  .drop-icon { font-size: 3rem; margin-bottom: 12px; display: block; }
-  .drop-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 6px; }
-  .drop-sub { color: var(--muted); font-size: 0.9rem; }
-  .drop-formats { color: #5b6684; font-size: 0.78rem; margin-top: 10px; }
+  #progress-wrap{margin-top:18px}
+  .progress-head{display:flex;justify-content:space-between;margin-bottom:8px;font-size:.88rem}
+  .progress-head .pct{color:var(--accent);font-weight:700}
+  .bar{height:11px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+  #progress-bar{height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2),#22d3ee);
+    background-size:200% 100%;border-radius:999px;transition:width .35s ease;
+    animation:shimmer 2s linear infinite}
+  @keyframes shimmer{0%{background-position:0% 0}100%{background-position:200% 0}}
+  #progress-text{color:var(--muted);font-size:.84rem;margin-top:8px;white-space:pre-line}
 
-  /* Options */
-  .options {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-  }
-  .option label {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .option input {
-    width: 100%;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 10px 12px;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    outline: none;
-  }
-  .option input:focus { border-color: var(--accent); }
+  #results h2{margin-bottom:16px;font-size:1.25rem}
+  #clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .clip-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    overflow:hidden;display:flex;flex-direction:column;transition:.2s}
+  .clip-card:hover{transform:translateY(-2px);border-color:var(--accent);
+    box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .clip-card video{width:100%;aspect-ratio:9/16;background:#000;object-fit:cover;display:block}
+  .clip-info{padding:12px}
+  .clip-title{font-weight:700;font-size:.92rem;margin-bottom:3px}
+  .clip-meta{font-size:.73rem;color:var(--muted);margin-bottom:10px}
+  .dl-btn{display:block;text-align:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:white;text-decoration:none;padding:9px;border-radius:9px;
+    font-size:.84rem;font-weight:600;transition:.2s}
+  .dl-btn:hover{opacity:.85}
 
-  /* Progress */
-  #progress-wrap { margin-top: 20px; }
-  .progress-head {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-  }
-  .progress-head .pct { color: var(--accent); font-weight: 700; }
-  .bar {
-    height: 12px;
-    background: var(--panel-2);
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-  }
-  #progress-bar {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2), #22d3ee);
-    background-size: 200% 100%;
-    border-radius: 999px;
-    transition: width 0.35s ease;
-    animation: shimmer 2s linear infinite;
-  }
-  @keyframes shimmer {
-    0% { background-position: 0% 0; }
-    100% { background-position: 200% 0; }
-  }
-  #progress-text { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+  #error{background:#450a0a;border:1px solid #7f1d1d;color:#fecaca;
+    padding:14px 18px;border-radius:12px;margin-top:16px;font-size:.88rem;
+    white-space:pre-wrap;font-family:ui-monospace,monospace}
 
-  /* Results */
-  #results h2 {
-    margin-bottom: 20px;
-    font-size: 1.3rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  #clips {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 18px;
-  }
-  .clip-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  .clip-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    border-color: var(--accent);
-  }
-  .clip-card video {
-    width: 100%;
-    aspect-ratio: 9 / 16;
-    background: #000;
-    object-fit: cover;
-    display: block;
-  }
-  .clip-info { padding: 14px; }
-  .clip-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
-  .clip-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
-  .dl-btn {
-    display: block;
-    text-align: center;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: white;
-    text-decoration: none;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    transition: opacity 0.2s;
-  }
-  .dl-btn:hover { opacity: 0.85; }
+  #debug{margin-top:16px;background:#020617;border:1px solid #1e293b;
+    border-radius:10px;padding:12px;font-family:ui-monospace,monospace;
+    font-size:.75rem;color:#94a3b8;max-height:160px;overflow:auto;display:none}
+  #debug.show{display:block}
+  #debug .line{padding:1px 0}
+  #debug .err{color:#fca5a5}
+  #debug .ok{color:#86efac}
 
-  #error {
-    background: #450a0a;
-    border: 1px solid #7f1d1d;
-    color: #fecaca;
-    padding: 14px 18px;
-    border-radius: 12px;
-    margin-top: 18px;
-    font-size: 0.9rem;
-  }
+  .hidden{display:none !important}
+  footer{text-align:center;color:var(--muted);font-size:.78rem;
+    margin-top:32px;line-height:1.7}
 
-  .hidden { display: none !important; }
-
-  footer {
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.8rem;
-    margin-top: 40px;
-    line-height: 1.6;
-  }
+  #file-info{display:none;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:10px;padding:12px 16px;margin-top:14px;font-size:.85rem}
+  #file-info.show{display:block}
+  #file-info b{color:#a5b4fc}
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <div class="badge" id="status">⚙️ Engine belum dimuat</div>
+    <div class="badge" id="status">⚙️ Engine belum dimuat — akan dimuat saat upload</div>
     <h1>🎬 ReelsForge</h1>
-    <p>Upload video panjang → otomatis dipecah jadi klip vertikal 9:16 siap Reels / Shorts / TikTok</p>
+    <p>Upload video panjang → otomatis dipecah jadi klip vertikal 9:16 untuk Reels / Shorts / TikTok</p>
   </header>
 
   <div id="warning" class="warning hidden"></div>
 
-  <!-- Upload card -->
   <div class="card">
     <div id="drop">
       <input type="file" id="file" accept="video/*" hidden>
       <span class="drop-icon">📁</span>
-      <div class="drop-title">Klik atau drag & drop video di sini</div>
+      <div class="drop-title">Klik atau drag &amp; drop video di sini</div>
       <div class="drop-sub">Proses 100% di browser — file tidak diunggah ke server</div>
-      <div class="drop-formats">MP4 · MOV · MKV · WEBM · Maks 400 MB · Rekomendasi < 10 menit</div>
+      <div class="drop-formats">MP4 · MOV · MKV · WEBM · Maks 400 MB · Rekomendasi &lt; 10 menit</div>
     </div>
+
+    <div id="file-info"></div>
 
     <div class="options">
       <div class="option">
@@ -296,9 +152,9 @@
     </div>
 
     <div id="error" class="hidden"></div>
+    <div id="debug"></div>
   </div>
 
-  <!-- Results -->
   <div id="results" class="card hidden">
     <h2>✅ Klip Anda Siap</h2>
     <div id="clips"></div>
@@ -306,22 +162,23 @@
 
   <footer>
     Semua pemrosesan berjalan lokal di browser Anda · Powered by ffmpeg.wasm<br>
-    Jika halaman ini lambat, coba video lebih pendek atau turunkan durasi maksimum.
+    Jika halaman lambat, coba video lebih pendek atau turunkan durasi maksimum.
   </footer>
 </div>
 
-<!-- ffmpeg.wasm from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
 <script>
-(() => {
-  const { FFmpeg } = FFmpegWASM;
-  const { fetchFile, toBlobURL } = FFmpegUtil;
+/* ══════════════════════════════════════════════════════════════════
+   ReelsForge — robust single-file client
+   Prinsip utama: UI dipasang dulu, engine ffmpeg dimuat lazy.
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
 
-  // ─── DOM ──────────────────────────────────────────────────
+  // ─── DOM refs ──────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const dropZone    = $('drop');
   const fileInput   = $('file');
+  const fileInfoBox = $('file-info');
   const progressWrap= $('progress-wrap');
   const progressBar = $('progress-bar');
   const progressPct = $('progress-pct');
@@ -331,27 +188,111 @@
   const errorBox    = $('error');
   const warningBox  = $('warning');
   const statusBadge = $('status');
+  const debugBox    = $('debug');
   const minDurInput = $('min-dur');
   const maxDurInput = $('max-dur');
 
-  // ─── Env check ────────────────────────────────────────────
-  if (typeof SharedArrayBuffer === 'undefined') {
-    warningBox.innerHTML =
-      '⚠️ <b>SharedArrayBuffer tidak tersedia.</b> Halaman ini harus disajikan dengan header ' +
-      '<code>Cross-Origin-Opener-Policy: same-origin</code> dan ' +
-      '<code>Cross-Origin-Embedder-Policy: require-corp</code>. ' +
-      'Lihat instruksi di komentar HTML (atas file).';
-    warningBox.classList.remove('hidden');
-  }
-
-  // ─── FFmpeg state ─────────────────────────────────────────
+  // ─── State ─────────────────────────────────────────────────────
   let ffmpeg = null;
   let engineReady = false;
+  let engineLoading = null;
+  let busy = false;
   let silenceStart = null;
   let silences = [];
   let captureSilence = false;
   let lastProgressTime = null;
 
+  // ─── Debug logging ─────────────────────────────────────────────
+  function dbg(msg, kind) {
+    debugBox.classList.add('show');
+    const line = document.createElement('div');
+    line.className = 'line' + (kind ? ' ' + kind : '');
+    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    debugBox.appendChild(line);
+    debugBox.scrollTop = debugBox.scrollHeight;
+    while (debugBox.children.length > 80) debugBox.removeChild(debugBox.firstChild);
+  }
+
+  // ─── Status helpers ────────────────────────────────────────────
+  function setStatus(kind, text) {
+    statusBadge.className = 'badge ' + kind;
+    statusBadge.textContent = text;
+  }
+
+  function setProgress(pct, text) {
+    progressWrap.classList.remove('hidden');
+    progressBar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    progressPct.textContent = Math.floor(pct) + '%';
+    if (text) progressTxt.textContent = text;
+  }
+
+  function showError(msg) {
+    errorBox.textContent = '❌ ' + msg;
+    errorBox.classList.remove('hidden');
+    dbg('ERROR: ' + msg, 'err');
+  }
+
+  function clearError() {
+    errorBox.classList.add('hidden');
+    errorBox.textContent = '';
+  }
+
+  // ─── Environment check ─────────────────────────────────────────
+  if (location.protocol === 'file:') {
+    warningBox.innerHTML =
+      '⚠️ <b>Halaman dibuka via <code>file://</code></b>. Browser akan memblokir WebAssembly worker. ' +
+      'Sajikan via HTTP: <code>python3 -m http.server</code> (atau <code>npx serve</code>).';
+    warningBox.classList.remove('hidden');
+  }
+
+  // ─── Robust script loader with CDN fallback ────────────────────
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Gagal memuat: ' + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function loadLibsFromAnyCDN(urls, checkFn, label) {
+    for (const url of urls) {
+      try {
+        dbg('Mencoba ' + label + ' ← ' + url);
+        await loadScript(url);
+        if (checkFn()) { dbg('✔ ' + label + ' dari ' + new URL(url).host, 'ok'); return; }
+        dbg('✖ ' + url + ' tidak mengekspos global yang diharapkan', 'err');
+      } catch (e) {
+        dbg('✖ ' + e.message, 'err');
+      }
+    }
+    throw new Error('Semua CDN gagal untuk ' + label + ' (mungkin diblokir adblocker / firewall)');
+  }
+
+  async function ensureLibs() {
+    if (window.FFmpegWASM && window.FFmpegUtil) return;
+
+    const ffmpegUrls = [
+      'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
+      'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
+      'https://cdn.skypack.dev/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
+    ];
+    const utilUrls = [
+      'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js',
+      'https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js',
+    ];
+
+    if (!window.FFmpegUtil) {
+      await loadLibsFromAnyCDN(utilUrls, () => !!window.FFmpegUtil, '@ffmpeg/util');
+    }
+    if (!window.FFmpegWASM) {
+      await loadLibsFromAnyCDN(ffmpegUrls, () => !!window.FFmpegWASM, '@ffmpeg/ffmpeg');
+    }
+  }
+
+  // ─── Handle log events from ffmpeg ─────────────────────────────
   function handleLog({ message }) {
     // Silence detection parsing
     if (captureSilence) {
@@ -366,57 +307,83 @@
     // Per-clip render progress
     if (!captureSilence) {
       const m = message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
-      if (m) {
-        lastProgressTime = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
-      }
+      if (m) lastProgressTime = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
     }
   }
 
-  async function initEngine() {
-    if (engineReady) return;
-    if (!ffmpeg) {
+  // ─── Lazy engine loader ────────────────────────────────────────
+  async function ensureEngine() {
+    if (engineReady) return ffmpeg;
+    if (engineLoading) return engineLoading;
+
+    engineLoading = (async () => {
+      setStatus('loading', '⏳ Memuat library ffmpeg…');
+      setProgress(1, 'Memuat library ffmpeg dari CDN…');
+      await ensureLibs();
+
+      const { FFmpeg } = window.FFmpegWASM;
+      const { toBlobURL } = window.FFmpegUtil;
+
       ffmpeg = new FFmpeg();
       ffmpeg.on('log', handleLog);
+
+      setStatus('loading', '⏳ Mengunduh core ffmpeg (~30 MB)…');
+      setProgress(3, 'Mengunduh core ffmpeg.wasm (~30 MB, sekali saja)…');
+
+      const coreBases = [
+        'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd',
+        'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd',
+      ];
+      let coreURL = null, wasmURL = null, lastErr = null;
+      for (const base of coreBases) {
+        try {
+          dbg('Mengunduh core dari ' + base);
+          coreURL = await toBlobURL(base + '/ffmpeg-core.js', 'text/javascript');
+          wasmURL = await toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm');
+          dbg('✔ Core terunduh dari ' + new URL(base).host, 'ok');
+          break;
+        } catch (e) {
+          lastErr = e;
+          dbg('✖ Core gagal dari ' + base + ': ' + e.message, 'err');
+        }
+      }
+      if (!coreURL) throw new Error('Gagal mengunduh core ffmpeg: ' + (lastErr && lastErr.message));
+
+      setProgress(10, 'Menginisialisasi WebAssembly worker…');
+      await ffmpeg.load({ coreURL, wasmURL });
+
+      engineReady = true;
+      setStatus('ready', '✅ Engine siap');
+      dbg('Engine ffmpeg siap', 'ok');
+      return ffmpeg;
+    })();
+
+    try {
+      return await engineLoading;
+    } catch (e) {
+      engineLoading = null;
+      setStatus('error', '❌ Engine gagal dimuat');
+      throw e;
     }
-    statusBadge.textContent = '⏳ Memuat engine… (~30MB)';
-    const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
-    engineReady = true;
-    statusBadge.textContent = '✅ Engine siap';
-    statusBadge.style.background = '#14532d';
-    statusBadge.style.color = '#86efac';
   }
 
-  // ─── Helpers ──────────────────────────────────────────────
-  function setProgress(pct, text) {
-    progressWrap.classList.remove('hidden');
-    progressBar.style.width = Math.min(100, pct) + '%';
-    progressPct.textContent = Math.floor(pct) + '%';
-    if (text) progressTxt.textContent = text;
-  }
-
-  function showError(msg) {
-    errorBox.textContent = '❌ ' + msg;
-    errorBox.classList.remove('hidden');
-  }
-
+  // ─── Media helpers ─────────────────────────────────────────────
   function getVideoDuration(file) {
     return new Promise((resolve) => {
       const v = document.createElement('video');
       v.preload = 'metadata';
+      v.muted = true;
       v.onloadedmetadata = () => {
+        const d = v.duration;
         URL.revokeObjectURL(v.src);
-        resolve(v.duration);
+        resolve(isFinite(d) ? d : 0);
       };
       v.onerror = () => resolve(0);
       v.src = URL.createObjectURL(file);
     });
   }
 
-  // ─── Silence detection (to find speech segments) ──────────
+  // ─── Silence detection ─────────────────────────────────────────
   async function detectSilences(duration) {
     captureSilence = true;
     silences = [];
@@ -424,17 +391,17 @@
     try {
       await ffmpeg.exec([
         '-i', 'input.mp4',
+        '-vn',
         '-af', 'silencedetect=noise=-35dB:d=0.8',
-        '-f', 'null', 'null.out',
+        '-f', 'null', '-',
       ]);
-    } catch (_) {
-      // Video tanpa audio → anggap tidak ada silence
+    } catch (e) {
+      dbg('silencedetect gagal (mungkin tanpa audio): ' + e.message, 'err');
     } finally {
       captureSilence = false;
     }
     if (silenceStart !== null) silences.push([silenceStart, duration]);
 
-    // Convert silences → speech segments
     const speech = [];
     let cursor = 0;
     for (const [s, e] of silences) {
@@ -462,7 +429,7 @@
     return clips;
   }
 
-  // ─── Render one clip to 9:16 with blurred background ─────
+  // ─── Render a single 9:16 clip ─────────────────────────────────
   async function renderClip(start, dur, outName, onProgress) {
     const W = 720, H = 1280;
     const filter =
@@ -474,7 +441,9 @@
 
     lastProgressTime = 0;
     const timer = setInterval(() => {
-      if (lastProgressTime !== null) onProgress(Math.min(1, lastProgressTime / dur));
+      if (lastProgressTime !== null && dur > 0) {
+        onProgress(Math.min(1, lastProgressTime / dur));
+      }
     }, 300);
 
     try {
@@ -499,129 +468,154 @@
     }
 
     const data = await ffmpeg.readFile(outName);
-    return new Blob([data.buffer], { type: 'video/mp4' });
+    return new Blob([data], { type: 'video/mp4' });
   }
 
-  // ─── Add clip to gallery ──────────────────────────────────
+  // ─── Gallery ───────────────────────────────────────────────────
   function addClipToGallery(blob, index, start, dur) {
     const url = URL.createObjectURL(blob);
     const card = document.createElement('div');
     card.className = 'clip-card';
-    card.innerHTML = `
-      <video src="${url}" controls preload="metadata" playsinline></video>
-      <div class="clip-info">
-        <div class="clip-title">Klip ${index}</div>
-        <div class="clip-meta">
-          ${dur.toFixed(1)} detik · mulai ${start.toFixed(1)}s ·
-          ${(blob.size / 1024 / 1024).toFixed(1)} MB
-        </div>
-        <a class="dl-btn" href="${url}" download="reels-clip-${index}.mp4">⬇ Unduh MP4</a>
-      </div>`;
+    card.innerHTML =
+      '<video src="' + url + '" controls preload="metadata" playsinline></video>' +
+      '<div class="clip-info">' +
+        '<div class="clip-title">Klip ' + index + '</div>' +
+        '<div class="clip-meta">' + dur.toFixed(1) + ' dtk · mulai ' + start.toFixed(1) +
+          's · ' + (blob.size / 1024 / 1024).toFixed(1) + ' MB</div>' +
+        '<a class="dl-btn" href="' + url + '" download="reels-clip-' + index + '.mp4">⬇ Unduh MP4</a>' +
+      '</div>';
     clipsGrid.appendChild(card);
   }
 
-  // ─── Main pipeline ────────────────────────────────────────
+  // ─── Main pipeline ─────────────────────────────────────────────
   async function processVideo(file) {
-    errorBox.classList.add('hidden');
+    if (busy) return;
+    busy = true;
+    dropZone.classList.add('busy');
+    clearError();
     resultsWrap.classList.add('hidden');
     clipsGrid.innerHTML = '';
-    progressWrap.classList.remove('hidden');
-    dropZone.classList.add('busy');
-
-    if (!file.type.startsWith('video/')) {
-      showError('File bukan video.');
-      dropZone.classList.remove('busy');
-      return;
-    }
-    if (file.size > 400 * 1024 * 1024) {
-      showError('File terlalu besar (maks 400 MB). Coba kompres dulu.');
-      dropZone.classList.remove('busy');
-      return;
-    }
 
     try {
-      setProgress(0, 'Memuat engine ffmpeg.wasm…');
-      await initEngine();
+      // 0) Tampilkan info file & validasi
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      fileInfoBox.innerHTML =
+        '<b>📄 ' + escapeHtml(file.name) + '</b> · ' + sizeMB + ' MB · ' + escapeHtml(file.type || '?');
+      fileInfoBox.classList.add('show');
 
-      setProgress(4, 'Membaca metadata video…');
+      if (!file.type.startsWith('video/') && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
+        throw new Error('File bukan video (tipe: ' + (file.type || 'unknown') + ')');
+      }
+      if (file.size > 400 * 1024 * 1024) {
+        throw new Error('File terlalu besar (' + sizeMB + ' MB). Maksimum 400 MB.');
+      }
+
+      dbg('Mulai proses: ' + file.name + ' (' + sizeMB + ' MB)');
+      setProgress(0, 'File diterima: ' + file.name);
+
+      // 1) Baca durasi (murni DOM, tanpa ffmpeg)
+      setProgress(1, 'Membaca metadata video…');
       const duration = await getVideoDuration(file);
-      if (!duration || !isFinite(duration)) throw new Error('Durasi tidak terdeteksi');
-      if (duration < 5) throw new Error('Video terlalu pendek (min 5 detik)');
+      if (!duration || duration < 5) {
+        throw new Error('Durasi tidak terdeteksi atau video < 5 detik. ' +
+          'Format mungkin tidak didukung browser.');
+      }
+      dbg('Durasi: ' + duration.toFixed(1) + 's');
 
-      setProgress(8, 'Menulis video ke memori browser…');
+      // 2) Muat engine (lazy)
+      if (!engineReady) {
+        setProgress(2, 'Memuat engine ffmpeg.wasm (unduh ~30 MB sekali saja)…');
+        await ensureEngine();
+      }
+
+      // 3) Tulis file ke virtual FS
+      setProgress(12, 'Menulis video ke memori browser…');
+      const { fetchFile } = window.FFmpegUtil;
       await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+      dbg('Video ditulis ke FS virtual');
 
+      // 4) Deteksi segmen
       setProgress(15, 'Mendeteksi segmen bicara (silencedetect)…');
       const speech = await detectSilences(duration);
+      dbg('Segmen ucapan terdeteksi: ' + speech.length);
 
       const minDur = Math.max(5, parseFloat(minDurInput.value) || 15);
       const maxDur = Math.max(minDur + 5, parseFloat(maxDurInput.value) || 60);
       const targetDur = Math.min(30, maxDur);
 
       let clips = groupIntoClips(speech, minDur, maxDur, targetDur);
-
-      // Fallback: tidak ada segmen → bagi rata
-      if (!clips || clips.length === 0) {
+      if (!clips || !clips.length) {
+        dbg('Fallback: split rata per ' + targetDur + 's');
         clips = [];
         for (let t = 0; t < duration; t += targetDur) {
           clips.push([t, Math.min(t + targetDur, duration)]);
         }
       }
+      if (clips.length > 10) clips = clips.slice(0, 10);
+      if (!clips.length) throw new Error('Tidak ada klip yang bisa dibuat.');
 
-      // Batasi agar tidak kelelahan
-      const MAX_CLIPS = 10;
-      if (clips.length > MAX_CLIPS) clips = clips.slice(0, MAX_CLIPS);
-
-      if (!clips.length) throw new Error('Tidak ada klip yang dapat dihasilkan.');
-
-      setProgress(20, `Merender ${clips.length} klip vertikal 9:16…`);
-
+      // 5) Render tiap klip
+      setProgress(20, 'Merender ' + clips.length + ' klip 9:16…');
       let rendered = 0;
+
       for (let i = 0; i < clips.length; i++) {
         const [s, e] = clips[i];
         const dur = e - s;
         if (dur < 3) continue;
 
         const basePct = 20 + (i / clips.length) * 75;
-
-        const blob = await renderClip(s, dur, `clip${i}.mp4`, (frac) => {
-          const pct = basePct + (frac / clips.length) * 75;
-          setProgress(pct, `Merender klip ${i + 1}/${clips.length}… (${Math.floor(frac * 100)}%)`);
+        const blob = await renderClip(s, dur, 'clip' + i + '.mp4', (frac) => {
+          setProgress(
+            basePct + (frac / clips.length) * 75,
+            'Merender klip ' + (i + 1) + '/' + clips.length + '… (' + Math.floor(frac * 100) + '%)'
+          );
         });
 
         rendered++;
         addClipToGallery(blob, rendered, s, dur);
+        dbg('Klip ' + rendered + ' selesai (' + (blob.size / 1024 / 1024).toFixed(1) + ' MB)', 'ok');
 
-        try { await ffmpeg.deleteFile(`clip${i}.mp4`); } catch (_) {}
-
-        setProgress(20 + ((i + 1) / clips.length) * 75,
-          `Selesai klip ${i + 1}/${clips.length}`);
+        try { await ffmpeg.deleteFile('clip' + i + '.mp4'); } catch (_) {}
+        setProgress(20 + ((i + 1) / clips.length) * 75, 'Klip ' + (i + 1) + '/' + clips.length + ' selesai');
       }
 
-      setProgress(100, `✅ ${rendered} klip siap diunduh!`);
+      if (rendered === 0) throw new Error('Tidak ada klip yang berhasil dirender.');
+
+      setProgress(100, '✅ ' + rendered + ' klip siap diunduh!');
       resultsWrap.classList.remove('hidden');
-      setTimeout(() => progressWrap.classList.add('hidden'), 1200);
+      setTimeout(() => progressWrap.classList.add('hidden'), 1500);
 
     } catch (err) {
       console.error(err);
       showError(err.message || String(err));
       progressWrap.classList.add('hidden');
     } finally {
-      try { await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
+      try { if (ffmpeg) await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
+      busy = false;
       dropZone.classList.remove('busy');
       fileInput.value = '';
     }
   }
 
-  // ─── File selection & drag-drop ───────────────────────────
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ─── EVENT LISTENERS — dipasang SEKARANG, sebelum engine ────
+  // ═══════════════════════════════════════════════════════════════
+  dbg('UI siap. Engine akan dimuat saat Anda memilih video.');
+
   dropZone.addEventListener('click', () => {
-    if (!dropZone.classList.contains('busy')) fileInput.click();
+    if (!busy) fileInput.click();
   });
 
   ['dragover', 'dragenter'].forEach((ev) =>
     dropZone.addEventListener(ev, (e) => {
       e.preventDefault();
-      dropZone.classList.add('dragover');
+      if (!busy) dropZone.classList.add('dragover');
     })
   );
   ['dragleave', 'drop'].forEach((ev) =>
@@ -629,12 +623,18 @@
   );
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (busy) return;
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
     if (f) processVideo(f);
+    else showError('Tidak ada file yang terdeteksi pada drop.');
   });
+
   fileInput.addEventListener('change', () => {
-    if (fileInput.files[0]) processVideo(fileInput.files[0]);
+    const f = fileInput.files && fileInput.files[0];
+    if (f) processVideo(f);
   });
+
 })();
 </script>
 </body>
