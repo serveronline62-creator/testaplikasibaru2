@@ -1,861 +1,641 @@
 <!DOCTYPE html>
+<!--
+═══════════════════════════════════════════════════════════════════════
+  ReelsForge — Single-File Video → Reels Generator (Client-Side)
+
+  ⚠️  PENTING — Halaman ini WAJIB disajikan dengan header:
+        Cross-Origin-Opener-Policy: same-origin
+        Cross-Origin-Embedder-Policy: require-corp
+      Tanpa header ini, ffmpeg.wasm tidak akan berjalan.
+
+  Cara cepat menyajikan (pilih salah satu):
+
+  ── Python 3 ──
+  python3 -c "import http.server as h; H=h.SimpleHTTPRequestHandler
+  class X(H):
+    def end_headers(self):
+        self.send_header('Cross-Origin-Opener-Policy','same-origin')
+        self.send_header('Cross-Origin-Embedder-Policy','require-corp')
+        super().end_headers()
+  h.HTTPServer(('',8000),X).serve_forever()"
+  → buka http://localhost:8000
+
+  ── Node.js (npx) ──
+  npx http-server -p 8000 -c-1 --cors
+  → TAMBAHKAN header COOP/COEP via service seperti:
+     Cloudflare Pages / Netlify _headers / Vercel vercel.json
+═══════════════════════════════════════════════════════════════════════
+-->
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Auto Converter</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReelsForge — Video → Reels Otomatis</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #151b2e;
+    --panel-2: #1e2740;
+    --border: #2a3450;
+    --text: #e5e9f0;
+    --muted: #8b96b3;
+    --accent: #7c5cff;
+    --accent-2: #a855f7;
+    --success: #22c55e;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -100px, #1e1e4a 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px 60px;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
 
-    <!-- Library Eksternal -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, #a855f7, #6366f1, #22d3ee);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+  header p { color: var(--muted); font-size: 1rem; }
 
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #eef2f5;
-            padding: 12px 0 24px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
+  .warning {
+    background: #422006;
+    border: 1px solid #92400e;
+    color: #fcd34d;
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
 
-        .app-wrapper {
-            width: 100%;
-            max-width: 210mm;
-            margin: 0 auto;
-            padding: 0 8px;
-        }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
 
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: white;
-            border-radius: 20px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
+  /* Drop zone */
+  #drop {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 60px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--panel-2);
+    position: relative;
+  }
+  #drop:hover, #drop.dragover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
+    transform: translateY(-1px);
+  }
+  #drop.busy {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .drop-icon { font-size: 3rem; margin-bottom: 12px; display: block; }
+  .drop-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 6px; }
+  .drop-sub { color: var(--muted); font-size: 0.9rem; }
+  .drop-formats { color: #5b6684; font-size: 0.78rem; margin-top: 10px; }
 
-        .logo { height: 32px; object-fit: contain; }
-        .app-title { font-size: 0.85rem; font-weight: 600; color: #2c3e4f; }
+  /* Options */
+  .options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .option label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .option input {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    outline: none;
+  }
+  .option input:focus { border-color: var(--accent); }
 
-        .tabs {
-            display: flex;
-            gap: 6px;
-            background: white;
-            padding: 6px;
-            border-radius: 40px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
+  /* Progress */
+  #progress-wrap { margin-top: 20px; }
+  .progress-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+  .progress-head .pct { color: var(--accent); font-weight: 700; }
+  .bar {
+    height: 12px;
+    background: var(--panel-2);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), #22d3ee);
+    background-size: 200% 100%;
+    border-radius: 999px;
+    transition: width 0.35s ease;
+    animation: shimmer 2s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 0; }
+    100% { background-position: 200% 0; }
+  }
+  #progress-text { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
 
-        .tab {
-            flex: 1;
-            padding: 8px 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #6c7a8e;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            border-radius: 30px;
-            transition: all 0.2s;
-            text-align: center;
-        }
+  /* Results */
+  #results h2 {
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #clips {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .clip-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .clip-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    border-color: var(--accent);
+  }
+  .clip-card video {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    background: #000;
+    object-fit: cover;
+    display: block;
+  }
+  .clip-info { padding: 14px; }
+  .clip-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+  .clip-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
+  .dl-btn {
+    display: block;
+    text-align: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    text-decoration: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  .dl-btn:hover { opacity: 0.85; }
 
-        .tab.active { background: #C62828; color: white; }
-        .tab:hover:not(.active) { background: #f0f2f5; color: #C62828; }
+  #error {
+    background: #450a0a;
+    border: 1px solid #7f1d1d;
+    color: #fecaca;
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-top: 18px;
+    font-size: 0.9rem;
+  }
 
-        .panel {
-            background: white;
-            border-radius: 20px;
-            padding: 12px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: none;
-        }
+  .hidden { display: none !important; }
 
-        .panel.active { display: block; }
-
-        .upload-box {
-            background: #f8fafc;
-            border: 2px dashed #cbd5e1;
-            border-radius: 14px;
-            padding: 12px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 12px;
-        }
-
-        .upload-box:hover { border-color: #C62828; background: #fff5f5; }
-        .upload-icon { font-size: 1.5rem; margin-bottom: 4px; }
-        .upload-text { font-size: 0.7rem; color: #475569; }
-
-        .file-info {
-            font-size: 0.65rem;
-            color: #5b6e8c;
-            background: #f1f5f9;
-            padding: 5px 10px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-
-        .layout-select {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            font-size: 0.7rem;
-            color: #334155;
-        }
-
-        .layout-select select {
-            padding: 6px 10px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #334155;
-            cursor: pointer;
-        }
-
-        .button-group { display: flex; gap: 10px; margin-top: 6px; }
-
-        .btn {
-            padding: 8px 14px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 0.7rem;
-            border: none;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-primary { background: #C62828; color: white; }
-        .btn-primary:hover { background: #B71C1C; }
-        .btn-secondary { background: #e2e8f0; color: #334155; }
-        .btn-secondary:hover { background: #cbd5e1; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .preview-area {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-            margin-top: 8px;
-        }
-
-        .empty-preview {
-            text-align: center;
-            padding: 30px 20px;
-            color: #94a3b8;
-            background: #f8fafc;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            width: 100%;
-        }
-
-        .a4-page {
-            width: 100%;
-            max-width: 210mm;
-            background: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-radius: 4px;
-            margin: 0 auto;
-        }
-
-        /* Grid 3x3 */
-        .grid-3x3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 6px;
-            padding: 6mm;
-            aspect-ratio: 210 / 297;
-            width: 100%;
-        }
-
-        /* Grid 2x2 — teks/gambar lebih besar */
-        .grid-2x2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(2, 1fr);
-            gap: 6px;
-            padding: 6mm;
-            aspect-ratio: 210 / 297;
-            width: 100%;
-        }
-
-        .grid-custom {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            padding: 6mm;
-            width: 100%;
-            align-items: start;
-        }
-
-        .photo-card {
-            border: 3px solid #000000;
-            background: #fefefe;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .grid-3x3 .photo-card,
-        .grid-2x2 .photo-card { min-height: 0; }
-
-        .grid-3x3 .photo-card img,
-        .grid-2x2 .photo-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            background-color: #ffffff;
-        }
-
-        .grid-custom .photo-card {
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-
-        .grid-custom .photo-card img {
-            width: 100%;
-            height: auto;
-            display: block;
-            object-fit: contain;
-        }
-
-        .empty-cell {
-            background: #f8fafc;
-            border: 3px solid #000000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            font-size: 0.8rem;
-        }
-
-        @media screen and (max-width: 230mm) {
-            .app-wrapper { max-width: 100%; padding: 0 6px; }
-            .a4-page { transform: scale(1); width: 100%; }
-            .grid-3x3, .grid-2x2, .grid-custom { gap: 4px; padding: 4mm; }
-            .photo-card { border-width: 2px; }
-        }
-
-        @media screen and (max-width: 480px) {
-            .grid-3x3, .grid-2x2, .grid-custom { gap: 3px; padding: 3mm; }
-            .btn { padding: 6px 10px; font-size: 0.65rem; }
-            .tab { padding: 6px 8px; font-size: 0.7rem; }
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: #1e293b;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: 0.2s;
-            white-space: nowrap;
-        }
-
-        .toast.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .loader {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 2000;
-            visibility: hidden;
-            opacity: 0;
-            transition: 0.2s;
-        }
-
-        .loader.active { visibility: visible; opacity: 1; }
-
-        .spinner {
-            width: 32px; height: 32px;
-            border: 3px solid #e2e8f0;
-            border-top: 3px solid #C62828;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 40px;
+    line-height: 1.6;
+  }
+</style>
 </head>
 <body>
+<div class="container">
+  <header>
+    <div class="badge" id="status">⚙️ Engine belum dimuat</div>
+    <h1>🎬 ReelsForge</h1>
+    <p>Upload video panjang → otomatis dipecah jadi klip vertikal 9:16 siap Reels / Shorts / TikTok</p>
+  </header>
 
-<div class="app-wrapper">
-    <div class="top-bar">
-        <span class="app-title">Convert Tools PDS KUPANG</span>
-        <img src="https://z-cdn-media.chatglm.cn/files/a0b674d0-3b9b-4d8b-a3a5-4d06cbbe2a88.png?auth_key=1870195860-833d93a4889b4ef49c52d0c4e3a13a73-0-dfae0851ee06920b914c96e9fc3fc540"
-             alt="Polytron" class="logo">
+  <div id="warning" class="warning hidden"></div>
+
+  <!-- Upload card -->
+  <div class="card">
+    <div id="drop">
+      <input type="file" id="file" accept="video/*" hidden>
+      <span class="drop-icon">📁</span>
+      <div class="drop-title">Klik atau drag & drop video di sini</div>
+      <div class="drop-sub">Proses 100% di browser — file tidak diunggah ke server</div>
+      <div class="drop-formats">MP4 · MOV · MKV · WEBM · Maks 400 MB · Rekomendasi < 10 menit</div>
     </div>
 
-    <div class="tabs">
-        <button class="tab active" data-tab="tab1">TAP 1 (Label Normal)</button>
-        <button class="tab" data-tab="tab2">TAP 2 (Label Panjang)</button>
+    <div class="options">
+      <div class="option">
+        <label>Durasi minimum (detik)</label>
+        <input type="number" id="min-dur" value="15" min="5" max="120">
+      </div>
+      <div class="option">
+        <label>Durasi maksimum (detik)</label>
+        <input type="number" id="max-dur" value="60" min="10" max="180">
+      </div>
+      <div class="option">
+        <label>Resolusi output</label>
+        <input type="text" value="720 × 1280 (9:16)" disabled>
+      </div>
     </div>
 
-    <div id="panel1" class="panel active">
-        <div class="upload-box" id="uploadBoxGrid">
-            <div class="upload-icon">📂</div>
-            <div class="upload-text">Upload Gambar / PDF</div>
-            <input type="file" id="fileGrid" multiple accept="image/*,application/pdf" style="display:none">
-        </div>
-
-        <div class="layout-select">
-            <label for="gridLayout">Ukuran Teks / Label:</label>
-            <select id="gridLayout">
-                <option value="3">Normal — 3×3 (9 label)</option>
-                <option value="2">Besar — 2×2 (4 label)</option>
-            </select>
-        </div>
-
-        <div id="infoGrid" class="file-info" style="display:none"></div>
-        <div class="button-group">
-            <button id="downloadGridBtn" class="btn btn-primary" disabled>📄 Download PDF</button>
-            <button id="resetGridBtn" class="btn btn-secondary" disabled>🗑️ Reset</button>
-        </div>
+    <div id="progress-wrap" class="hidden">
+      <div class="progress-head">
+        <span id="progress-text">Menyiapkan…</span>
+        <span class="pct" id="progress-pct">0%</span>
+      </div>
+      <div class="bar"><div id="progress-bar"></div></div>
     </div>
 
-    <div id="panel2" class="panel">
-        <div class="upload-box" id="uploadBoxPhoto">
-            <div class="upload-icon">📂</div>
-            <div class="upload-text">Upload Gambar / PDF</div>
-            <input type="file" id="filePhoto" multiple accept="image/*,application/pdf" style="display:none">
-        </div>
-        <div id="infoPhoto" class="file-info" style="display:none"></div>
-        <div class="button-group">
-            <button id="downloadPhotoBtn" class="btn btn-primary" disabled>📄 Download PDF</button>
-            <button id="resetPhotoBtn" class="btn btn-secondary" disabled>🗑️ Reset</button>
-        </div>
-    </div>
+    <div id="error" class="hidden"></div>
+  </div>
 
-    <div id="previewContainer" class="preview-area">
-        <div class="empty-preview">
-            📄 Belum ada data<br>
-            Unggah Foto atau File PDF (Auto-convert). Sistem akan menyusun otomatis ke format A4. By Om Berlin
-        </div>
-    </div>
+  <!-- Results -->
+  <div id="results" class="card hidden">
+    <h2>✅ Klip Anda Siap</h2>
+    <div id="clips"></div>
+  </div>
+
+  <footer>
+    Semua pemrosesan berjalan lokal di browser Anda · Powered by ffmpeg.wasm<br>
+    Jika halaman ini lambat, coba video lebih pendek atau turunkan durasi maksimum.
+  </footer>
 </div>
 
-<div id="toast" class="toast"></div>
-<div id="loader" class="loader">
-    <div class="spinner"></div>
-    <div style="color:#334155; font-size:0.8rem;">Memproses...</div>
-</div>
-
+<!-- ffmpeg.wasm from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+(() => {
+  const { FFmpeg } = FFmpegWASM;
+  const { fetchFile, toBlobURL } = FFmpegUtil;
 
-    let imagesGrid = [];
-    let imagesPhoto = [];
-    let activeTab = 'grid';
-    let gridLayout = 3; // 3 = 3x3, 2 = 2x2
+  // ─── DOM ──────────────────────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+  const dropZone    = $('drop');
+  const fileInput   = $('file');
+  const progressWrap= $('progress-wrap');
+  const progressBar = $('progress-bar');
+  const progressPct = $('progress-pct');
+  const progressTxt = $('progress-text');
+  const resultsWrap = $('results');
+  const clipsGrid   = $('clips');
+  const errorBox    = $('error');
+  const warningBox  = $('warning');
+  const statusBadge = $('status');
+  const minDurInput = $('min-dur');
+  const maxDurInput = $('max-dur');
 
-    const previewDiv = document.getElementById('previewContainer');
-    const emptyState = document.querySelector('.empty-preview');
-    const toast = document.getElementById('toast');
-    const loader = document.getElementById('loader');
+  // ─── Env check ────────────────────────────────────────────
+  if (typeof SharedArrayBuffer === 'undefined') {
+    warningBox.innerHTML =
+      '⚠️ <b>SharedArrayBuffer tidak tersedia.</b> Halaman ini harus disajikan dengan header ' +
+      '<code>Cross-Origin-Opener-Policy: same-origin</code> dan ' +
+      '<code>Cross-Origin-Embedder-Policy: require-corp</code>. ' +
+      'Lihat instruksi di komentar HTML (atas file).';
+    warningBox.classList.remove('hidden');
+  }
 
-    const tabBtns = document.querySelectorAll('.tab');
-    const panel1 = document.getElementById('panel1');
-    const panel2 = document.getElementById('panel2');
+  // ─── FFmpeg state ─────────────────────────────────────────
+  let ffmpeg = null;
+  let engineReady = false;
+  let silenceStart = null;
+  let silences = [];
+  let captureSilence = false;
+  let lastProgressTime = null;
 
-    const fileGrid = document.getElementById('fileGrid');
-    const uploadBoxGrid = document.getElementById('uploadBoxGrid');
-    const downloadGridBtn = document.getElementById('downloadGridBtn');
-    const resetGridBtn = document.getElementById('resetGridBtn');
-    const infoGrid = document.getElementById('infoGrid');
-    const gridLayoutSelect = document.getElementById('gridLayout');
+  function handleLog({ message }) {
+    // Silence detection parsing
+    if (captureSilence) {
+      const s = message.match(/silence_start:\s*([\d.]+)/);
+      const e = message.match(/silence_end:\s*([\d.]+)/);
+      if (s) silenceStart = parseFloat(s[1]);
+      if (e && silenceStart !== null) {
+        silences.push([silenceStart, parseFloat(e[1])]);
+        silenceStart = null;
+      }
+    }
+    // Per-clip render progress
+    if (!captureSilence) {
+      const m = message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+      if (m) {
+        lastProgressTime = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+      }
+    }
+  }
 
-    const filePhoto = document.getElementById('filePhoto');
-    const uploadBoxPhoto = document.getElementById('uploadBoxPhoto');
-    const downloadPhotoBtn = document.getElementById('downloadPhotoBtn');
-    const resetPhotoBtn = document.getElementById('resetPhotoBtn');
-    const infoPhoto = document.getElementById('infoPhoto');
+  async function initEngine() {
+    if (engineReady) return;
+    if (!ffmpeg) {
+      ffmpeg = new FFmpeg();
+      ffmpeg.on('log', handleLog);
+    }
+    statusBadge.textContent = '⏳ Memuat engine… (~30MB)';
+    const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    engineReady = true;
+    statusBadge.textContent = '✅ Engine siap';
+    statusBadge.style.background = '#14532d';
+    statusBadge.style.color = '#86efac';
+  }
 
-    const PX_TO_MM = 25.4 / 96;
+  // ─── Helpers ──────────────────────────────────────────────
+  function setProgress(pct, text) {
+    progressWrap.classList.remove('hidden');
+    progressBar.style.width = Math.min(100, pct) + '%';
+    progressPct.textContent = Math.floor(pct) + '%';
+    if (text) progressTxt.textContent = text;
+  }
 
-    function showToast(msg, isError = false) {
-        toast.textContent = msg;
-        toast.classList.add('show');
-        toast.style.background = isError ? '#b91c1c' : '#1e293b';
-        setTimeout(() => toast.classList.remove('show'), 2800);
+  function showError(msg) {
+    errorBox.textContent = '❌ ' + msg;
+    errorBox.classList.remove('hidden');
+  }
+
+  function getVideoDuration(file) {
+    return new Promise((resolve) => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(v.src);
+        resolve(v.duration);
+      };
+      v.onerror = () => resolve(0);
+      v.src = URL.createObjectURL(file);
+    });
+  }
+
+  // ─── Silence detection (to find speech segments) ──────────
+  async function detectSilences(duration) {
+    captureSilence = true;
+    silences = [];
+    silenceStart = null;
+    try {
+      await ffmpeg.exec([
+        '-i', 'input.mp4',
+        '-af', 'silencedetect=noise=-35dB:d=0.8',
+        '-f', 'null', 'null.out',
+      ]);
+    } catch (_) {
+      // Video tanpa audio → anggap tidak ada silence
+    } finally {
+      captureSilence = false;
+    }
+    if (silenceStart !== null) silences.push([silenceStart, duration]);
+
+    // Convert silences → speech segments
+    const speech = [];
+    let cursor = 0;
+    for (const [s, e] of silences) {
+      if (s - cursor > 0.6) speech.push([cursor, s]);
+      cursor = Math.max(cursor, e);
+    }
+    if (cursor < duration - 0.6) speech.push([cursor, duration]);
+    return speech;
+  }
+
+  function groupIntoClips(speech, minDur, maxDur, targetDur) {
+    if (!speech.length) return null;
+    const clips = [];
+    let cur = null;
+    for (const [s, e] of speech) {
+      if (!cur) cur = [s, e];
+      else if (e - cur[0] <= maxDur) cur[1] = e;
+      else { clips.push(cur); cur = [s, e]; }
+      if (cur[1] - cur[0] >= targetDur) { clips.push(cur); cur = null; }
+    }
+    if (cur) {
+      if (cur[1] - cur[0] >= minDur || clips.length === 0) clips.push(cur);
+      else if (clips.length) clips[clips.length - 1][1] = cur[1];
+    }
+    return clips;
+  }
+
+  // ─── Render one clip to 9:16 with blurred background ─────
+  async function renderClip(start, dur, outName, onProgress) {
+    const W = 720, H = 1280;
+    const filter =
+      `[0:v]split=2[orig][copy];` +
+      `[copy]scale=${W}:${H}:force_original_aspect_ratio=increase,` +
+      `crop=${W}:${H},boxblur=20:20[bg];` +
+      `[orig]scale=${W}:${H}:force_original_aspect_ratio=decrease[fg];` +
+      `[bg][fg]overlay=(W-w)/2:(H-h)/2[out]`;
+
+    lastProgressTime = 0;
+    const timer = setInterval(() => {
+      if (lastProgressTime !== null) onProgress(Math.min(1, lastProgressTime / dur));
+    }, 300);
+
+    try {
+      await ffmpeg.exec([
+        '-ss', String(start),
+        '-i', 'input.mp4',
+        '-t', String(dur),
+        '-filter_complex', filter,
+        '-map', '[out]',
+        '-map', '0:a?',
+        '-c:v', 'libx264',
+        '-preset', 'ultrafast',
+        '-crf', '24',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-movflags', '+faststart',
+        '-r', '30',
+        outName,
+      ]);
+    } finally {
+      clearInterval(timer);
     }
 
-    function setLoader(show, text = 'Memproses...') {
-        if (show) {
-            loader.querySelector('div:last-child').innerText = text;
-            loader.classList.add('active');
-        } else {
-            loader.classList.remove('active');
+    const data = await ffmpeg.readFile(outName);
+    return new Blob([data.buffer], { type: 'video/mp4' });
+  }
+
+  // ─── Add clip to gallery ──────────────────────────────────
+  function addClipToGallery(blob, index, start, dur) {
+    const url = URL.createObjectURL(blob);
+    const card = document.createElement('div');
+    card.className = 'clip-card';
+    card.innerHTML = `
+      <video src="${url}" controls preload="metadata" playsinline></video>
+      <div class="clip-info">
+        <div class="clip-title">Klip ${index}</div>
+        <div class="clip-meta">
+          ${dur.toFixed(1)} detik · mulai ${start.toFixed(1)}s ·
+          ${(blob.size / 1024 / 1024).toFixed(1)} MB
+        </div>
+        <a class="dl-btn" href="${url}" download="reels-clip-${index}.mp4">⬇ Unduh MP4</a>
+      </div>`;
+    clipsGrid.appendChild(card);
+  }
+
+  // ─── Main pipeline ────────────────────────────────────────
+  async function processVideo(file) {
+    errorBox.classList.add('hidden');
+    resultsWrap.classList.add('hidden');
+    clipsGrid.innerHTML = '';
+    progressWrap.classList.remove('hidden');
+    dropZone.classList.add('busy');
+
+    if (!file.type.startsWith('video/')) {
+      showError('File bukan video.');
+      dropZone.classList.remove('busy');
+      return;
+    }
+    if (file.size > 400 * 1024 * 1024) {
+      showError('File terlalu besar (maks 400 MB). Coba kompres dulu.');
+      dropZone.classList.remove('busy');
+      return;
+    }
+
+    try {
+      setProgress(0, 'Memuat engine ffmpeg.wasm…');
+      await initEngine();
+
+      setProgress(4, 'Membaca metadata video…');
+      const duration = await getVideoDuration(file);
+      if (!duration || !isFinite(duration)) throw new Error('Durasi tidak terdeteksi');
+      if (duration < 5) throw new Error('Video terlalu pendek (min 5 detik)');
+
+      setProgress(8, 'Menulis video ke memori browser…');
+      await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+
+      setProgress(15, 'Mendeteksi segmen bicara (silencedetect)…');
+      const speech = await detectSilences(duration);
+
+      const minDur = Math.max(5, parseFloat(minDurInput.value) || 15);
+      const maxDur = Math.max(minDur + 5, parseFloat(maxDurInput.value) || 60);
+      const targetDur = Math.min(30, maxDur);
+
+      let clips = groupIntoClips(speech, minDur, maxDur, targetDur);
+
+      // Fallback: tidak ada segmen → bagi rata
+      if (!clips || clips.length === 0) {
+        clips = [];
+        for (let t = 0; t < duration; t += targetDur) {
+          clips.push([t, Math.min(t + targetDur, duration)]);
         }
-    }
+      }
 
-    async function pdfToImages(file, scale = 3.2) {
-        const arrayBuf = await file.arrayBuffer();
-        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
-        const images = [];
-        for (let i = 1; i <= pdfDoc.numPages; i++) {
-            const page = await pdfDoc.getPage(i);
-            const viewport = page.getViewport({ scale: scale });
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { alpha: false });
-            canvas.width = Math.floor(viewport.width);
-            canvas.height = Math.floor(viewport.height);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            await page.render({
-                canvasContext: ctx,
-                viewport: viewport,
-                intent: 'print',
-                background: '#ffffff'
-            }).promise;
-            images.push(canvas.toDataURL('image/jpeg', 0.98));
-        }
-        return images;
-    }
+      // Batasi agar tidak kelelahan
+      const MAX_CLIPS = 10;
+      if (clips.length > MAX_CLIPS) clips = clips.slice(0, MAX_CLIPS);
 
-    function readImage(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
+      if (!clips.length) throw new Error('Tidak ada klip yang dapat dihasilkan.');
+
+      setProgress(20, `Merender ${clips.length} klip vertikal 9:16…`);
+
+      let rendered = 0;
+      for (let i = 0; i < clips.length; i++) {
+        const [s, e] = clips[i];
+        const dur = e - s;
+        if (dur < 3) continue;
+
+        const basePct = 20 + (i / clips.length) * 75;
+
+        const blob = await renderClip(s, dur, `clip${i}.mp4`, (frac) => {
+          const pct = basePct + (frac / clips.length) * 75;
+          setProgress(pct, `Merender klip ${i + 1}/${clips.length}… (${Math.floor(frac * 100)}%)`);
         });
+
+        rendered++;
+        addClipToGallery(blob, rendered, s, dur);
+
+        try { await ffmpeg.deleteFile(`clip${i}.mp4`); } catch (_) {}
+
+        setProgress(20 + ((i + 1) / clips.length) * 75,
+          `Selesai klip ${i + 1}/${clips.length}`);
+      }
+
+      setProgress(100, `✅ ${rendered} klip siap diunduh!`);
+      resultsWrap.classList.remove('hidden');
+      setTimeout(() => progressWrap.classList.add('hidden'), 1200);
+
+    } catch (err) {
+      console.error(err);
+      showError(err.message || String(err));
+      progressWrap.classList.add('hidden');
+    } finally {
+      try { await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
+      dropZone.classList.remove('busy');
+      fileInput.value = '';
     }
+  }
 
-    async function processFiles(files) {
-        let results = [];
-        for (const file of files) {
-            if (file.type === 'application/pdf') {
-                const pdfImages = await pdfToImages(file);
-                results.push(...pdfImages);
-            } else if (file.type.startsWith('image/')) {
-                const img = await readImage(file);
-                results.push(img);
-            }
-        }
-        return results;
-    }
+  // ─── File selection & drag-drop ───────────────────────────
+  dropZone.addEventListener('click', () => {
+    if (!dropZone.classList.contains('busy')) fileInput.click();
+  });
 
-    const imgPropCache = new Map();
-
-    function getImageProps(src) {
-        if (imgPropCache.has(src)) return Promise.resolve(imgPropCache.get(src));
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                const info = {
-                    w: img.naturalWidth || img.width,
-                    h: img.naturalHeight || img.height,
-                    format: /^data:image\/png/i.test(src) ? 'PNG' : 'JPEG'
-                };
-                imgPropCache.set(src, info);
-                resolve(info);
-            };
-            img.onerror = () => reject(new Error('Gagal membaca gambar'));
-            img.src = src;
-        });
-    }
-
-    function updateFileInfo(tabType, files) {
-        let pdfCount = 0, imgCount = 0;
-        for (const f of files) {
-            if (f.type === 'application/pdf') pdfCount++;
-            else if (f.type.startsWith('image/')) imgCount++;
-        }
-        const text = `📁 ${files.length} file: ${imgCount} gambar, ${pdfCount} PDF`;
-        if (tabType === 'grid') {
-            infoGrid.textContent = text;
-            infoGrid.style.display = 'inline-block';
-        } else {
-            infoPhoto.textContent = text;
-            infoPhoto.style.display = 'inline-block';
-        }
-    }
-
-    function renderPreview() {
-        previewDiv.innerHTML = '';
-        const images = (activeTab === 'grid') ? imagesGrid : imagesPhoto;
-
-        if (!images.length) {
-            previewDiv.appendChild(emptyState);
-            emptyState.style.display = 'flex';
-            return;
-        }
-        emptyState.style.display = 'none';
-
-        if (activeTab === 'grid') {
-            const cols = gridLayout;
-            const perPage = cols * cols;
-            const gridClass = cols === 3 ? 'grid-3x3' : 'grid-2x2';
-
-            for (let i = 0; i < images.length; i += perPage) {
-                const page = document.createElement('div');
-                page.className = 'a4-page';
-                const grid = document.createElement('div');
-                grid.className = gridClass;
-                const pageImages = images.slice(i, i + perPage);
-
-                for (const imgSrc of pageImages) {
-                    const box = document.createElement('div');
-                    box.className = 'photo-card';
-                    const img = document.createElement('img');
-                    img.src = imgSrc;
-                    box.appendChild(img);
-                    grid.appendChild(box);
-                }
-
-                const remaining = perPage - pageImages.length;
-                for (let r = 0; r < remaining; r++) {
-                    const empty = document.createElement('div');
-                    empty.className = 'photo-card empty-cell';
-                    empty.innerHTML = '—';
-                    grid.appendChild(empty);
-                }
-
-                page.appendChild(grid);
-                previewDiv.appendChild(page);
-            }
-        } else {
-            const perPage = 3;
-            for (let i = 0; i < images.length; i += perPage) {
-                const page = document.createElement('div');
-                page.className = 'a4-page';
-                const grid = document.createElement('div');
-                grid.className = 'grid-custom';
-                const pageImages = images.slice(i, i + perPage);
-
-                for (const imgSrc of pageImages) {
-                    const box = document.createElement('div');
-                    box.className = 'photo-card';
-                    const img = document.createElement('img');
-                    img.src = imgSrc;
-                    img.style.width = '100%';
-                    img.style.height = 'auto';
-                    img.style.objectFit = 'contain';
-                    box.appendChild(img);
-                    grid.appendChild(box);
-                }
-
-                const remaining = perPage - pageImages.length;
-                for (let r = 0; r < remaining; r++) {
-                    const empty = document.createElement('div');
-                    empty.className = 'photo-card empty-cell';
-                    empty.innerHTML = '∅';
-                    grid.appendChild(empty);
-                }
-
-                page.appendChild(grid);
-                previewDiv.appendChild(page);
-            }
-        }
-    }
-
-    async function handleUpload(files, tabType) {
-        if (!files.length) return;
-        updateFileInfo(tabType, files);
-        setLoader(true, 'Memproses file...');
-        try {
-            const allImages = await processFiles(files);
-            if (!allImages.length) throw new Error('Tidak ada gambar valid');
-
-            if (tabType === 'grid') {
-                imagesGrid = allImages;
-                downloadGridBtn.disabled = false;
-                resetGridBtn.disabled = false;
-                activeTab = 'grid';
-            } else {
-                imagesPhoto = allImages;
-                downloadPhotoBtn.disabled = false;
-                resetPhotoBtn.disabled = false;
-                activeTab = 'photo';
-            }
-            renderPreview();
-            showToast(`✅ ${allImages.length} halaman/gambar siap`);
-        } catch (err) {
-            showToast(`❌ Gagal: ${err.message}`, true);
-            if (tabType === 'grid') {
-                imagesGrid = [];
-                downloadGridBtn.disabled = true;
-                resetGridBtn.disabled = true;
-                infoGrid.style.display = 'none';
-            } else {
-                imagesPhoto = [];
-                downloadPhotoBtn.disabled = true;
-                resetPhotoBtn.disabled = true;
-                infoPhoto.style.display = 'none';
-            }
-            renderPreview();
-        } finally {
-            setLoader(false);
-        }
-    }
-
-    function resetData(tabType) {
-        if (!confirm('Hapus semua data?')) return;
-        if (tabType === 'grid') {
-            imagesGrid = [];
-            fileGrid.value = '';
-            downloadGridBtn.disabled = true;
-            resetGridBtn.disabled = true;
-            infoGrid.style.display = 'none';
-            if (activeTab === 'grid') renderPreview();
-        } else {
-            imagesPhoto = [];
-            filePhoto.value = '';
-            downloadPhotoBtn.disabled = true;
-            resetPhotoBtn.disabled = true;
-            infoPhoto.style.display = 'none';
-            if (activeTab === 'photo') renderPreview();
-        }
-        showToast('Data direset');
-    }
-
-    /* ============================================================
-       TAP 1 : PDF HD — mendukung layout 3×3 / 2×2
-       ============================================================ */
-    async function generateGridPDF() {
-        if (!imagesGrid.length) {
-            showToast('Tidak ada data', true);
-            return;
-        }
-
-        setLoader(true, 'Membuat PDF HD...');
-        downloadGridBtn.disabled = true;
-        resetGridBtn.disabled = true;
-
-        try {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
-            });
-
-            const PAGE_W = 210;
-            const PAGE_H = 297;
-            const PAD = 6;
-            const COLS = gridLayout;
-            const ROWS = gridLayout;
-            const GAP = 6 * PX_TO_MM;
-            const BORDER = 3 * PX_TO_MM;
-            const PER_PAGE = COLS * ROWS;
-
-            const cellW = (PAGE_W - PAD * 2 - GAP * (COLS - 1)) / COLS;
-            const cellH = (PAGE_H - PAD * 2 - GAP * (ROWS - 1)) / ROWS;
-
-            for (let start = 0; start < imagesGrid.length; start += PER_PAGE) {
-                if (start > 0) pdf.addPage();
-                const pageImages = imagesGrid.slice(start, start + PER_PAGE);
-
-                for (let i = 0; i < PER_PAGE; i++) {
-                    const col = i % COLS;
-                    const row = Math.floor(i / COLS);
-                    const x = PAD + col * (cellW + GAP);
-                    const y = PAD + row * (cellH + GAP);
-
-                    // Bingkai hitam
-                    pdf.setDrawColor(0, 0, 0);
-                    pdf.setLineWidth(BORDER);
-                    pdf.rect(x + BORDER / 2, y + BORDER / 2, cellW - BORDER, cellH - BORDER);
-
-                    const src = pageImages[i];
-
-                    // Sel kosong
-                    if (!src) {
-                        pdf.setDrawColor(180, 190, 200);
-                        pdf.setLineWidth(0.4);
-                        pdf.line(
-                            x + cellW / 2 - 6, y + cellH / 2,
-                            x + cellW / 2 + 6, y + cellH / 2
-                        );
-                        continue;
-                    }
-
-                    const prop = await getImageProps(src);
-
-                    const boxW = cellW - BORDER * 2;
-                    const boxH = cellH - BORDER * 2;
-
-                    // object-fit: contain
-                    const ratio = Math.min(boxW / prop.w, boxH / prop.h);
-                    const drawW = prop.w * ratio;
-                    const drawH = prop.h * ratio;
-                    const drawX = x + (cellW - drawW) / 2;
-                    const drawY = y + (cellH - drawH) / 2;
-
-                    // Gambar asli resolusi penuh
-                    pdf.addImage(
-                        src,
-                        prop.format,
-                        drawX, drawY, drawW, drawH,
-                        undefined,
-                        'SLOW'
-                    );
-                }
-            }
-
-            const date = new Date().toISOString().slice(0, 10);
-            pdf.save(`Label Komponen Bekas_TAP1_${gridLayout}x${gridLayout}_HD_${date}.pdf`);
-            showToast('✅ PDF HD berhasil dibuat!');
-        } catch (err) {
-            console.error(err);
-            showToast('Gagal membuat PDF: ' + err.message, true);
-        } finally {
-            setLoader(false);
-            downloadGridBtn.disabled = false;
-            resetGridBtn.disabled = false;
-        }
-    }
-
-    /* ============================================================
-       TAP 2 : tetap memakai html2canvas
-       ============================================================ */
-    async function generatePhotoPDF() {
-        if (!imagesPhoto.length) {
-            showToast('Tidak ada data', true);
-            return;
-        }
-        if (activeTab !== 'photo') {
-            activeTab = 'photo';
-            renderPreview();
-        }
-        const pages = document.querySelectorAll('.a4-page');
-        if (!pages.length) {
-            showToast('Halaman tidak tersedia', true);
-            return;
-        }
-
-        setLoader(true, 'Membuat PDF...');
-        downloadPhotoBtn.disabled = true;
-        resetPhotoBtn.disabled = true;
-
-        try {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = 210;
-            const pageHeight = 297;
-
-            for (let i = 0; i < pages.length; i++) {
-                const canvas = await html2canvas(pages[i], {
-                    scale: 3.5,
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    logging: false
-                });
-                const imgData = canvas.toDataURL('image/jpeg', 0.98);
-                if (i > 0) pdf.addPage();
-
-                const imgWidth = pageWidth;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                if (imgHeight > pageHeight) {
-                    const ratio = pageHeight / imgHeight;
-                    pdf.addImage(imgData, 'JPEG', (pageWidth - imgWidth * ratio) / 2, 0, imgWidth * ratio, pageHeight);
-                } else {
-                    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                }
-            }
-
-            const date = new Date().toISOString().slice(0, 10);
-            pdf.save(`Label Komponen Bekas_TAP2_${date}.pdf`);
-            showToast('✅ PDF berhasil dibuat!');
-        } catch (err) {
-            console.error(err);
-            showToast('Gagal membuat PDF', true);
-        } finally {
-            setLoader(false);
-            downloadPhotoBtn.disabled = false;
-            resetPhotoBtn.disabled = false;
-        }
-    }
-
-    // Event Listeners
-    uploadBoxGrid.addEventListener('click', () => fileGrid.click());
-    uploadBoxPhoto.addEventListener('click', () => filePhoto.click());
-
-    fileGrid.addEventListener('change', (e) => {
-        if (e.target.files.length) handleUpload([...e.target.files], 'grid');
-    });
-    filePhoto.addEventListener('change', (e) => {
-        if (e.target.files.length) handleUpload([...e.target.files], 'photo');
-    });
-
-    downloadGridBtn.addEventListener('click', () => generateGridPDF());
-    downloadPhotoBtn.addEventListener('click', () => generatePhotoPDF());
-    resetGridBtn.addEventListener('click', () => resetData('grid'));
-    resetPhotoBtn.addEventListener('click', () => resetData('photo'));
-
-    gridLayoutSelect.addEventListener('change', (e) => {
-        gridLayout = parseInt(e.target.value, 10);
-        if (activeTab === 'grid') renderPreview();
-        showToast(`Layout TAP 1: ${gridLayout}×${gridLayout}`);
-    });
-
-    function switchTab(tabId) {
-        if (tabId === 'tab1') {
-            activeTab = 'grid';
-            panel1.classList.add('active');
-            panel2.classList.remove('active');
-            tabBtns.forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-tab') === 'tab1');
-            });
-        } else {
-            activeTab = 'photo';
-            panel2.classList.add('active');
-            panel1.classList.remove('active');
-            tabBtns.forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-tab') === 'tab2');
-            });
-        }
-        renderPreview();
-    }
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabId = btn.getAttribute('data-tab');
-            switchTab(tabId);
-        });
-    });
-
-    renderPreview();
+  ['dragover', 'dragenter'].forEach((ev) =>
+    dropZone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    })
+  );
+  ['dragleave', 'drop'].forEach((ev) =>
+    dropZone.addEventListener(ev, () => dropZone.classList.remove('dragover'))
+  );
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) processVideo(f);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) processVideo(fileInput.files[0]);
+  });
+})();
 </script>
 </body>
 </html>
