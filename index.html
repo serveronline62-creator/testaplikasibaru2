@@ -1,1 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Split Screen Video</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html, body {
+      height: 100%;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Frame 9:16 fullscreen di HP */
+    .phone-frame {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: calc(100vh * 9 / 16);   /* batasi rasio 9:16 */
+      max-height: 100vh;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Setiap layar: 50% tinggi */
+    .screen {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screen video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;      /* penuhi layar, crop bagian pinggir */
+      background: #000;
+    }
+
+    /* Label kecil di pojok layar */
+    .label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.5px;
+      z-index: 2;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .label.live {
+      background: rgba(255, 0, 50, 0.85);
+      animation: pulse 1.5s infinite;
+    }
+    .label.live::before {
+      content: "● ";
+      color: #fff;
+    }
+
+    .label.upload {
+      background: rgba(0, 140, 255, 0.85);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.6; }
+    }
+
+    /* Garis pembatas antar layar */
+    .divider {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #fff, transparent);
+      z-index: 3;
+    }
+
+    /* Tombol kontrol di bawah */
+    .controls {
+      position: absolute;
+      bottom: 16px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: rgba(0, 140, 255, 0.9); }
+    .btn.danger  { background: rgba(255, 0, 50, 0.9); }
+
+    input[type="file"] { display: none; }
+
+    /* Placeholder saat belum ada video */
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+      gap: 8px;
+    }
+    .placeholder svg { width: 40px; height: 40px; opacity: 0.4; }
+  </style>
+</head>
+<body>
+
+  <div class="phone-frame">
+
+    <!-- ================= LAYAR ATAS : LIVE CAMERA ================= -->
+    <div class="screen">
+      <span class="label live">LIVE</span>
+      <video id="liveVideo" autoplay playsinline muted></video>
+      <div class="placeholder" id="livePlaceholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 7l-7 5 7 5V7z"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+        <span>Kamera belum aktif</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ================= LAYAR BAWAH : VIDEO UPLOAD ================= -->
+    <div class="screen">
+      <span class="label upload">UPLOAD</span>
+      <video id="uploadVideo" controls playsinline loop></video>
+      <div class="placeholder" id="uploadPlaceholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Belum ada video<br/>Tekan tombol Upload</span>
+      </div>
+    </div>
+
+    <!-- ================= TOMBOL KONTROL ================= -->
+    <div class="controls">
+      <button class="btn primary" id="btnStartCam">🎥 Aktifkan Kamera</button>
+      <button class="btn" id="btnUpload">📁 Upload Video</button>
+      <button class="btn danger" id="btnSwitchCam" style="display:none;">🔄</button>
+    </div>
+
+    <input type="file" id="fileInput" accept="video/*" />
+  </div>
+
+  <script>
+    const liveVideo        = document.getElementById('liveVideo');
+    const uploadVideo      = document.getElementById('uploadVideo');
+    const livePlaceholder  = document.getElementById('livePlaceholder');
+    const uploadPlaceholder= document.getElementById('uploadPlaceholder');
+    const btnStartCam      = document.getElementById('btnStartCam');
+    const btnUpload        = document.getElementById('btnUpload');
+    const btnSwitchCam     = document.getElementById('btnSwitchCam');
+    const fileInput        = document.getElementById('fileInput');
+
+    let stream = null;
+    let facingMode = 'user'; // 'user' = depan, 'environment' = belakang
+
+    /* ---------- 1. Aktifkan Kamera (Live Video) ---------- */
+    async function startCamera() {
+      try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facingMode,
+            width:  { ideal: 720 },
+            height: { ideal: 1280 }
+          },
+          audio: false   // set true jika perlu mic
+        });
+
+        liveVideo.srcObject = stream;
+        livePlaceholder.style.display = 'none';
+        btnSwitchCam.style.display = 'inline-block';
+      } catch (err) {
+        alert('Tidak bisa mengakses kamera: ' + err.message);
+      }
+    }
+
+    /* ---------- 2. Upload Video (Layar Bawah) ---------- */
+    btnUpload.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const url = URL.createObjectURL(file);
+      uploadVideo.src = url;
+      uploadVideo.load();
+      uploadPlaceholder.style.display = 'none';
+
+      // Autoplay setelah metadata siap
+      uploadVideo.addEventListener('loadedmetadata', () => {
+        uploadVideo.play().catch(() => {});
+      }, { once: true });
+    });
+
+    /* ---------- 3. Tombol Aksi ---------- */
+    btnStartCam.addEventListener('click', startCamera);
+
+    btnSwitchCam.addEventListener('click', () => {
+      facingMode = facingMode === 'user' ? 'environment' : 'user';
+      startCamera();
+    });
+
+    /* ---------- 4. Stop kamera saat tab ditutup ---------- */
+    window.addEventListener('beforeunload', () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    });
+  </script>
+
+</body>
+</html>
