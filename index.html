@@ -67,6 +67,7 @@
       justify-content: center;
     }
 
+    /* Default awal: 40% / 60% — dioverride oleh JS applySplitToLayout() */
     .screen-live   { flex: 0.8 1 0; }
     .screen-upload { flex: 1.2 1 0; }
 
@@ -131,11 +132,80 @@
     .pan-hint.show { opacity: 1; transform: translateY(0); }
     /* =============================================== */
 
+    /* ====== DIVIDER (bisa di-drag 0%–100%) ====== */
     .divider {
       flex: 0 0 2px;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
       z-index: 3;
+      position: relative;
+      cursor: ns-resize;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
+
+    /* Area sentuh lebih besar (transparan) */
+    .divider::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 64px;
+      height: 44px;
+      background: transparent;
+    }
+
+    /* Grip handle bulat */
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.32);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      pointer-events: none;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s;
+      z-index: 1;
+    }
+
+    .divider:hover::after,
+    .divider.dragging::after {
+      background: rgba(99,102,241,0.55);
+      border-color: rgba(139,92,246,0.7);
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+
+    /* Tooltip persentase saat drag */
+    .split-pct {
+      position: absolute;
+      left: calc(50% + 22px);
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(99,102,241,0.95);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 2;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .divider.dragging .split-pct { opacity: 1; }
+    /* =============================================== */
 
     .badge {
       position: absolute;
@@ -523,7 +593,7 @@
 <div class="app">
   <div class="phone-frame">
 
-    <div class="screen screen-live">
+    <div class="screen screen-live" id="liveScreen">
       <span class="badge live">
         <span class="dot"></span>
         LIVE
@@ -538,7 +608,9 @@
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="divider" title="Geser untuk atur ukuran LIVE / UPLOAD (0%–100%)">
+      <span class="split-pct" id="splitPct">40% / 60%</span>
+    </div>
 
     <div class="screen screen-upload" id="uploadScreen">
       <span class="badge upload">
@@ -559,10 +631,8 @@
         <span>Upload video dari galeri HP<br>lalu geser untuk atur posisi</span>
       </div>
 
-      <!-- HINT GESER -->
       <div class="pan-hint" id="panHint">✋ Geser untuk atur posisi</div>
 
-      <!-- RESET POSISI -->
       <button class="pan-reset hidden" id="btnResetPan" title="Reset posisi video">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -712,8 +782,10 @@ const QUALITY_ORDER = ['480', '720', '1080'];
 const SEEK_STEP = 5;
 const DEFAULT_SPLIT = 0.40;
 
-/* ✅ TARGET ASPECT RATIO OUTPUT — dipaksa 9:16 (portrait)
-   nilai = height / width = 16 / 9 */
+/* ✅ 0%–100% (salah satu layar boleh hilang total) */
+const MIN_SPLIT = 0.0;
+const MAX_SPLIT = 1.0;
+
 const TARGET_ASPECT = 16 / 9;
 
 /* ============================================================
@@ -762,6 +834,7 @@ const qualityLabel      = $('qualityLabel');
 const recText           = btnRecord.querySelector('.rec-text');
 const btnResetPan       = $('btnResetPan');
 const panHint           = $('panHint');
+const splitPct          = $('splitPct');
 
 const btnPlayPause      = $('btnPlayPause');
 const btnBack           = $('btnBack');
@@ -771,8 +844,9 @@ const videoProgress     = $('videoProgress');
 const videoProgressFill = $('videoProgressFill');
 
 const phoneFrame        = document.querySelector('.phone-frame');
-const liveScreen        = document.querySelector('.screen-live');
-const uploadScreen      = document.querySelector('.screen-upload');
+const liveScreen        = $('liveScreen');
+const uploadScreen      = $('uploadScreen');
+const divider           = $('divider');
 
 const RECORD_LOCKED_BTNS = [btnStartCam, btnSwitchCam, btnMic, btnUpload, btnQuality];
 const RECORD_ACTIVE_BTNS = [btnPlayPause, btnBack, btnNext, btnStop];
@@ -794,13 +868,8 @@ function getLayoutMetrics() {
   const uploadH  = uploadRect.height;
   const screensH = liveH + uploadH;
 
-  /* ✅ KUNCI: aspect ratio output dipaksa 9:16, tidak peduli bentuk layar HP.
-     Hasilnya: 540×960, 720×1280, 1080×1920. */
   const aspect = TARGET_ASPECT;
-
-  /* Proporsi split live vs upload tetap mengikuti layout di layar,
-     jadi preview dan hasil rekaman terlihat konsisten. */
-  const split = (screensH > 0) ? (liveH / screensH) : DEFAULT_SPLIT;
+  const split  = (screensH > 0) ? (liveH / screensH) : state.splitRatio;
 
   return { aspect, split };
 }
@@ -809,13 +878,88 @@ function applyQuality(q) {
   const p = QUALITY_PRESETS[q];
   const { aspect, split } = getLayoutMetrics();
 
-  canvas.width = p.w;
+  canvas.width  = p.w;
   canvas.height = Math.max(2, Math.round((p.w * aspect) / 2) * 2);
 
-  state.quality = q;
+  state.quality    = q;
   state.splitRatio = split;
   qualityLabel.textContent = p.label;
 }
+
+/* ============================================================
+   SPLIT SCREEN 0%–100% — drag divider
+   ============================================================ */
+function applySplitToLayout() {
+  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
+  state.splitRatio = r;
+  liveScreen.style.flex   = `${r} 1 0`;
+  uploadScreen.style.flex = `${1 - r} 1 0`;
+  updateSplitPct();
+}
+
+function updateSplitPct() {
+  const live = Math.round(state.splitRatio * 100);
+  const up   = 100 - live;
+  splitPct.textContent = `${live}% / ${up}%`;
+}
+
+let splitDrag = null;
+
+function onDivDown(e) {
+  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+  const liveRect   = liveScreen.getBoundingClientRect();
+  const uploadRect = uploadScreen.getBoundingClientRect();
+  const totalH = liveRect.height + uploadRect.height;
+  if (totalH <= 0) return;
+
+  splitDrag = {
+    pointerId: e.pointerId,
+    startY: e.clientY,
+    startSplit: state.splitRatio,
+    totalH
+  };
+  try { divider.setPointerCapture(e.pointerId); } catch (_) {}
+  divider.classList.add('dragging');
+  updateSplitPct();
+  e.preventDefault();
+}
+
+function onDivMove(e) {
+  if (!splitDrag || e.pointerId !== splitDrag.pointerId) return;
+  const dy = e.clientY - splitDrag.startY;
+  const newSplit = splitDrag.startSplit + dy / splitDrag.totalH;
+  state.splitRatio = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, newSplit));
+  applySplitToLayout();
+  e.preventDefault();
+}
+
+function onDivUp(e) {
+  if (!splitDrag) return;
+  if (e && e.pointerId !== undefined && e.pointerId !== splitDrag.pointerId) return;
+  try { divider.releasePointerCapture(splitDrag.pointerId); } catch (_) {}
+  splitDrag = null;
+  divider.classList.remove('dragging');
+}
+
+divider.addEventListener('pointerdown', onDivDown);
+divider.addEventListener('pointermove', onDivMove);
+divider.addEventListener('pointerup', onDivUp);
+divider.addEventListener('pointercancel', onDivUp);
+divider.addEventListener('lostpointercapture', onDivUp);
+
+/* Double-tap divider → reset 50 / 50 */
+let divLastTap = 0;
+divider.addEventListener('pointerup', (e) => {
+  const now = Date.now();
+  if (now - divLastTap < 300) {
+    state.splitRatio = 0.5;
+    applySplitToLayout();
+    showToast('⚖️ Split direset 50% / 50%');
+    divLastTap = 0;
+  } else {
+    divLastTap = now;
+  }
+});
 
 /* ============================================================
    POSISI MANUAL VIDEO UPLOAD (PAN / GESER)
@@ -930,9 +1074,10 @@ function hidePanHint() {
 }
 
 /* ============================================================
-   DRAW COVER (mengikuti posisi manual)
+   DRAW COVER (aman saat dw/dh = 0)
    ============================================================ */
 function drawCover(video, dx, dy, dw, dh, posX = 0.5, posY = 0.5) {
+  if (dw <= 0 || dh <= 0) return;          // ← guard: layar 0% tidak digambar
   if (!video || !video.videoWidth || !video.videoHeight) {
     ctx.fillStyle = '#0d0d0f';
     ctx.fillRect(dx, dy, dw, dh);
@@ -970,8 +1115,11 @@ function startDrawLoop() {
       state.uploadPos.x, state.uploadPos.y
     );
 
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillRect(0, splitY - 1, W, 2);
+    /* Garis pemisah hanya jika kedua sisi masih terlihat */
+    if (splitY > 1 && splitY < H - 1) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillRect(0, splitY - 1, W, 2);
+    }
 
     state.drawRAF = requestAnimationFrame(tick);
   };
@@ -1155,7 +1303,7 @@ function ensureAudioCtx() {
 });
 
 /* ============================================================
-   UPLOAD — support galeri HP
+   UPLOAD
    ============================================================ */
 btnUpload.addEventListener('click', () => {
   fileInput.value = '';
@@ -1250,7 +1398,6 @@ async function startRecording() {
   if (state.stream) await waitForVideoDim(liveVideo, 1500);
   if (state.uploadReady) await waitForVideoDim(uploadVideo, 1500);
 
-  /* ✅ Ukuran canvas di-set di sini → 9:16 (mis. 720×1280) */
   applyQuality(state.quality);
 
   const videoStream = canvas.captureStream(30);
@@ -1322,7 +1469,7 @@ async function startRecording() {
     RECORD_LOCKED_BTNS.forEach(b => b.disabled = true);
     RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
 
-    showToast('🔴 Merekam 9:16 — kontrol ▶ ⏸ ◀ ▶ ⏹ tetap aktif', 'success');
+    showToast('🔴 Merekam 9:16 — drag divider untuk atur split', 'success');
   } catch (err) {
     showToast('Rekam gagal: ' + err.message, 'error');
   }
@@ -1447,7 +1594,10 @@ let resizeTimeout;
 function handleResize() {
   if (state.isRecording) return;
   clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(() => applyQuality(state.quality), 150);
+  resizeTimeout = setTimeout(() => {
+    applySplitToLayout();
+    applyQuality(state.quality);
+  }, 150);
 }
 window.addEventListener('resize', handleResize);
 window.addEventListener('orientationchange', handleResize);
@@ -1467,10 +1617,13 @@ window.addEventListener('beforeunload', cleanup);
    INIT
    ============================================================ */
 applyQuality('720');
-requestAnimationFrame(() => applyQuality(state.quality));
+requestAnimationFrame(() => {
+  applySplitToLayout();
+  applyQuality(state.quality);
+});
 applyUploadPosition();
 updatePlayPauseIcon();
-console.log('%c📱 Split Screen Recorder — output 9:16 (720×1280 default)', 'color:#6366f1;font-weight:bold;font-size:14px');
+console.log('%c📱 Split Screen Recorder — split 0%–100% | output 9:16', 'color:#6366f1;font-weight:bold;font-size:14px');
 </script>
 
 </body>
