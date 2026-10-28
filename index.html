@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
-  <title>Split Screen Recorder</title>
+  <title>Split Screen Recorder — Floating LIVE</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -56,41 +56,203 @@
       overflow: hidden;
     }
 
+    /* ============ LAYAR UPLOAD: sekarang PENUH ============ */
     .screen {
       position: relative;
       flex: 1 1 0;
       min-height: 0;
       overflow: hidden;
-      background: #0d0d0f;
+      background: #000000;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* Default awal: 40% / 60% — dioverride oleh JS applySplitToLayout() */
-    .screen-live   { flex: 0.8 1 0; }
-    .screen-upload { flex: 1.2 1 0; }
-
-    .screen video {
-      width: 100%; height: 100%;
+    /* ============ VIDEO (upload & live) ============ */
+    .screen video,
+    .float-inner video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      background: #000;
+      background: transparent;
       display: block;
-    }
-
-    /* ====== VIDEO UPLOAD: bisa digeser manual ====== */
-    .screen-upload video {
-      object-position: 50% 50%;
       touch-action: none;
       cursor: grab;
-      will-change: object-position;
+      will-change: width, height, left, top;
     }
-    .screen-upload video.grabbing { cursor: grabbing; }
+    .screen video.grabbing,
+    .float-inner video.grabbing { cursor: grabbing; }
 
-    .pan-reset {
+    /* ============================================================
+       JENDELA LIVE MENGAMBANG (PiP)
+       ============================================================ */
+    .float-live {
+      position: absolute;
+      left: 29%;
+      top: 5%;
+      width: 42%;
+      height: 14%;
+      z-index: 15;
+      border-radius: 14px;
+      touch-action: none;
+    }
+
+    .float-inner {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      border: 1.5px solid rgba(255,255,255,0.30);
+      box-shadow:
+        0 10px 30px rgba(0,0,0,0.60),
+        0 0 0 1px rgba(0,0,0,0.45),
+        inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    .float-live .badge {
+      top: auto;
+      bottom: 6px;
+      left: 6px;
+      padding: 3px 7px;
+      font-size: 8px;
+      letter-spacing: 0.6px;
+      gap: 4px;
+    }
+    .float-live .badge .dot { width: 5px; height: 5px; }
+
+    .float-live .placeholder {
+      gap: 4px;
+      font-size: 9px;
+      padding: 6px;
+    }
+    .float-live .placeholder svg { width: 22px; height: 22px; }
+
+    .float-move {
+      position: absolute;
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 42px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.30);
+      background: rgba(0,0,0,0.62);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 24;
+      cursor: grab;
+      touch-action: none;
+      padding: 0;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: background 0.2s, transform 0.12s, border-color 0.2s;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .float-move svg { width: 15px; height: 15px; }
+    .float-move:active,
+    .float-move.dragging {
+      cursor: grabbing;
+      background: rgba(99,102,241,0.85);
+      border-color: rgba(139,92,246,0.85);
+      transform: translateX(-50%) scale(0.94);
+    }
+
+    .float-resize {
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.30);
+      background: rgba(0,0,0,0.62);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 24;
+      cursor: nwse-resize;
+      touch-action: none;
+      padding: 0;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: background 0.2s, transform 0.12s, border-color 0.2s;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .float-resize svg { width: 14px; height: 14px; }
+    .float-resize:active,
+    .float-resize.dragging {
+      background: rgba(99,102,241,0.85);
+      border-color: rgba(139,92,246,0.85);
+      transform: scale(0.94);
+    }
+
+    .float-live .screen-tools {
+      top: 5px;
+      right: 5px;
+      bottom: auto;
+      left: auto;
+      z-index: 22;
+      gap: 5px;
+    }
+    .float-live .tool-toggle { width: 26px; height: 26px; }
+    .float-live .tool-toggle svg { width: 13px; height: 13px; }
+
+    .float-live .tool-panel {
+      padding: 8px;
+      border-radius: 12px;
+      gap: 6px;
+    }
+    .float-live .pos-grid { width: 78px; gap: 3px; }
+    .float-live .tool-row { gap: 4px; }
+    .float-live .tool-row button { width: 22px; height: 22px; border-radius: 7px; font-size: 13px; }
+    .float-live .zoom-label { font-size: 9px; }
+
+    /* ============================================================ */
+
+    .pan-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%) translateY(6px);
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #fff;
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 7;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      white-space: nowrap;
+    }
+    .pan-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .screen-tools {
       position: absolute;
       right: 10px;
       bottom: 12px;
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .screen-tools > * { pointer-events: auto; }
+
+    .tool-toggle {
       width: 34px; height: 34px;
       border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.18);
@@ -99,113 +261,92 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 7;
       cursor: pointer;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      transition: transform 0.15s, background 0.2s, opacity 0.2s;
+      transition: transform 0.15s, background 0.2s;
     }
-    .pan-reset svg { width: 16px; height: 16px; }
-    .pan-reset:active { transform: scale(0.9); }
-    .pan-reset:hover { background: rgba(0,0,0,0.75); }
+    .tool-toggle svg { width: 16px; height: 16px; }
+    .tool-toggle:active { transform: scale(0.9); }
+    .tool-toggle.open { background: rgba(99,102,241,0.85); border-color: transparent; }
 
-    .pan-hint {
-      position: absolute;
-      right: 10px;
-      bottom: 54px;
-      padding: 5px 9px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      color: #fff;
-      background: rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 7;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.3s, transform 0.3s;
+    .tool-panel {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(12,12,16,0.94);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+      animation: modalIn 0.18s ease;
     }
-    .pan-hint.show { opacity: 1; transform: translateY(0); }
-    /* =============================================== */
+    .tool-panel.open { display: flex; }
 
-    /* ====== DIVIDER (bisa di-drag 0%–100%) ====== */
-    .divider {
-      flex: 0 0 2px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-      z-index: 3;
-      position: relative;
-      cursor: ns-resize;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
+    .pos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      width: 96px;
     }
-
-    /* Area sentuh lebih besar (transparan) */
-    .divider::before {
+    .pos-grid button {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .pos-grid button::after {
       content: '';
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 64px;
-      height: 44px;
-      background: transparent;
-    }
-
-    /* Grip handle bulat */
-    .divider::after {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 28px;
-      height: 28px;
+      width: 6px; height: 6px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.16);
-      border: 1px solid rgba(255,255,255,0.32);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-      pointer-events: none;
-      transition: transform 0.15s, background 0.2s, border-color 0.2s;
-      z-index: 1;
+      background: rgba(255,255,255,0.35);
+      transition: background 0.2s, transform 0.2s;
     }
+    .pos-grid button:hover { background: rgba(255,255,255,0.15); }
+    .pos-grid button.active { background: rgba(99,102,241,0.25); border-color: rgba(99,102,241,0.6); }
+    .pos-grid button.active::after { background: var(--accent); transform: scale(1.5); }
 
-    .divider:hover::after,
-    .divider.dragging::after {
-      background: rgba(99,102,241,0.55);
-      border-color: rgba(139,92,246,0.7);
-      transform: translate(-50%, -50%) scale(1.15);
+    .tool-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
-
-    /* Tooltip persentase saat drag */
-    .split-pct {
-      position: absolute;
-      left: calc(50% + 22px);
-      top: 50%;
-      transform: translateY(-50%);
-      padding: 4px 8px;
+    .tool-row button {
+      width: 26px; height: 26px;
       border-radius: 8px;
-      background: rgba(99,102,241,0.95);
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
       color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s, background 0.2s;
+    }
+    .tool-row button:hover { background: rgba(255,255,255,0.15); }
+    .tool-row button:active { transform: scale(0.9); }
+    .tool-row button svg { width: 13px; height: 13px; }
+    .zoom-label {
+      flex: 1;
+      text-align: center;
       font-size: 10px;
       font-weight: 800;
-      letter-spacing: 0.3px;
       font-variant-numeric: tabular-nums;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s;
-      z-index: 2;
-      white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      color: rgba(255,255,255,0.8);
+      letter-spacing: 0.3px;
     }
-    .divider.dragging .split-pct { opacity: 1; }
-    /* =============================================== */
 
     .badge {
       position: absolute;
@@ -217,13 +358,14 @@
       font-weight: 800;
       letter-spacing: 0.8px;
       color: #fff;
-      z-index: 4;
+      z-index: 10;
       display: inline-flex;
       align-items: center;
       gap: 5px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255,255,255,0.15);
+      pointer-events: none;
     }
     .badge.live { background: rgba(239,68,68,0.85); }
     .badge.live .dot {
@@ -283,7 +425,7 @@
       padding: 20px;
       pointer-events: none;
       transition: opacity 0.3s;
-      z-index: 2;
+      z-index: 5;
     }
     .placeholder svg {
       width: 40px; height: 40px;
@@ -299,7 +441,7 @@
       bottom: 0; left: 0; right: 0;
       height: 3px;
       background: rgba(255,255,255,0.12);
-      z-index: 6;
+      z-index: 12;
       cursor: pointer;
       transition: height 0.2s;
     }
@@ -320,7 +462,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      z-index: 10;
+      z-index: 25;
     }
 
     .ctrl-row {
@@ -328,6 +470,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .circle-btn {
@@ -379,6 +522,38 @@
       color: var(--green);
     }
     .pill.icon-only { padding: 8px; width: 34px; justify-content: center; }
+
+    .split-row {
+      gap: 6px;
+      padding: 0 2px;
+    }
+    .split-label {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-right: 2px;
+    }
+    .split-btn {
+      flex: 1 1 0;
+      padding: 7px 2px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .split-btn:hover { background: var(--surface-hover); }
+    .split-btn:active { transform: scale(0.94); }
+    .split-btn.active {
+      background: rgba(99,102,241,0.2);
+      border-color: rgba(99,102,241,0.55);
+      color: #c7c9ff;
+    }
 
     .record-btn {
       width: 100%;
@@ -527,9 +702,95 @@
       border: 1px solid var(--border);
     }
 
+    /* ====== BACKGROUND PICKER ====== */
+    .bg-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: -4px;
+      text-transform: uppercase;
+    }
+    .bg-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .bg-swatch {
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.10);
+      cursor: pointer;
+      position: relative;
+      padding: 0;
+      transition: transform 0.15s, border-color 0.2s;
+      overflow: hidden;
+    }
+    .bg-swatch:hover { transform: scale(1.05); }
+    .bg-swatch.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(99,102,241,0.35);
+    }
+    .bg-swatch::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .bg-swatch.active::after { opacity: 1; }
+    .bg-swatch .bg-swatch-label {
+      position: absolute;
+      bottom: 3px;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 8px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+      pointer-events: none;
+    }
+
+    .bg-custom {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .bg-custom label {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .bg-custom input[type="color"] {
+      width: 48px;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      cursor: pointer;
+      padding: 3px;
+    }
+    .bg-custom input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    .bg-custom input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 6px;
+    }
+
     .toast {
       position: fixed;
-      bottom: calc(220px + var(--safe-bottom));
+      bottom: calc(240px + var(--safe-bottom));
       left: 50%;
       transform: translateX(-50%) translateY(20px);
       background: rgba(30,30,35,0.98);
@@ -585,6 +846,7 @@
       .circle-btn.primary { width: 46px; height: 46px; }
       .pill { padding: 7px 10px; font-size: 10px; }
       .record-btn { padding: 12px; font-size: 13px; }
+      .split-btn { padding: 6px 2px; font-size: 9px; }
     }
   </style>
 </head>
@@ -593,25 +855,7 @@
 <div class="app">
   <div class="phone-frame">
 
-    <div class="screen screen-live" id="liveScreen">
-      <span class="badge live">
-        <span class="dot"></span>
-        LIVE
-      </span>
-      <video id="liveVideo" autoplay playsinline muted></video>
-      <div class="placeholder" id="livePlaceholder">
-        <svg viewBox="0 0 24 24">
-          <path d="M23 7l-7 5 7 5V7z"/>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-        </svg>
-        <span>Kamera belum aktif</span>
-      </div>
-    </div>
-
-    <div class="divider" id="divider" title="Geser untuk atur ukuran LIVE / UPLOAD (0%–100%)">
-      <span class="split-pct" id="splitPct">40% / 60%</span>
-    </div>
-
+    <!-- ================= UPLOAD (FULL SCREEN) ================= -->
     <div class="screen screen-upload" id="uploadScreen">
       <span class="badge upload">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -621,31 +865,113 @@
         </svg>
         UPLOAD
       </span>
-      <video id="uploadVideo" playsinline loop preload="metadata"></video>
+
+      <video id="uploadVideo" playsinline preload="metadata"></video>
+
       <div class="placeholder" id="uploadPlaceholder">
         <svg viewBox="0 0 24 24">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/>
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
-        <span>Upload video dari galeri HP<br>lalu geser untuk atur posisi</span>
+        <span>Upload video dari galeri HP<br>lalu geser / cubit untuk atur</span>
       </div>
 
-      <div class="pan-hint" id="panHint">✋ Geser untuk atur posisi</div>
+      <div class="pan-hint" id="uploadHint">✋ Geser · cubit untuk zoom</div>
 
-      <button class="pan-reset hidden" id="btnResetPan" title="Reset posisi video">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <line x1="12" y1="2" x2="12" y2="6"/>
-          <line x1="12" y1="18" x2="12" y2="22"/>
-          <line x1="2" y1="12" x2="6" y2="12"/>
-          <line x1="18" y1="12" x2="22" y2="12"/>
-        </svg>
-      </button>
+      <div class="screen-tools hidden" id="uploadTools">
+        <div class="tool-panel" data-panel>
+          <div class="pos-grid" data-grid></div>
+          <div class="tool-row">
+            <button type="button" data-zoom="-" title="Zoom out">−</button>
+            <span class="zoom-label" data-zoom-label>1.0×</span>
+            <button type="button" data-zoom="+" title="Zoom in">+</button>
+            <button type="button" data-reset title="Reset tampilan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                <polyline points="3 4 3 10 9 10"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button class="tool-toggle" type="button" data-toggle title="Atur posisi & zoom">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="5 9 2 12 5 15"/>
+            <polyline points="9 5 12 2 15 5"/>
+            <polyline points="15 19 12 22 9 19"/>
+            <polyline points="19 9 22 12 19 15"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <line x1="12" y1="2" x2="12" y2="22"/>
+          </svg>
+        </button>
+      </div>
 
       <div class="video-progress" id="videoProgress">
         <div class="video-progress-fill" id="videoProgressFill"></div>
       </div>
+    </div>
+
+    <!-- ================= LIVE (JENDELA MENGAMBANG) ================= -->
+    <div class="float-live hidden" id="liveScreen">
+
+      <div class="float-inner">
+        <video id="liveVideo" autoplay playsinline muted></video>
+
+        <div class="placeholder" id="livePlaceholder">
+          <svg viewBox="0 0 24 24">
+            <path d="M23 7l-7 5 7 5V7z"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <span>Kamera belum aktif</span>
+        </div>
+
+        <span class="badge live">
+          <span class="dot"></span>
+          LIVE
+        </span>
+      </div>
+
+      <button class="float-move" id="liveMoveHandle" type="button" title="Geser jendela LIVE">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <line x1="4" y1="9" x2="20" y2="9"/>
+          <line x1="4" y1="15" x2="20" y2="15"/>
+        </svg>
+      </button>
+
+      <button class="float-resize" id="liveResizeHandle" type="button" title="Ubah ukuran jendela LIVE">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 21 21 21 21 9"/>
+          <line x1="21" y1="21" x2="13" y2="13"/>
+        </svg>
+      </button>
+
+      <div class="screen-tools hidden" id="liveTools">
+        <button class="tool-toggle" type="button" data-toggle title="Posisi & zoom">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="5 9 2 12 5 15"/>
+            <polyline points="9 5 12 2 15 5"/>
+            <polyline points="15 19 12 22 9 19"/>
+            <polyline points="19 9 22 12 19 15"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <line x1="12" y1="2" x2="12" y2="22"/>
+          </svg>
+        </button>
+        <div class="tool-panel" data-panel>
+          <div class="pos-grid" data-grid></div>
+          <div class="tool-row">
+            <button type="button" data-zoom="-" title="Zoom out">−</button>
+            <span class="zoom-label" data-zoom-label>1.0×</span>
+            <button type="button" data-zoom="+" title="Zoom in">+</button>
+            <button type="button" data-reset title="Reset tampilan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                <polyline points="3 4 3 10 9 10"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <div class="rec-badge" id="recBadge">
@@ -714,6 +1040,32 @@
           </svg>
           <span id="qualityLabel">HD</span>
         </button>
+        <button class="pill" id="btnFitMode" title="Rasio tampilan video upload" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+            <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+          </svg>
+          <span id="fitModeLabel">9:16</span>
+        </button>
+        <!-- ✅ Tombol Background -->
+        <button class="pill icon-only" id="btnBackground" title="Ganti background">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="ctrl-row split-row">
+        <span class="split-label">LIVE</span>
+        <button class="split-btn" data-size="0.25">S</button>
+        <button class="split-btn" data-size="0.4">M</button>
+        <button class="split-btn" data-size="0.6">L</button>
+        <button class="split-btn" data-size="0.85">XL</button>
+        <button class="split-btn" data-size="0">Sembunyi</button>
       </div>
 
       <button class="record-btn" id="btnRecord">
@@ -733,6 +1085,7 @@
 
 <input type="file" id="fileInput" accept="video/*" />
 
+<!-- MODAL PREVIEW REKAMAN -->
 <div class="modal" id="previewModal">
   <div class="modal-card">
     <div class="modal-header">
@@ -767,6 +1120,31 @@
   </div>
 </div>
 
+<!-- ✅ MODAL BACKGROUND PICKER -->
+<div class="modal" id="bgModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span>🎨 Ganti Background</span>
+      <button id="btnCloseBg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="bg-section-title">Warna Solid</div>
+      <div class="bg-grid" id="bgGridSolid"></div>
+      <div class="bg-section-title">Gradien</div>
+      <div class="bg-grid" id="bgGridGradient"></div>
+      <div class="bg-custom">
+        <label for="bgColorInput">Warna kustom</label>
+        <input type="color" id="bgColorInput" value="#000000" />
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -780,13 +1158,42 @@ const QUALITY_PRESETS = {
 };
 const QUALITY_ORDER = ['480', '720', '1080'];
 const SEEK_STEP = 5;
-const DEFAULT_SPLIT = 0.40;
 
-/* ✅ 0%–100% (salah satu layar boleh hilang total) */
-const MIN_SPLIT = 0.0;
-const MAX_SPLIT = 1.0;
-
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 6;
 const TARGET_ASPECT = 16 / 9;
+
+const FLOAT_ASPECT   = 16 / 9;
+const MIN_FLOAT_W    = 0.18;
+const MAX_FLOAT_W    = 1.0;
+
+const AUTO_STOP_ON_UPLOAD_END = true;
+const LOOP_UPLOAD_PREVIEW     = true;
+
+/* ============================================================
+   PRESET BACKGROUND
+   ============================================================ */
+const BG_SOLID = [
+  { id: 'black',  label: 'Hitam',  css: '#000000', gradient: null },
+  { id: 'white',  label: 'Putih',  css: '#ffffff', gradient: null },
+  { id: 'gray',   label: 'Abu',    css: '#374151', gradient: null },
+  { id: 'indigo', label: 'Indigo', css: '#6366f1', gradient: null },
+  { id: 'purple', label: 'Purple', css: '#8b5cf6', gradient: null },
+  { id: 'pink',   label: 'Pink',   css: '#ec4899', gradient: null },
+  { id: 'green',  label: 'Hijau',  css: '#10b981', gradient: null },
+  { id: 'navy',   label: 'Navy',   css: '#1e1b4b', gradient: null },
+];
+
+const BG_GRADIENTS = [
+  { id: 'sunset', label: 'Sunset', css: 'linear-gradient(135deg, #ff3366, #8b5cf6)', gradient: { from: '#ff3366', to: '#8b5cf6' } },
+  { id: 'ocean',  label: 'Ocean',  css: 'linear-gradient(135deg, #06b6d4, #3b82f6)', gradient: { from: '#06b6d4', to: '#3b82f6' } },
+  { id: 'forest', label: 'Forest', css: 'linear-gradient(135deg, #10b981, #059669)', gradient: { from: '#10b981', to: '#059669' } },
+  { id: 'fire',   label: 'Fire',   css: 'linear-gradient(135deg, #f59e0b, #ef4444)', gradient: { from: '#f59e0b', to: '#ef4444' } },
+  { id: 'night',  label: 'Night',  css: 'linear-gradient(135deg, #1e1b4b, #0f172a)', gradient: { from: '#1e1b4b', to: '#0f172a' } },
+  { id: 'candy',  label: 'Candy',  css: 'linear-gradient(135deg, #f472b6, #a855f7)', gradient: { from: '#f472b6', to: '#a855f7' } },
+  { id: 'mint',   label: 'Mint',   css: 'linear-gradient(135deg, #6ee7b7, #3b82f6)', gradient: { from: '#6ee7b7', to: '#3b82f6' } },
+  { id: 'gold',   label: 'Gold',   css: 'linear-gradient(135deg, #fbbf24, #f97316)', gradient: { from: '#fbbf24', to: '#f97316' } },
+];
 
 /* ============================================================
    STATE
@@ -799,8 +1206,26 @@ const state = {
   mediaRecorder: null, recordedChunks: [], recDest: null,
   recStartTime: 0, timerInterval: null, drawRAF: null,
   quality: '720',
-  splitRatio: DEFAULT_SPLIT,
-  uploadPos: { x: 0.5, y: 0.5 },
+
+  /* ✅ mode tampilan video upload: 'cover' = penuhi 9:16, 'contain' = rasio asli */
+  uploadFit: 'cover',
+
+  /* ✅ background komposisi */
+  background: {
+    id: 'black',
+    type: 'solid',        // 'solid' | 'gradient'
+    css: '#000000',
+    gradient: null        // { from, to } untuk canvas
+  },
+
+  /* ✅ posisi & ukuran jendela LIVE (ternormalisasi 0..1 terhadap phone-frame) */
+  float: { x: 0.29, y: 0.05, w: 0.42, h: 0.14 },
+
+  /* ✅ posisi + zoom di dalam tiap video */
+  views: {
+    live:   { zoom: 1, panX: 0.5, panY: 0.5 },
+    upload: { zoom: 1, panX: 0.5, panY: 0.5 }
+  },
   previewBlob: null, previewUrl: null, previewMime: ''
 };
 
@@ -831,10 +1256,15 @@ const btnClosePreview   = $('btnClosePreview');
 const btnSaveGallery    = $('btnSaveGallery');
 const btnDownload       = $('btnDownload');
 const qualityLabel      = $('qualityLabel');
+const btnFitMode        = $('btnFitMode');
+const fitModeLabel      = $('fitModeLabel');
+const btnBackground     = $('btnBackground');
+const bgModal           = $('bgModal');
+const btnCloseBg        = $('btnCloseBg');
+const bgGridSolid       = $('bgGridSolid');
+const bgGridGradient    = $('bgGridGradient');
+const bgColorInput      = $('bgColorInput');
 const recText           = btnRecord.querySelector('.rec-text');
-const btnResetPan       = $('btnResetPan');
-const panHint           = $('panHint');
-const splitPct          = $('splitPct');
 
 const btnPlayPause      = $('btnPlayPause');
 const btnBack           = $('btnBack');
@@ -846,285 +1276,601 @@ const videoProgressFill = $('videoProgressFill');
 const phoneFrame        = document.querySelector('.phone-frame');
 const liveScreen        = $('liveScreen');
 const uploadScreen      = $('uploadScreen');
-const divider           = $('divider');
 
-const RECORD_LOCKED_BTNS = [btnStartCam, btnSwitchCam, btnMic, btnUpload, btnQuality];
+const liveMoveHandle    = $('liveMoveHandle');
+const liveResizeHandle  = $('liveResizeHandle');
+
+const RECORD_LOCKED_BTNS = [btnStartCam, btnSwitchCam, btnMic, btnUpload, btnQuality, btnFitMode, btnBackground];
 const RECORD_ACTIVE_BTNS = [btnPlayPause, btnBack, btnNext, btnStop];
 
 const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
 
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const clamp01 = v => Math.min(1, Math.max(0, v));
+
 /* ============================================================
-   CANVAS — OUTPUT DIPAKSA 9:16
+   CONTROLLER TIAP LAYAR
+   ============================================================ */
+const VIEW_CTRL = [
+  {
+    key: 'live', screen: liveScreen, video: liveVideo,
+    tools: $('liveTools'), hint: null,
+    isReady: () => !!state.stream && liveVideo.videoWidth > 0
+  },
+  {
+    key: 'upload', screen: uploadScreen, video: uploadVideo,
+    tools: $('uploadTools'), hint: $('uploadHint'),
+    isReady: () => state.uploadReady && uploadVideo.videoWidth > 0
+  }
+];
+const ctrlByKey = Object.fromEntries(VIEW_CTRL.map(c => [c.key, c]));
+
+/* ============================================================
+   GEOMETRI "COVER" / "CONTAIN"
+   ============================================================ */
+function getFitInfo(videoEl, screenEl, mode = 'cover') {
+  const vw = videoEl.videoWidth || 0;
+  const vh = videoEl.videoHeight || 0;
+  const cw = screenEl.clientWidth;
+  const ch = screenEl.clientHeight;
+  if (!vw || !vh || !cw || !ch) return null;
+  const s0 = (mode === 'contain')
+    ? Math.min(cw / vw, ch / vh)
+    : Math.max(cw / vw, ch / vh);
+  return { vw, vh, cw, ch, s0, mode };
+}
+
+function fitModeOf(ctrl) {
+  return ctrl.key === 'upload' ? state.uploadFit : 'cover';
+}
+
+function applyView(ctrl) {
+  const vs = state.views[ctrl.key];
+  const info = getFitInfo(ctrl.video, ctrl.screen, fitModeOf(ctrl));
+  if (!info) return;
+
+  const { vw, vh, cw, ch, s0 } = info;
+  const z = clamp(vs.zoom, MIN_ZOOM, MAX_ZOOM);
+  const W = vw * s0 * z;
+  const H = vh * s0 * z;
+
+  ctrl.video.style.width  = W.toFixed(2) + 'px';
+  ctrl.video.style.height = H.toFixed(2) + 'px';
+  ctrl.video.style.left   = (-vs.panX * (W - cw)).toFixed(2) + 'px';
+  ctrl.video.style.top    = (-vs.panY * (H - ch)).toFixed(2) + 'px';
+
+  if (ctrl.zoomLabel) ctrl.zoomLabel.textContent = z.toFixed(1) + '×';
+}
+
+function applyAllViews() {
+  VIEW_CTRL.forEach(applyView);
+}
+
+function resetView(ctrl, silent = false) {
+  const vs = state.views[ctrl.key];
+  vs.zoom = 1;
+  vs.panX = 0.5;
+  vs.panY = 0.5;
+  applyView(ctrl);
+  updateGridActive(ctrl);
+  if (!silent) showToast('↺ Tampilan direset ke tengah');
+}
+
+/* ============================================================
+   BACKGROUND
+   ============================================================ */
+function applyBackgroundToDOM() {
+  uploadScreen.style.background = state.background.css;
+}
+
+function paintCanvasBackground(W, H) {
+  const bg = state.background;
+  if (bg.gradient) {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, bg.gradient.from);
+    g.addColorStop(1, bg.gradient.to);
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = bg.css;
+  }
+  ctx.fillRect(0, 0, W, H);
+}
+
+function setBackground(preset) {
+  state.background = {
+    id: preset.id,
+    type: preset.gradient ? 'gradient' : 'solid',
+    css: preset.css,
+    gradient: preset.gradient || null
+  };
+  applyBackgroundToDOM();
+  updateBgActive();
+  showToast(`🎨 Background: ${preset.label || 'kustom'}`, 'success');
+}
+
+function updateBgActive() {
+  document.querySelectorAll('.bg-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.id === state.background.id);
+  });
+}
+
+function setupBackgroundPicker() {
+  /* Solid swatches */
+  BG_SOLID.forEach(preset => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'bg-swatch';
+    b.dataset.id = preset.id;
+    b.style.background = preset.css;
+    b.title = preset.label;
+    b.innerHTML = `<span class="bg-swatch-label">${preset.label}</span>`;
+    if (preset.id === 'white') b.style.color = '#000';
+    b.addEventListener('click', () => setBackground(preset));
+    bgGridSolid.appendChild(b);
+  });
+
+  /* Gradient swatches */
+  BG_GRADIENTS.forEach(preset => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'bg-swatch';
+    b.dataset.id = preset.id;
+    b.style.background = preset.css;
+    b.title = preset.label;
+    b.innerHTML = `<span class="bg-swatch-label">${preset.label}</span>`;
+    b.addEventListener('click', () => setBackground(preset));
+    bgGridGradient.appendChild(b);
+  });
+
+  /* Custom color */
+  bgColorInput.addEventListener('input', (e) => {
+    const color = e.target.value;
+    state.background = {
+      id: 'custom',
+      type: 'solid',
+      css: color,
+      gradient: null
+    };
+    applyBackgroundToDOM();
+    updateBgActive();
+  });
+
+  updateBgActive();
+}
+
+btnBackground.addEventListener('click', () => {
+  bgColorInput.value = (state.background.type === 'solid') ? state.background.css : '#000000';
+  updateBgActive();
+  bgModal.classList.add('show');
+});
+btnCloseBg.addEventListener('click', () => bgModal.classList.remove('show'));
+bgModal.addEventListener('click', (e) => {
+  if (e.target === bgModal) bgModal.classList.remove('show');
+});
+
+/* ============================================================
+   JENDELA LIVE MENGAMBANG
+   ============================================================ */
+function frameSize() {
+  const r = phoneFrame.getBoundingClientRect();
+  return { w: r.width || 1, h: r.height || 1 };
+}
+
+function normalizeFloat() {
+  const f = state.float;
+  const fs = frameSize();
+
+  f.w = clamp(f.w, MIN_FLOAT_W, MAX_FLOAT_W);
+  const hPx = (f.w * fs.w) / FLOAT_ASPECT;
+  f.h = Math.min(1, hPx / fs.h);
+
+  f.x = clamp(f.x, 0, Math.max(0, 1 - f.w));
+  f.y = clamp(f.y, 0, Math.max(0, 1 - f.h));
+}
+
+function applyFloat() {
+  normalizeFloat();
+  const f = state.float;
+  liveScreen.style.left   = (f.x * 100).toFixed(3) + '%';
+  liveScreen.style.top    = (f.y * 100).toFixed(3) + '%';
+  liveScreen.style.width  = (f.w * 100).toFixed(3) + '%';
+  liveScreen.style.height = (f.h * 100).toFixed(3) + '%';
+
+  applyView(ctrlByKey.live);
+  updateSizePresets();
+}
+
+function showLiveFloat(silent = true) {
+  liveScreen.classList.remove('hidden');
+  applyFloat();
+  if (!silent) showToast('🪟 Jendela LIVE ditampilkan');
+}
+
+function hideLiveFloat() {
+  liveScreen.classList.add('hidden');
+  updateSizePresets();
+}
+
+function isFloatVisible() {
+  return !liveScreen.classList.contains('hidden');
+}
+
+function setFloatWidth(wNorm, silent = false) {
+  if (wNorm <= 0) { hideLiveFloat(); if (!silent) showToast('🫥 Jendela LIVE disembunyikan'); return; }
+
+  const fs = frameSize();
+  const cx = state.float.x + state.float.w / 2;
+
+  showLiveFloat(true);
+  state.float.w = wNorm;
+  const hPx = (wNorm * fs.w) / FLOAT_ASPECT;
+  state.float.h = Math.min(1, hPx / fs.h);
+  state.float.x = clamp(cx - wNorm / 2, 0, Math.max(0, 1 - wNorm));
+
+  applyFloat();
+
+  if (!silent) {
+    const pct = Math.round(wNorm * 100);
+    showToast(`📐 Ukuran jendela LIVE: ${pct}%`);
+  }
+}
+
+function updateSizePresets() {
+  const visible = isFloatVisible();
+  document.querySelectorAll('[data-size]').forEach(b => {
+    const v = parseFloat(b.dataset.size);
+    b.classList.toggle('active', visible && v > 0 && Math.abs(v - state.float.w) < 0.03);
+  });
+}
+
+let floatDrag = null;
+
+function beginFloatDrag(e, mode) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const fs = frameSize();
+  floatDrag = {
+    mode, id: e.pointerId,
+    startX: e.clientX, startY: e.clientY,
+    baseX: state.float.x * fs.w,
+    baseY: state.float.y * fs.h,
+    baseW: state.float.w * fs.w,
+    baseH: state.float.h * fs.h,
+    fs, target: e.currentTarget
+  };
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+  e.currentTarget.classList.add('dragging');
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function onFloatDragMove(e) {
+  if (!floatDrag || e.pointerId !== floatDrag.id) return;
+  const d = floatDrag;
+  const dx = e.clientX - d.startX;
+  const dy = e.clientY - d.startY;
+
+  if (d.mode === 'move') {
+    const nx = clamp(d.baseX + dx, 0, Math.max(0, d.fs.w - d.baseW));
+    const ny = clamp(d.baseY + dy, 0, Math.max(0, d.fs.h - d.baseH));
+    state.float.x = nx / d.fs.w;
+    state.float.y = ny / d.fs.h;
+  } else {
+    const delta = (Math.abs(dx) >= Math.abs(dy)) ? dx : dy * FLOAT_ASPECT;
+    const minPx = MIN_FLOAT_W * d.fs.w;
+    const maxByW = d.fs.w - d.baseX;
+    const maxByH = (d.fs.h - d.baseY) * FLOAT_ASPECT;
+    const maxPx = Math.max(minPx, Math.min(maxByW, maxByH));
+    const newW = clamp(d.baseW + delta, minPx, maxPx);
+    state.float.w = newW / d.fs.w;
+    state.float.h = (newW / FLOAT_ASPECT) / d.fs.h;
+    state.float.x = d.baseX / d.fs.w;
+    state.float.y = d.baseY / d.fs.h;
+  }
+
+  applyFloat();
+  e.preventDefault();
+}
+
+function endFloatDrag(e) {
+  if (!floatDrag) return;
+  if (e && e.pointerId !== undefined && e.pointerId !== floatDrag.id) return;
+  try { floatDrag.target.releasePointerCapture(floatDrag.id); } catch (_) {}
+  floatDrag.target.classList.remove('dragging');
+  floatDrag = null;
+}
+
+liveMoveHandle.addEventListener('pointerdown', e => beginFloatDrag(e, 'move'));
+liveResizeHandle.addEventListener('pointerdown', e => beginFloatDrag(e, 'resize'));
+window.addEventListener('pointermove', onFloatDragMove, { passive: false });
+window.addEventListener('pointerup', endFloatDrag);
+window.addEventListener('pointercancel', endFloatDrag);
+
+document.querySelectorAll('[data-size]').forEach(b => {
+  b.addEventListener('click', () => setFloatWidth(parseFloat(b.dataset.size)));
+});
+
+/* ============================================================
+   TOOLS: 3×3 PRESET POSISI + ZOOM
+   ============================================================ */
+function updateGridActive(ctrl) {
+  if (!ctrl.tools) return;
+  const vs = state.views[ctrl.key];
+  ctrl.tools.querySelectorAll('[data-grid] button').forEach(b => {
+    const px = parseFloat(b.dataset.px);
+    const py = parseFloat(b.dataset.py);
+    b.classList.toggle('active',
+      Math.abs(px - vs.panX) < 0.02 && Math.abs(py - vs.panY) < 0.02
+    );
+  });
+}
+
+function initTools(ctrl) {
+  if (!ctrl.tools) return;
+
+  const panel  = ctrl.tools.querySelector('[data-panel]');
+  const grid   = ctrl.tools.querySelector('[data-grid]');
+  const toggle = ctrl.tools.querySelector('[data-toggle]');
+  ctrl.zoomLabel = ctrl.tools.querySelector('[data-zoom-label]');
+
+  [0, 0.5, 1].forEach(py => {
+    [0, 0.5, 1].forEach(px => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.px = px;
+      b.dataset.py = py;
+      b.title = `Posisi ${Math.round(px * 100)}% / ${Math.round(py * 100)}%`;
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const vs = state.views[ctrl.key];
+        vs.panX = px;
+        vs.panY = py;
+        applyView(ctrl);
+        updateGridActive(ctrl);
+      });
+      grid.appendChild(b);
+    });
+  });
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!panel.classList.contains('open')) return;
+    if (ctrl.tools.contains(e.target)) return;
+    panel.classList.remove('open');
+    toggle.classList.remove('open');
+  }, { passive: true });
+
+  ctrl.tools.querySelectorAll('[data-zoom]').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const vs = state.views[ctrl.key];
+      const f = b.dataset.zoom === '+' ? 1.25 : 0.8;
+      vs.zoom = clamp(vs.zoom * f, MIN_ZOOM, MAX_ZOOM);
+      applyView(ctrl);
+    });
+  });
+
+  ctrl.tools.querySelector('[data-reset]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetView(ctrl);
+  });
+
+  updateGridActive(ctrl);
+}
+
+/* ============================================================
+   GESTURE
+   ============================================================ */
+function showHint(ctrl) {
+  if (!ctrl.hint) return;
+  ctrl.hint.classList.add('show');
+  clearTimeout(ctrl._hintTimer);
+  ctrl._hintTimer = setTimeout(() => ctrl.hint.classList.remove('show'), 3400);
+}
+function hideHint(ctrl) {
+  if (!ctrl.hint) return;
+  clearTimeout(ctrl._hintTimer);
+  ctrl.hint.classList.remove('show');
+}
+
+function setupGestures(ctrl) {
+  const el = ctrl.video;
+  const pts = new Map();
+  let gesture = null;
+  let lastTap = 0;
+
+  el.addEventListener('pointerdown', (e) => {
+    if (!ctrl.isReady()) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+
+    if (pts.size === 1) {
+      const vs = state.views[ctrl.key];
+      gesture = {
+        type: 'pan',
+        startX: e.clientX, startY: e.clientY,
+        baseX: vs.panX, baseY: vs.panY,
+        time: Date.now(), moved: false
+      };
+    } else if (pts.size === 2) {
+      const arr = [...pts.values()];
+      const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+      gesture = {
+        type: 'pinch',
+        startDist: Math.max(1, d),
+        baseZoom: state.views[ctrl.key].zoom
+      };
+    }
+
+    el.classList.add('grabbing');
+    hideHint(ctrl);
+    e.preventDefault();
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId) || !gesture) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const vs = state.views[ctrl.key];
+
+    if (gesture.type === 'pan' && pts.size === 1) {
+      const dx = e.clientX - gesture.startX;
+      const dy = e.clientY - gesture.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) gesture.moved = true;
+
+      const info = getFitInfo(el, ctrl.screen, fitModeOf(ctrl));
+      if (!info) return;
+      const W = info.vw * info.s0 * vs.zoom;
+      const H = info.vh * info.s0 * vs.zoom;
+      const maxX = W - info.cw;
+      const maxY = H - info.ch;
+
+      if (maxX > 0.5) vs.panX = clamp01(gesture.baseX - dx / maxX);
+      if (maxY > 0.5) vs.panY = clamp01(gesture.baseY - dy / maxY);
+
+      applyView(ctrl);
+      updateGridActive(ctrl);
+
+    } else if (gesture.type === 'pinch' && pts.size === 2) {
+      const arr = [...pts.values()];
+      const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+      vs.zoom = clamp(gesture.baseZoom * (d / gesture.startDist), MIN_ZOOM, MAX_ZOOM);
+      applyView(ctrl);
+    }
+
+    e.preventDefault();
+  });
+
+  const endPointer = (e) => {
+    if (!pts.has(e.pointerId)) return;
+
+    const wasPan = gesture && gesture.type === 'pan';
+    const moved  = gesture && gesture.moved;
+    const time   = gesture && gesture.time;
+
+    pts.delete(e.pointerId);
+    try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+
+    if (pts.size === 0) {
+      gesture = null;
+      el.classList.remove('grabbing');
+    }
+
+    if (wasPan && !moved && Date.now() - time < 300) {
+      const now = Date.now();
+      if (now - lastTap < 320) {
+        resetView(ctrl);
+        lastTap = 0;
+      } else {
+        lastTap = now;
+      }
+    }
+  };
+
+  el.addEventListener('pointerup', endPointer);
+  el.addEventListener('pointercancel', endPointer);
+  el.addEventListener('lostpointercapture', endPointer);
+
+  el.addEventListener('wheel', (e) => {
+    if (!ctrl.isReady()) return;
+    e.preventDefault();
+    const vs = state.views[ctrl.key];
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    vs.zoom = clamp(vs.zoom * factor, MIN_ZOOM, MAX_ZOOM);
+    applyView(ctrl);
+  }, { passive: false });
+}
+
+VIEW_CTRL.forEach(ctrl => {
+  initTools(ctrl);
+  setupGestures(ctrl);
+});
+
+liveVideo.addEventListener('loadedmetadata', () => applyView(ctrlByKey.live));
+uploadVideo.addEventListener('loadedmetadata', () => applyView(ctrlByKey.upload));
+
+/* ============================================================
+   CANVAS — OUTPUT 9:16
    ============================================================ */
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
-function getLayoutMetrics() {
-  const liveRect   = liveScreen.getBoundingClientRect();
-  const uploadRect = uploadScreen.getBoundingClientRect();
-
-  const liveH    = liveRect.height;
-  const uploadH  = uploadRect.height;
-  const screensH = liveH + uploadH;
-
-  const aspect = TARGET_ASPECT;
-  const split  = (screensH > 0) ? (liveH / screensH) : state.splitRatio;
-
-  return { aspect, split };
-}
-
 function applyQuality(q) {
   const p = QUALITY_PRESETS[q];
-  const { aspect, split } = getLayoutMetrics();
-
   canvas.width  = p.w;
-  canvas.height = Math.max(2, Math.round((p.w * aspect) / 2) * 2);
-
-  state.quality    = q;
-  state.splitRatio = split;
+  canvas.height = Math.max(2, Math.round((p.w * TARGET_ASPECT) / 2) * 2);
+  state.quality = q;
   qualityLabel.textContent = p.label;
 }
 
 /* ============================================================
-   SPLIT SCREEN 0%–100% — drag divider
+   DRAW
    ============================================================ */
-function applySplitToLayout() {
-  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
-  state.splitRatio = r;
-  liveScreen.style.flex   = `${r} 1 0`;
-  uploadScreen.style.flex = `${1 - r} 1 0`;
-  updateSplitPct();
-}
+function drawVideoFit(video, viewState, dx, dy, dw, dh, mode = 'cover') {
+  if (dw <= 0 || dh <= 0) return;
 
-function updateSplitPct() {
-  const live = Math.round(state.splitRatio * 100);
-  const up   = 100 - live;
-  splitPct.textContent = `${live}% / ${up}%`;
-}
-
-let splitDrag = null;
-
-function onDivDown(e) {
-  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-  const liveRect   = liveScreen.getBoundingClientRect();
-  const uploadRect = uploadScreen.getBoundingClientRect();
-  const totalH = liveRect.height + uploadRect.height;
-  if (totalH <= 0) return;
-
-  splitDrag = {
-    pointerId: e.pointerId,
-    startY: e.clientY,
-    startSplit: state.splitRatio,
-    totalH
-  };
-  try { divider.setPointerCapture(e.pointerId); } catch (_) {}
-  divider.classList.add('dragging');
-  updateSplitPct();
-  e.preventDefault();
-}
-
-function onDivMove(e) {
-  if (!splitDrag || e.pointerId !== splitDrag.pointerId) return;
-  const dy = e.clientY - splitDrag.startY;
-  const newSplit = splitDrag.startSplit + dy / splitDrag.totalH;
-  state.splitRatio = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, newSplit));
-  applySplitToLayout();
-  e.preventDefault();
-}
-
-function onDivUp(e) {
-  if (!splitDrag) return;
-  if (e && e.pointerId !== undefined && e.pointerId !== splitDrag.pointerId) return;
-  try { divider.releasePointerCapture(splitDrag.pointerId); } catch (_) {}
-  splitDrag = null;
-  divider.classList.remove('dragging');
-}
-
-divider.addEventListener('pointerdown', onDivDown);
-divider.addEventListener('pointermove', onDivMove);
-divider.addEventListener('pointerup', onDivUp);
-divider.addEventListener('pointercancel', onDivUp);
-divider.addEventListener('lostpointercapture', onDivUp);
-
-/* Double-tap divider → reset 50 / 50 */
-let divLastTap = 0;
-divider.addEventListener('pointerup', (e) => {
-  const now = Date.now();
-  if (now - divLastTap < 300) {
-    state.splitRatio = 0.5;
-    applySplitToLayout();
-    showToast('⚖️ Split direset 50% / 50%');
-    divLastTap = 0;
-  } else {
-    divLastTap = now;
-  }
-});
-
-/* ============================================================
-   POSISI MANUAL VIDEO UPLOAD (PAN / GESER)
-   ============================================================ */
-function applyUploadPosition() {
-  const p = state.uploadPos;
-  uploadVideo.style.objectPosition = `${(p.x * 100).toFixed(3)}% ${(p.y * 100).toFixed(3)}%`;
-}
-
-function resetUploadPosition(silent = false) {
-  state.uploadPos.x = 0.5;
-  state.uploadPos.y = 0.5;
-  applyUploadPosition();
-  if (!silent) showToast('↺ Posisi video direset ke tengah');
-}
-
-function getCoverOverflow(video, w, h) {
   const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw || !vh || !w || !h) return null;
-  const scale = Math.max(w / vw, h / vh);
-  return {
-    x: Math.max(0, vw * scale - w),
-    y: Math.max(0, vh * scale - h)
-  };
-}
+  if (!vw || !vh) return;
 
-const clamp01 = v => Math.min(1, Math.max(0, v));
+  const s0 = (mode === 'contain')
+    ? Math.min(dw / vw, dh / vh)
+    : Math.max(dw / vw, dh / vh);
 
-let pan = null;
+  const z = clamp(viewState.zoom, MIN_ZOOM, MAX_ZOOM);
+  const W = vw * s0 * z;
+  const H = vh * s0 * z;
+  const left = dx - viewState.panX * (W - dw);
+  const top  = dy - viewState.panY * (H - dh);
 
-function onPanDown(e) {
-  if (!state.uploadReady) return;
-  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-
-  const rect = uploadVideo.getBoundingClientRect();
-  const ov = getCoverOverflow(uploadVideo, rect.width, rect.height);
-  if (!ov) return;
-  if (ov.x <= 0.5 && ov.y <= 0.5) return;
-
-  pan = {
-    pointerId: e.pointerId,
-    startX: e.clientX,
-    startY: e.clientY,
-    baseX: state.uploadPos.x,
-    baseY: state.uploadPos.y,
-    ovX: ov.x,
-    ovY: ov.y
-  };
-
-  try { uploadVideo.setPointerCapture(e.pointerId); } catch (err) {}
-  uploadVideo.classList.add('grabbing');
-  hidePanHint();
-  e.preventDefault();
-}
-
-function onPanMove(e) {
-  if (!pan || e.pointerId !== pan.pointerId) return;
-
-  const dx = e.clientX - pan.startX;
-  const dy = e.clientY - pan.startY;
-
-  const nx = pan.ovX > 0.5 ? pan.baseX - (dx / pan.ovX) : 0.5;
-  const ny = pan.ovY > 0.5 ? pan.baseY - (dy / pan.ovY) : 0.5;
-
-  state.uploadPos.x = clamp01(nx);
-  state.uploadPos.y = clamp01(ny);
-  applyUploadPosition();
-
-  e.preventDefault();
-}
-
-function onPanUp(e) {
-  if (!pan) return;
-  if (e && e.pointerId !== undefined && e.pointerId !== pan.pointerId) return;
-  try { uploadVideo.releasePointerCapture(pan.pointerId); } catch (err) {}
-  pan = null;
-  uploadVideo.classList.remove('grabbing');
-}
-
-uploadVideo.addEventListener('pointerdown', onPanDown);
-uploadVideo.addEventListener('pointermove', onPanMove);
-uploadVideo.addEventListener('pointerup', onPanUp);
-uploadVideo.addEventListener('pointercancel', onPanUp);
-uploadVideo.addEventListener('lostpointercapture', onPanUp);
-
-let lastTapTime = 0;
-uploadVideo.addEventListener('pointerup', (e) => {
-  if (!state.uploadReady) return;
-  const now = Date.now();
-  if (now - lastTapTime < 300) {
-    resetUploadPosition();
-    lastTapTime = 0;
-  } else {
-    lastTapTime = now;
-  }
-});
-
-btnResetPan.addEventListener('click', (e) => {
-  e.stopPropagation();
-  resetUploadPosition();
-});
-
-let panHintTimer;
-function showPanHint() {
-  panHint.classList.add('show');
-  clearTimeout(panHintTimer);
-  panHintTimer = setTimeout(hidePanHint, 3200);
-}
-function hidePanHint() {
-  clearTimeout(panHintTimer);
-  panHint.classList.remove('show');
-}
-
-/* ============================================================
-   DRAW COVER (aman saat dw/dh = 0)
-   ============================================================ */
-function drawCover(video, dx, dy, dw, dh, posX = 0.5, posY = 0.5) {
-  if (dw <= 0 || dh <= 0) return;          // ← guard: layar 0% tidak digambar
-  if (!video || !video.videoWidth || !video.videoHeight) {
-    ctx.fillStyle = '#0d0d0f';
-    ctx.fillRect(dx, dy, dw, dh);
-    return;
-  }
-  const vw = video.videoWidth, vh = video.videoHeight;
-
-  const scale = Math.max(dw / vw, dh / vh);
-  const dispW = vw * scale;
-  const dispH = vh * scale;
-  const overX = Math.max(0, dispW - dw);
-  const overY = Math.max(0, dispH - dh);
-
-  const sw = Math.min(vw, dw / scale);
-  const sh = Math.min(vh, dh / scale);
-  const sx = (posX * overX) / scale;
-  const sy = (posY * overY) / scale;
-
-  try { ctx.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh); } catch (e) {}
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(dx, dy, dw, dh);
+  ctx.clip();
+  try { ctx.drawImage(video, left, top, W, H); } catch (e) {}
+  ctx.restore();
 }
 
 function startDrawLoop() {
   if (state.drawRAF) return;
   const tick = () => {
     const W = canvas.width, H = canvas.height;
-    const splitY = Math.round(H * state.splitRatio);
 
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
+    /* ✅ Background dulu */
+    paintCanvasBackground(W, H);
 
-    drawCover(liveVideo, 0, 0, W, splitY, 0.5, 0.5);
+    /* Video upload */
+    if (state.uploadReady) {
+      drawVideoFit(uploadVideo, state.views.upload, 0, 0, W, H, state.uploadFit);
+    }
 
-    drawCover(
-      uploadVideo, 0, splitY, W, H - splitY,
-      state.uploadPos.x, state.uploadPos.y
-    );
+    /* Overlay LIVE */
+    if (state.stream && isFloatVisible()) {
+      const f  = state.float;
+      const fx = f.x * W;
+      const fy = f.y * H;
+      const fw = f.w * W;
+      const fh = f.h * H;
 
-    /* Garis pemisah hanya jika kedua sisi masih terlihat */
-    if (splitY > 1 && splitY < H - 1) {
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillRect(0, splitY - 1, W, 2);
+      drawVideoFit(liveVideo, state.views.live, fx, fy, fw, fh, 'cover');
+
+      const lw = Math.max(2, fw * 0.012);
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = lw;
+      ctx.strokeRect(fx + lw / 2, fy + lw / 2, fw - lw, fh - lw);
     }
 
     state.drawRAF = requestAnimationFrame(tick);
   };
   tick();
 }
+
 function stopDrawLoop() {
   if (state.drawRAF) cancelAnimationFrame(state.drawRAF);
   state.drawRAF = null;
@@ -1163,12 +1909,10 @@ async function togglePlayPause() {
   if (!state.uploadReady) { showToast('Upload video dulu', 'error'); return; }
   ensureAudioCtx();
   if (uploadVideo.paused) {
+    if (uploadVideo.ended) uploadVideo.currentTime = 0;
     uploadVideo.muted = false;
-    try {
-      await uploadVideo.play();
-    } catch (err) {
-      showToast('Gagal play: ' + err.message, 'error');
-    }
+    try { await uploadVideo.play(); }
+    catch (err) { showToast('Gagal play: ' + err.message, 'error'); }
   } else {
     uploadVideo.pause();
   }
@@ -1204,9 +1948,27 @@ btnNext.addEventListener('click', seekNext);
 btnStop.addEventListener('click', stopVideo);
 uploadVideo.addEventListener('play',  updatePlayPauseIcon);
 uploadVideo.addEventListener('pause', updatePlayPauseIcon);
-uploadVideo.addEventListener('ended', updatePlayPauseIcon);
 uploadVideo.addEventListener('timeupdate', updateProgressBar);
 uploadVideo.addEventListener('loadedmetadata', updateProgressBar);
+
+uploadVideo.addEventListener('ended', () => {
+  updatePlayPauseIcon();
+  updateProgressBar();
+
+  if (AUTO_STOP_ON_UPLOAD_END && state.isRecording) {
+    stopRecording();
+    showToast('⏹ Video upload selesai — rekaman otomatis berhenti', 'success');
+    return;
+  }
+
+  if (LOOP_UPLOAD_PREVIEW) {
+    uploadVideo.currentTime = 0;
+    uploadVideo.play().catch(() => {
+      uploadVideo.muted = true;
+      uploadVideo.play().catch(() => {});
+    });
+  }
+});
 
 videoProgress.addEventListener('click', (e) => {
   if (!state.uploadReady) return;
@@ -1233,7 +1995,14 @@ async function startCamera(silent = false) {
     livePlaceholder.classList.add('hidden');
     btnSwitchCam.classList.remove('hidden');
     btnStartCam.classList.add('active');
-    if (!silent) showToast('Kamera aktif', 'success');
+
+    showLiveFloat(true);
+
+    const c = ctrlByKey.live;
+    if (c.tools) c.tools.classList.remove('hidden');
+    resetView(c, true);
+
+    if (!silent) showToast('Kamera aktif — geser / ubah ukuran jendela LIVE', 'success');
     return true;
   } catch (err) {
     if (!silent) showToast('Kamera gagal: ' + err.message, 'error');
@@ -1331,9 +2100,11 @@ fileInput.addEventListener('change', async (e) => {
 
     uploadPlaceholder.classList.add('hidden');
     state.uploadReady = true;
+    btnFitMode.disabled = false;
 
-    resetUploadPosition(true);
-    btnResetPan.classList.remove('hidden');
+    const c = ctrlByKey.upload;
+    resetView(c, true);
+    if (c.tools) c.tools.classList.remove('hidden');
 
     ensureAudioCtx();
     try {
@@ -1348,14 +2119,14 @@ fileInput.addEventListener('change', async (e) => {
     try {
       uploadVideo.muted = false;
       await uploadVideo.play();
-      showToast('Video dimuat — geser untuk atur posisi', 'success');
+      showToast('Video dimuat — geser / cubit untuk atur', 'success');
     } catch (autoplayErr) {
       uploadVideo.muted = true;
       try { await uploadVideo.play(); } catch(e) {}
       showToast('Video dimuat — ketuk ▶ untuk audio', '');
     }
 
-    showPanHint();
+    showHint(c);
     updatePlayPauseIcon();
     updateProgressBar();
   } catch (err) {
@@ -1366,7 +2137,33 @@ fileInput.addEventListener('change', async (e) => {
 });
 
 /* ============================================================
-   REKAM — output 9:16
+   RASIO TAMPILAN VIDEO UPLOAD
+   ============================================================ */
+function setUploadFit(mode, silent = false) {
+  state.uploadFit = (mode === 'contain') ? 'contain' : 'cover';
+
+  fitModeLabel.textContent = state.uploadFit === 'contain' ? 'Asli' : '9:16';
+  btnFitMode.classList.toggle('active', state.uploadFit === 'contain');
+
+  const c = ctrlByKey.upload;
+  resetView(c, true);
+  applyView(c);
+  updateGridActive(c);
+
+  if (!silent) {
+    showToast(state.uploadFit === 'contain'
+      ? '🖼️ Rasio asli — video tampil utuh (tanpa crop)'
+      : '📱 9:16 — video memenuhi layar', 'success');
+  }
+}
+
+btnFitMode.addEventListener('click', () => {
+  if (!state.uploadReady) { showToast('Upload video dulu', 'error'); return; }
+  setUploadFit(state.uploadFit === 'contain' ? 'cover' : 'contain');
+});
+
+/* ============================================================
+   REKAM
    ============================================================ */
 async function startRecording() {
   if (state.isRecording) return;
@@ -1386,6 +2183,7 @@ async function startRecording() {
   ensureAudioCtx();
 
   if (state.uploadReady && uploadVideo.paused) {
+    if (uploadVideo.ended) uploadVideo.currentTime = 0;
     try {
       uploadVideo.muted = false;
       await uploadVideo.play();
@@ -1469,7 +2267,7 @@ async function startRecording() {
     RECORD_LOCKED_BTNS.forEach(b => b.disabled = true);
     RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
 
-    showToast('🔴 Merekam 9:16 — drag divider untuk atur split', 'success');
+    showToast('🔴 Merekam 9:16 — jendela LIVE bisa digeser & diubah ukuran', 'success');
   } catch (err) {
     showToast('Rekam gagal: ' + err.message, 'error');
   }
@@ -1488,6 +2286,7 @@ function stopRecording() {
   recText.textContent = 'Mulai Rekam';
 
   RECORD_LOCKED_BTNS.forEach(b => b.disabled = false);
+  btnFitMode.disabled = !state.uploadReady;
   RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
 }
 
@@ -1567,22 +2366,33 @@ function formatBytes(b) {
 /* ============================================================
    EVENT UTAMA
    ============================================================ */
-btnStartCam.addEventListener('click', () => startCamera());
+btnStartCam.addEventListener('click', () => {
+  if (state.stream && !isFloatVisible()) {
+    showLiveFloat(false);
+    return;
+  }
+  startCamera();
+});
+
 btnSwitchCam.addEventListener('click', () => {
   state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
   startCamera();
 });
+
 btnMic.addEventListener('click', toggleMic);
+
 btnQuality.addEventListener('click', () => {
   const i = QUALITY_ORDER.indexOf(state.quality);
   const next = QUALITY_ORDER[(i + 1) % QUALITY_ORDER.length];
   applyQuality(next);
   showToast('Kualitas: ' + QUALITY_PRESETS[next].label);
 });
+
 btnRecord.addEventListener('click', () => {
   if (state.isRecording) stopRecording();
   else startRecording();
 });
+
 btnClosePreview.addEventListener('click', closePreview);
 btnSaveGallery.addEventListener('click', saveToGallery);
 btnDownload.addEventListener('click', downloadFile);
@@ -1592,15 +2402,21 @@ btnDownload.addEventListener('click', downloadFile);
    ============================================================ */
 let resizeTimeout;
 function handleResize() {
-  if (state.isRecording) return;
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
-    applySplitToLayout();
+    applyFloat();
     applyQuality(state.quality);
+    applyAllViews();
   }, 150);
 }
 window.addEventListener('resize', handleResize);
 window.addEventListener('orientationchange', handleResize);
+
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => applyAllViews());
+  ro.observe(liveScreen);
+  ro.observe(uploadScreen);
+}
 
 /* ============================================================
    CLEANUP
@@ -1617,13 +2433,16 @@ window.addEventListener('beforeunload', cleanup);
    INIT
    ============================================================ */
 applyQuality('720');
+setupBackgroundPicker();
+applyBackgroundToDOM();
 requestAnimationFrame(() => {
-  applySplitToLayout();
-  applyQuality(state.quality);
+  applyFloat();
+  applyAllViews();
 });
-applyUploadPosition();
 updatePlayPauseIcon();
-console.log('%c📱 Split Screen Recorder — split 0%–100% | output 9:16', 'color:#6366f1;font-weight:bold;font-size:14px');
+
+console.log('%c📱 Split Recorder — LIVE floating | 9:16 output | bg customizable',
+  'color:#6366f1;font-weight:bold;font-size:14px');
 </script>
 
 </body>
