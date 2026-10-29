@@ -599,6 +599,46 @@
     }
     .expand-btn.has-value .expand-dot { display: block; }
 
+    /* ====== SWAP QUICK BUTTON ====== */
+    .expand-btn.swap-quick {
+      flex: 0 0 42px;
+      padding: 9px 6px;
+      font-size: 14px;
+    }
+    .expand-btn.swap-quick.active {
+      background: rgba(16,185,129,0.2);
+      border-color: rgba(16,185,129,0.55);
+      color: var(--green);
+    }
+    .expand-btn.swap-quick svg { width: 14px; height: 14px; }
+
+    /* ====== SWAP IN PANEL ====== */
+    .swap-full-btn {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s;
+    }
+    .swap-full-btn:hover { background: var(--surface-hover); }
+    .swap-full-btn:active { transform: scale(0.97); }
+    .swap-full-btn.active {
+      background: rgba(16,185,129,0.18);
+      border-color: rgba(16,185,129,0.5);
+      color: var(--green);
+    }
+    .swap-full-btn svg { width: 14px; height: 14px; }
+
     .expand-panel {
       display: none;
       padding-top: 2px;
@@ -677,7 +717,6 @@
       font-family: -apple-system, system-ui, sans-serif;
     }
 
-    /* ====== TICKER SPEED ====== */
     .ticker-speed-row {
       padding-top: 6px;
       gap: 8px;
@@ -1216,6 +1255,13 @@
           <span class="expand-value" id="expandTickerLabel"></span>
           <span class="expand-dot"></span>
         </button>
+        <button class="expand-btn swap-quick" id="btnSwapScreens" type="button" title="Tukar posisi LIVE ↔ UPLOAD">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 4 12 9 17 4"/>
+            <polyline points="7 20 12 15 17 20"/>
+            <line x1="12" y1="9" x2="12" y2="15"/>
+          </svg>
+        </button>
       </div>
 
       <div class="expand-panel" data-panel-for="split">
@@ -1226,6 +1272,17 @@
           <button class="split-btn" data-split="0.5">50%</button>
           <button class="split-btn" data-split="0.7">70%</button>
           <button class="split-btn" data-split="1">100%</button>
+        </div>
+        <div class="ctrl-row" style="padding-top: 6px;">
+          <button class="swap-full-btn" id="btnSwapFull" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            <span id="swapFullText">Tukar Posisi LIVE ↔ UPLOAD</span>
+          </button>
         </div>
       </div>
 
@@ -1384,6 +1441,7 @@ const state = {
   quality: '720',
   aspectMode: '9:16',
   splitRatio: DEFAULT_SPLIT,
+  swapped: false,
   views: {
     live:   { zoom: 1, panX: 0.5, panY: 0.5 },
     upload: { zoom: 1, panX: 0.5, panY: 0.5 }
@@ -1466,7 +1524,11 @@ const expandSplitLabel  = $('expandSplitLabel');
 const expandAspectLabel = $('expandAspectLabel');
 const expandTickerLabel = $('expandTickerLabel');
 
-const RECORD_LOCKED_BTNS = [btnStartCam, btnSwitchCam, btnMic, btnUpload, btnQuality, btnBg];
+const btnSwapScreens    = $('btnSwapScreens');
+const btnSwapFull       = $('btnSwapFull');
+const swapFullText      = $('swapFullText');
+
+const RECORD_LOCKED_BTNS = [btnStartCam, btnSwitchCam, btnMic, btnUpload, btnQuality, btnBg, btnSwapScreens, btnSwapFull];
 const RECORD_ACTIVE_BTNS = [btnPlayPause, btnBack, btnNext, btnStop];
 
 const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
@@ -1548,9 +1610,9 @@ function setAspectMode(mode) {
    ============================================================ */
 function updateExpandLabels() {
   if (expandSplitLabel) {
-    const live = Math.round(state.splitRatio * 100);
-    expandSplitLabel.textContent = `${live}%`;
-    expandSplitBtn.classList.toggle('has-value', live !== 40);
+    const pct = Math.round(state.splitRatio * 100);
+    expandSplitLabel.textContent = state.swapped ? `↕${pct}%` : `${pct}%`;
+    expandSplitBtn.classList.toggle('has-value', state.swapped || pct !== 40);
   }
   if (expandAspectLabel) {
     expandAspectLabel.textContent = state.aspectMode;
@@ -1560,6 +1622,24 @@ function updateExpandLabels() {
     const active = state.ticker.enabled && state.ticker.text;
     expandTickerLabel.textContent = active ? 'ON' : '';
     expandTickerBtn.classList.toggle('has-value', !!active);
+  }
+  updateSwapBtns();
+}
+
+function updateSwapBtns() {
+  if (btnSwapScreens) {
+    btnSwapScreens.classList.toggle('active', state.swapped);
+    btnSwapScreens.title = state.swapped
+      ? 'Kembalikan: LIVE di atas, UPLOAD di bawah'
+      : 'Tukar: UPLOAD di atas, LIVE di bawah';
+  }
+  if (btnSwapFull) {
+    btnSwapFull.classList.toggle('active', state.swapped);
+  }
+  if (swapFullText) {
+    swapFullText.textContent = state.swapped
+      ? 'Kembalikan Posisi Semula'
+      : 'Tukar Posisi LIVE ↔ UPLOAD';
   }
 }
 
@@ -1572,6 +1652,7 @@ function closeAllExpand() {
 }
 
 document.querySelectorAll('.expand-btn').forEach(btn => {
+  if (!btn.dataset.expand) return;
   btn.addEventListener('click', () => {
     const key = btn.dataset.expand;
     const panel = document.querySelector(`.expand-panel[data-panel-for="${key}"]`);
@@ -1594,6 +1675,46 @@ document.querySelectorAll('.expand-panel[data-panel-for="split"] [data-split]').
 document.querySelectorAll('.expand-panel[data-panel-for="aspect"] [data-aspect]').forEach(b => {
   b.addEventListener('click', () => setTimeout(closeAllExpand, 120));
 });
+
+/* ============================================================
+   SWAP LIVE ↔ UPLOAD
+   ============================================================ */
+function swapScreens() {
+  if (state.isRecording) {
+    showToast('Stop rekaman dulu untuk tukar posisi', 'error');
+    return;
+  }
+
+  state.swapped = !state.swapped;
+
+  // 1) Ubah urutan visual via CSS order
+  const firstScreen = state.swapped ? uploadScreen : liveScreen;
+  const secondScreen = state.swapped ? liveScreen : uploadScreen;
+  firstScreen.style.order = '1';
+  divider.style.order = '2';
+  secondScreen.style.order = '3';
+
+  // 2) Ubah rasio flex (splitRatio = porsi layar pertama)
+  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
+  firstScreen.style.flex = `${r} 1 0`;
+  secondScreen.style.flex = `${1 - r} 1 0`;
+
+  // 3) Refresh view + label
+  updateSplitPct();
+  updateSplitPresets();
+  updateExpandLabels();
+  requestAnimationFrame(applyAllViews);
+
+  // 4) Feedback
+  showToast(state.swapped
+    ? '🔄 Ditukar: UPLOAD di atas, LIVE di bawah'
+    : '🔄 Dikembalikan: LIVE di atas, UPLOAD di bawah',
+    'success'
+  );
+}
+
+if (btnSwapScreens) btnSwapScreens.addEventListener('click', swapScreens);
+if (btnSwapFull) btnSwapFull.addEventListener('click', swapScreens);
 
 /* ============================================================
    GEOMETRI COVER
@@ -2094,18 +2215,28 @@ function applyQuality(q) {
 function applySplitToLayout() {
   const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
   state.splitRatio = r;
-  liveScreen.style.flex   = `${r} 1 0`;
-  uploadScreen.style.flex = `${1 - r} 1 0`;
+
+  // Layar "pertama" (order 1, visual atas/kiri) mendapat porsi splitRatio
+  const firstScreen  = state.swapped ? uploadScreen : liveScreen;
+  const secondScreen = state.swapped ? liveScreen : uploadScreen;
+
+  firstScreen.style.order  = '1';
+  divider.style.order      = '2';
+  secondScreen.style.order = '3';
+
+  firstScreen.style.flex   = `${r} 1 0`;
+  secondScreen.style.flex  = `${1 - r} 1 0`;
+
   updateSplitPct();
   updateSplitPresets();
+  updateExpandLabels();
   requestAnimationFrame(applyAllViews);
 }
 
 function updateSplitPct() {
-  const live = Math.round(state.splitRatio * 100);
-  const up   = 100 - live;
-  splitPct.textContent = `${live}% / ${up}%`;
-  updateExpandLabels();
+  const first = Math.round(state.splitRatio * 100);
+  const second = 100 - first;
+  splitPct.textContent = `${first}% / ${second}%`;
 }
 
 function updateSplitPresets() {
@@ -2260,16 +2391,22 @@ function startDrawLoop() {
     const liveSource = (state.bg.mode !== 'off' && liveCanvas.width > 0)
       ? liveCanvas : liveVideo;
 
+    // ✅ Tentukan sumber mana yang jadi "pertama" (visual atas/kiri) & "kedua"
+    const firstSource = state.swapped ? uploadVideo  : liveSource;
+    const firstView   = state.swapped ? state.views.upload : state.views.live;
+    const secondSource= state.swapped ? liveSource   : uploadVideo;
+    const secondView  = state.swapped ? state.views.live   : state.views.upload;
+
     if (landscape) {
       const splitX = Math.max(1, Math.min(W - 1, Math.round(W * state.splitRatio)));
-      drawVideoCover(liveSource, state.views.live, 0, 0, splitX, H);
-      drawVideoCover(uploadVideo, state.views.upload, splitX, 0, W - splitX, H);
+      drawVideoCover(firstSource,  firstView,  0,        0, splitX,     H);
+      drawVideoCover(secondSource, secondView, splitX,   0, W - splitX, H);
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.fillRect(splitX - 1, 0, 2, H);
     } else {
       const splitY = Math.max(1, Math.min(H - 1, Math.round(H * state.splitRatio)));
-      drawVideoCover(liveSource, state.views.live, 0, 0, W, splitY);
-      drawVideoCover(uploadVideo, state.views.upload, 0, splitY, W, H - splitY);
+      drawVideoCover(firstSource,  firstView,  0, 0,      W, splitY);
+      drawVideoCover(secondSource, secondView, 0, splitY, W, H - splitY);
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.fillRect(0, splitY - 1, W, 2);
     }
@@ -2961,7 +3098,7 @@ requestAnimationFrame(() => {
 });
 updatePlayPauseIcon();
 updateBgBtnState();
-console.log('%c📱 Split Screen Recorder — accordion + ticker speed',
+console.log('%c📱 Split Screen Recorder — swap posisi LIVE ↔ UPLOAD',
   'color:#6366f1;font-weight:bold;font-size:14px');
 </script>
 
