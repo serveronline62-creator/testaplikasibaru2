@@ -1,1451 +1,1762 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#000000" />
-<title>Split Screen Recorder — Multi Input</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Manajemen Sparepart Bekas - J&T Style</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Google Fonts: Roboto -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#000;--panel:#0a0a0c;--border:rgba(255,255,255,.08);--surface:rgba(255,255,255,.06);--surface-hover:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.55);--accent:#6366f1;--accent-2:#8b5cf6;--green:#10b981;--red:#ef4444;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-font-smoothing:antialiased}
-.app{height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center}
-.phone-frame{position:relative;background:#000;display:flex;flex-direction:column;overflow:hidden;width:min(100vw,calc(100dvh*9/16));height:min(100dvh,calc(100vw*16/9))}
-.phone-frame.mode-16-9{width:min(100vw,calc(100dvh*16/9));height:min(100dvh,calc(100vw*9/16))}
-.phone-frame.mode-asli{width:100vw;height:100dvh}
-.video-area{flex:1 1 0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}
-.phone-frame.mode-16-9 .video-area{flex-direction:row}
-.screen{position:relative;flex:1 1 0;min-height:0;overflow:hidden;background:#0d0d0f;display:flex;align-items:center;justify-content:center}
-.screen video,.screen .wifi-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;display:block}
-.screen .wifi-img{display:none}
-.screen .wifi-img.active{display:block}
-.divider{flex:0 0 2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);z-index:20;position:relative;cursor:ns-resize;touch-action:none}
-.divider::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);pointer-events:none}
-.divider.vert{background:linear-gradient(180deg,transparent,rgba(255,255,255,.4),transparent);cursor:ew-resize}
-.badge{position:absolute;top:12px;left:12px;padding:5px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.8px;color:#fff;z-index:10;display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.15);pointer-events:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:background .2s}
-.badge.live{background:rgba(239,68,68,.85)}
-.badge.live .dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.5s ease-in-out infinite}
-.badge.upload{background:rgba(99,102,241,.85)}
-.badge.upload.connected{background:rgba(16,185,129,.85)}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+:root {
+    /* J&T Express Colors */
+    --jt-red: #e3000f;
+    --jt-red-dark: #c2000d;
+    --jt-gray-nav: #d1d3d4;
+    --jt-bg: #ffffff;
+    --jt-bg-light: #f5f5f5;
+    
+    /* Original Functional Colors (Adjusted for J&T theme) */
+    --primary: var(--jt-red);
+    --primary-dark: var(--jt-red-dark);
+    --primary-light: #ffe5e5;
+    --primary-subtle: #fff0f0;
+    --secondary: #666666;
+    --success: #10b981;
+    --success-dark: #059669;
+    --danger: #ef4444;
+    --danger-dark: #dc2626;
+    --warning: #f59e0b;
+    --warning-dark: #d97706;
+    --text-main: #333333;
+    --text-body: #4a4a4a;
+    --text-muted: #888888;
+    --border-color: #e0e0e0;
+    --border-light: #cccccc;
+    --hover-bg: #f9f9f9;
+}
 
-.placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;text-align:center;padding:14px;pointer-events:none;transition:opacity .3s;z-index:5}
-.placeholder.hidden{opacity:0;pointer-events:none !important}
-.ph-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.75);letter-spacing:.5px}
-.source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;width:100%;max-width:300px;pointer-events:auto}
-.source-btn{padding:9px 6px;border-radius:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:background .2s,border-color .2s,transform .15s;font-family:inherit;backdrop-filter:blur(10px)}
-.source-btn .src-icon{font-size:18px;line-height:1}
-.source-btn .src-label{font-size:10px;font-weight:800;letter-spacing:.3px}
-.source-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
-.source-btn:active{transform:scale(.95)}
-.source-btn.connected{background:rgba(16,185,129,.22);border-color:rgba(16,185,129,.6);color:#a7f3d0}
-.source-btn .dev-name{font-size:8px;font-weight:600;color:rgba(255,255,255,.5);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.source-file-btn{padding:9px 14px;border-radius:10px;border:1px solid rgba(99,102,241,.4);background:rgba(99,102,241,.2);color:#c7c9ff;font-size:10px;font-weight:700;cursor:pointer;pointer-events:auto;font-family:inherit;transition:background .2s}
-.source-file-btn:hover{background:rgba(99,102,241,.3)}
-.source-config-btn{padding:4px 10px;border:none;background:transparent;color:rgba(255,255,255,.45);font-size:10px;font-weight:600;cursor:pointer;pointer-events:auto;text-decoration:underline;font-family:inherit}
+*, *::before, *::after { box-sizing: border-box; }
 
-.video-progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.12);z-index:12;cursor:pointer}
-.video-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
-.control-panel{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--border);padding:12px 14px calc(12px + var(--safe-bottom));display:flex;flex-direction:column;gap:10px;z-index:25}
-.ctrl-row{display:flex;align-items:center;justify-content:center;gap:8px}
-.circle-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .15s,background .2s}
-.circle-btn svg{width:18px;height:18px}
-.circle-btn:active{transform:scale(.9)}
-.circle-btn.primary{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
-.circle-btn.primary svg{width:22px;height:22px}
-.circle-btn:disabled{opacity:.3;pointer-events:none}
-.pill{padding:8px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:transform .15s,background .2s}
-.pill:active{transform:scale(.95)}
-.pill.active{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4);color:var(--green)}
-.pill.icon-only{padding:8px;width:34px;justify-content:center}
-.split-row{gap:6px}
-.split-label{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--muted)}
-.split-btn{flex:1 1 0;padding:7px 2px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:10px;font-weight:800;cursor:pointer;transition:transform .15s,background .2s,border-color .2s,color .2s}
-.split-btn.active{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.55);color:#c7c9ff}
-.swap-btn{flex:0 0 42px;padding:9px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s,color .2s}
-.swap-btn svg{width:14px;height:14px}
-.swap-btn.active{background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.55);color:var(--green)}
-.record-btn{width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff3366,#e60045);color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 20px rgba(255,51,102,.35);transition:transform .15s,background .25s}
-.record-btn:active{transform:scale(.97)}
-.record-btn:disabled{opacity:.5;pointer-events:none}
-.record-btn .rec-indicator{width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.6);transition:border-radius .25s}
-.record-btn.recording{background:linear-gradient(135deg,#2a2a2e,#1a1a1e)}
-.record-btn.recording .rec-indicator{border-radius:3px}
-.rec-badge{position:absolute;top:calc(12px + var(--safe-top));left:50%;transform:translateX(-50%) translateY(-10px);padding:7px 14px;border-radius:999px;background:rgba(239,68,68,.95);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;gap:7px;z-index:30;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
-.rec-badge.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.rec-badge .rec-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1s ease-in-out infinite}
-input[type="file"]{display:none}
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: var(--jt-bg-light);
+    color: var(--text-main);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding-bottom: 60px; /* Space for cookie banner */
+}
 
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
-.modal.show{display:flex}
-.modal-card{width:100%;max-width:420px;background:#16161a;border-radius:24px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;max-height:100%}
-.modal-header{padding:18px 20px;font-size:16px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.modal-header button{background:var(--surface);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:16px}
-.modal-body{padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
-.modal-body video{width:100%;border-radius:14px;background:#000;max-height:55vh}
-.modal-info{font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
-.modal-actions{display:flex;gap:8px;flex-direction:column}
-.modal-actions .modal-btn{padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:700;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.modal-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
-.modal-btn.secondary{background:var(--surface);border:1px solid var(--border)}
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
 
-.input-list{display:flex;flex-direction:column;gap:8px}
-.input-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:10px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s,background .2s}
-.input-card.connected{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.5)}
-.input-card-head{display:flex;align-items:center;gap:10px}
-.input-icon{font-size:18px}
-.input-info{flex:1;min-width:0;text-align:left}
-.input-title{font-size:11px;font-weight:800;letter-spacing:.4px;color:#fff}
-.input-device{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.input-status{font-size:14px;color:var(--muted)}
-.input-card.connected .input-status{color:var(--green)}
-.input-controls{display:flex;gap:6px}
-.input-select{flex:1;min-width:0;padding:7px 8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-size:11px;font-family:inherit;outline:none}
-.input-select:focus{border-color:rgba(99,102,241,.6)}
-.input-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(99,102,241,.5);background:rgba(99,102,241,.2);color:#c7c9ff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:transform .15s}
-.input-btn:active{transform:scale(.95)}
-.input-card.connected .input-btn{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5);color:#fca5a5}
+/* =========================================
+   J&T NAVBAR
+   ========================================= */
+.jt-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    background-color: var(--jt-gray-nav);
+    position: relative;
+    z-index: 100;
+}
 
-.wifi-form{display:flex;flex-direction:column;gap:10px}
-.wifi-form label{font-size:11px;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:.3px;text-align:left}
-.wifi-form input,.wifi-form select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-size:12px;font-family:inherit;outline:none}
-.wifi-form input:focus,.wifi-form select:focus{border-color:rgba(99,102,241,.6)}
-.wifi-form input::placeholder{color:rgba(255,255,255,.35)}
-.wifi-examples{font-size:10px;line-height:1.7;color:rgba(255,255,255,.55);text-align:left;padding:8px 10px;background:rgba(99,102,241,.08);border-radius:8px;border:1px solid rgba(99,102,241,.2)}
-.wifi-examples b{color:rgba(255,255,255,.8)}
-.wifi-examples code{font-family:ui-monospace,monospace;color:#c7c9ff;font-size:10px;background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px}
-.wifi-status{font-size:11px;padding:8px 10px;border-radius:8px;text-align:center;display:none}
-.wifi-status.show{display:block}
-.wifi-status.ok{background:rgba(16,185,129,.2);color:#a7f3d0;border:1px solid rgba(16,185,129,.4)}
-.wifi-status.err{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
-.wifi-status.loading{background:rgba(99,102,241,.2);color:#c7c9ff;border:1px solid rgba(99,102,241,.4)}
+.nav-left {
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+}
 
-.toast{position:fixed;bottom:calc(40px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,35,.98);color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-weight:600;border:1px solid var(--border);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:200;max-width:85%;text-align:center;backdrop-filter:blur(20px)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.error{background:rgba(239,68,68,.95)}
-.toast.success{background:rgba(16,185,129,.95)}
-.loader{position:absolute;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;color:#fff;font-size:13px;font-weight:600}
-.loader.show{display:flex}
-.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.hidden{display:none!important}
-@media (max-height:700px){
-  .source-btn{padding:7px 5px}
-  .source-btn .src-icon{font-size:15px}
-  .source-btn .src-label{font-size:9px}
-  .source-grid{gap:5px}
+.jt-logo {
+    font-size: 24px;
+    font-weight: 900;
+    color: white;
+    background-color: var(--jt-red);
+    padding: 0 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    font-style: italic;
+    letter-spacing: -1px;
+    margin-right: 30px;
+}
+
+.jt-logo span {
+    font-size: 14px;
+    font-style: normal;
+    margin-left: 5px;
+    font-weight: 500;
+}
+
+.jt-nav-links {
+    display: flex;
+    list-style: none;
+    gap: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #444;
+    margin: 0;
+    padding: 0;
+}
+
+.jt-nav-links li { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.jt-nav-links li:hover { color: var(--jt-red); }
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    position: relative;
+}
+
+.nav-right::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; width: 350px;
+    background-color: var(--jt-red);
+    clip-path: polygon(15% 0, 100% 0, 100% 100%, 0 100%);
+    z-index: -1;
+}
+
+.nav-right-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: white;
+    font-size: 14px;
+    padding-right: 30px;
+}
+.nav-right-links div { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+/* =========================================
+   J&T HERO SECTION
+   ========================================= */
+.jt-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 40px 10%;
+    background-color: #ffffff;
+    min-height: 250px;
+}
+
+.hero-text h1 {
+    font-size: 56px;
+    color: #444;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1.1;
+}
+
+.hero-image {
+    width: 300px;
+    height: 200px;
+    background-image: url('https://via.placeholder.com/300x200?text=Maskot+J%26T');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: right center;
+}
+
+/* =========================================
+   MAIN CONTENT & CARD
+   ========================================= */
+.container {
+    max-width: 1500px;
+    margin: -30px auto 40px auto; /* Pull up slightly */
+    padding: 0 20px;
+    position: relative;
+    z-index: 10;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid #eee;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+/* =========================================
+   J&T TABS (Segmented Control Style)
+   ========================================= */
+.tabs {
+    display: flex;
+    justify-content: center;
+    background: #ffffff;
+    padding: 20px 20px 0 20px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.tab-button {
+    padding: 12px 30px;
+    cursor: pointer;
+    background: #ececec;
+    color: #555;
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.tab-button:first-child { border-radius: 6px 0 0 0; }
+.tab-button:last-child { border-radius: 0 6px 0 0; }
+.tab-button:hover { background: #e0e0e0; }
+
+.tab-button.active {
+    background: var(--jt-red);
+    color: #ffffff;
+}
+
+.tab-content { display: none; padding: 25px; background: #ffffff; animation: fadeIn 0.3s; }
+.tab-content.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* =========================================
+   BUTTONS & INPUTS
+   ========================================= */
+.btn-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+
+button {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px; /* J&T style is less rounded */
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+button:active { transform: scale(0.98); }
+
+.btn-primary { background: var(--jt-red); color: #fff; }
+.btn-primary:hover { background: var(--jt-red-dark); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: var(--success-dark); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: var(--danger-dark); }
+.btn-warning { background: var(--warning); color: #fff; }
+.btn-warning:hover { background: var(--warning-dark); }
+.btn-secondary { background: #e0e0e0; color: #333; }
+.btn-secondary:hover { background: #d0d0d0; }
+.btn-info { background: #333; color: #fff; } /* Dark button for reset */
+.btn-info:hover { background: #000; }
+
+.btn-group-info { margin-left: auto; font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.badge { background: var(--primary-light); color: var(--jt-red); font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
+
+input[type="text"], input[type="date"], select {
+    display: block; font-size: 14px; font-family: inherit; border: 1px solid var(--border-color);
+    border-radius: 6px; transition: all 0.2s; background: #fff; color: var(--text-main);
+}
+
+input[type="text"] {
+    width: 100%; padding: 12px 14px 12px 40px; margin-bottom: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 14px center;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+select {
+    padding: 12px 14px; margin-bottom: 16px; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+}
+
+input[type="date"] { padding: 12px; cursor: pointer; }
+input:focus, select:focus { outline: none; border-color: var(--jt-red); box-shadow: 0 0 0 3px rgba(227,0,15,0.1); }
+
+.filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; align-items: center; }
+.period-filter-label { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--jt-red); text-transform: uppercase; margin: 10px 0 5px 0; }
+@media (max-width: 1400px) { .filter-grid { grid-template-columns: 1fr 1fr 1fr 1fr; } }
+@media (max-width: 1100px) { .filter-grid { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 700px) { .filter-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px) { .filter-grid { grid-template-columns: 1fr; } }
+.filter-grid > * { margin-bottom: 0 !important; min-width: 0; }
+
+/* File Upload */
+.file-upload-wrapper { position: relative; margin-bottom: 20px; }
+.file-upload-wrapper input[type="file"] {
+    display: block; width: 100%; padding: 25px 20px; font-size: 14px; cursor: pointer;
+    background: #fafafa; border: 2px dashed #ccc; border-radius: 8px; transition: all 0.2s; color: #666;
+}
+.file-upload-wrapper input[type="file"]:hover { border-color: var(--jt-red); background: #fff0f0; }
+.file-upload-wrapper input[type="file"]::file-selector-button {
+    padding: 8px 20px; border-radius: 4px; border: 1px solid #ddd; background: #fff;
+    color: #333; font-weight: 600; cursor: pointer; margin-right: 15px;
+}
+
+/* =========================================
+   TABLES
+   ========================================= */
+.table-container { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); }
+table { border-collapse: collapse; width: 100%; white-space: nowrap; }
+thead th {
+    background: #f8f9fa; color: #333; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; border-bottom: 2px solid #ddd; padding: 14px 12px; text-align: left;
+    position: sticky; top: 0; z-index: 2;
+}
+tbody td { font-size: 13px; padding: 10px 12px; border-bottom: 1px solid #eee; color: var(--text-body); }
+tbody tr:hover td { background: #fffafa; } /* Very light red on hover */
+.col-check, .col-no, .col-action { width: 50px; text-align: center; }
+.cb-cell { accent-color: var(--jt-red); width: 16px; height: 16px; cursor: pointer; }
+
+td[contenteditable] {
+    background: #fff; border: 1px solid transparent; border-radius: 4px;
+    transition: all 0.2s; outline: none; cursor: text;
+}
+td[contenteditable]:hover { border-color: #ddd; background: #fafafa; }
+td[contenteditable]:focus { background: #fff0f0; border-color: var(--jt-red); box-shadow: inset 0 0 0 1px var(--jt-red); }
+
+td.read-only-cell { background: transparent; cursor: default; }
+td.no-urut { font-weight: 700; color: var(--jt-red); text-align: center; background: #fafafa; width: 50px; }
+td.days-count { background: #fff0f0; color: var(--jt-red); font-weight: 700; text-align: center; border: 1px solid transparent; }
+
+tr.selected-row td { background: #fff0f0 !important; }
+tr.new-row td { background: #ecfdf5; }
+
+tfoot td { padding: 15px 12px; border-top: 2px solid #ddd; }
+.total-label { background: #f8f9fa; font-weight: 700; text-align: right; color: #333; font-size: 12px; text-transform: uppercase; }
+.total-value { background: #ecfdf5; font-weight: 800; color: var(--success); font-size: 16px; }
+
+/* Notes */
+.manual-notes-section { margin-top: 25px; padding-top: 20px; border-top: 2px dashed #ddd; }
+.notes-header { font-weight: 700; color: var(--jt-red); margin-bottom: 15px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.note-row { display: flex; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
+.note-num { width: 25px; font-size: 13px; font-weight: 600; color: #666; text-align: right; padding-top: 6px; }
+.note-input {
+    flex-grow: 1; border: 1px solid #eee; border-bottom: 1px solid #ccc; padding: 8px 10px;
+    font-size: 13px; outline: none; background: transparent; border-radius: 4px 4px 0 0; min-height: 35px;
+}
+.note-input:focus { border-color: var(--jt-red); background: #fafafa; }
+.note-input:empty::before { content: attr(data-placeholder); color: #bbb; }
+
+/* Toast */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column-reverse; gap: 10px; }
+.toast {
+    background: #333; color: #fff; padding: 14px 20px; border-radius: 6px; font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 12px;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards; max-width: 350px;
+}
+.toast.toast-success { border-left: 4px solid var(--success); }
+.toast.toast-danger { border-left: 4px solid var(--danger); }
+.toast.toast-info { border-left: 4px solid var(--jt-red); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(10px); } }
+
+.empty-state { text-align: center; padding: 50px 20px; color: #999; }
+.empty-state i { font-size: 40px; margin-bottom: 15px; opacity: 0.3; display: block; color: var(--jt-red); }
+.empty-state p { font-size: 14px; margin: 0; }
+
+.filter-info-banner {
+    display: none; background: #fff0f0; border: 1px solid #ffcccc; border-left: 4px solid var(--jt-red);
+    padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; color: var(--jt-red-dark); align-items: center; gap: 10px;
+}
+.filter-info-banner.active { display: flex; }
+.close-info { margin-left: auto; background: none; border: none; color: var(--jt-red); cursor: pointer; padding: 4px; }
+
+/* =========================================
+   J&T BOTTOM BANNER (Cookie)
+   ========================================= */
+.jt-cookie-banner {
+    position: fixed; bottom: 0; left: 0; width: 100%; background-color: #333;
+    color: #fff; padding: 15px 30px; display: flex; justify-content: space-between;
+    align-items: center; z-index: 1000; font-size: 14px;
+}
+.jt-cookie-banner button {
+    background-color: var(--jt-red); color: white; padding: 8px 25px;
+    border-radius: 4px; font-weight: 500; cursor: pointer;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .nav-links { display: none; } /* Hide nav links on mobile for simplicity */
+    .nav-right::before { width: 200px; }
+    .jt-hero { flex-direction: column; text-align: center; padding: 20px; }
+    .hero-image { display: none; }
+    .hero-text h1 { font-size: 36px; }
+    .container { padding: 0 10px; margin-top: 10px; }
+    .tabs { padding: 10px 10px 0 10px; }
+    .tab-button { padding: 10px 15px; font-size: 13px; width: 100%; justify-content: center; border-radius: 4px; }
+    .btn-group-info { width: 100%; margin-top: 10px; justify-content: flex-start; }
+    .filter-grid { grid-template-columns: 1fr; }
+    .jt-cookie-banner { flex-direction: column; gap: 10px; text-align: center; }
+    body { padding-bottom: 100px; }
 }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="phone-frame" id="phoneFrame">
-    <div class="video-area" id="videoArea">
-      <div class="screen" id="liveScreen">
-        <span class="badge live"><span class="dot"></span>LIVE</span>
-        <video id="liveVideo" autoplay playsinline muted></video>
-        <div class="placeholder" id="livePlaceholder">
-          <svg viewBox="0 0 24 24" style="width:40px;height:40px;opacity:.4;stroke:currentColor;fill:none;stroke-width:1.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          <span>Kamera belum aktif</span>
+
+    <!-- J&T NAVBAR -->
+    <header class="jt-navbar">
+        <div class="nav-left">
+            <div class="jt-logo">J&T<span>EXPRESS</span></div>
+            <ul class="jt-nav-links">
+                <li><i class="fa-solid fa-box"></i> Order</li>
+                <li><i class="fa-solid fa-magnifying-glass"></i> Cari</li>
+                <li><i class="fa-solid fa-truck-fast"></i> Layanan</li>
+                <li><i class="fa-solid fa-circle-info"></i> Informasi</li>
+            </ul>
         </div>
-      </div>
-      <div class="divider" id="divider"></div>
-      <div class="screen" id="uploadScreen">
-        <span class="badge upload" id="uploadBadge">UPLOAD</span>
-        <video id="uploadVideo" playsinline preload="metadata"></video>
-        <img id="wifiImg" class="wifi-img" alt="" />
-
-        <div class="placeholder" id="uploadPlaceholder">
-          <div class="ph-title">📺 PILIH SUMBER INPUT</div>
-          <div class="source-grid">
-            <button class="source-btn" data-input="hdmi1">
-              <span class="src-icon">🔌</span>
-              <span class="src-label">HDMI 1</span>
-              <span class="dev-name" data-devname="hdmi1">—</span>
-            </button>
-            <button class="source-btn" data-input="hdmi2">
-              <span class="src-icon">🔌</span>
-              <span class="src-label">HDMI 2</span>
-              <span class="dev-name" data-devname="hdmi2">—</span>
-            </button>
-            <button class="source-btn" data-input="av">
-              <span class="src-icon">📼</span>
-              <span class="src-label">VIDEO IN + LINE</span>
-              <span class="dev-name" data-devname="av">—</span>
-            </button>
-            <button class="source-btn" data-input="rgb">
-              <span class="src-icon">🖥</span>
-              <span class="src-label">RGB</span>
-              <span class="dev-name" data-devname="rgb">—</span>
-            </button>
-            <button class="source-btn" data-input="usb">
-              <span class="src-icon">💾</span>
-              <span class="src-label">USB</span>
-              <span class="dev-name" data-devname="usb">—</span>
-            </button>
-            <button class="source-btn" data-input="wifi">
-              <span class="src-icon">📶</span>
-              <span class="src-label">WIFI / HOTSPOT</span>
-              <span class="dev-name" data-devname="wifi">—</span>
-            </button>
-          </div>
-          <button class="source-file-btn" id="placeholderUploadBtn">📁 Upload dari Galeri</button>
-          <button class="source-config-btn" id="btnConfigureInputs">⚙ Atur Perangkat</button>
+        <div class="nav-right">
+            <div class="nav-right-links">
+                <div><i class="fa-regular fa-user"></i> Masuk/Daftar</div>
+            </div>
         </div>
+    </header>
 
-        <div class="video-progress" id="videoProgress"><div class="video-progress-fill" id="videoProgressFill"></div></div>
-      </div>
-    </div>
-    <div class="rec-badge" id="recBadge"><span class="rec-dot"></span><span id="recTimer">00:00</span></div>
-    <div class="control-panel">
-      <div class="ctrl-row">
-        <button class="circle-btn" id="btnBack" title="Mundur 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-        <button class="circle-btn primary" id="btnPlayPause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
-        <button class="circle-btn" id="btnNext" title="Maju 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-        <button class="circle-btn" id="btnStop" title="Stop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
-      </div>
-      <div class="ctrl-row">
-        <button class="pill" id="btnStartCam">📷 Kamera</button>
-        <button class="pill icon-only hidden" id="btnSwitchCam" title="Ganti kamera">🔄</button>
-        <button class="pill" id="btnMic">🎤 Mic</button>
-        <button class="pill" id="btnUpload">📺 Sumber</button>
-        <button class="pill" id="btnQuality"><span id="qualityLabel">HD</span></button>
-      </div>
-      <div class="ctrl-row split-row">
-        <span class="split-label">SPLIT</span>
-        <button class="split-btn" data-split="0">0%</button>
-        <button class="split-btn" data-split="0.3">30%</button>
-        <button class="split-btn" data-split="0.5">50%</button>
-        <button class="split-btn" data-split="0.7">70%</button>
-        <button class="split-btn" data-split="1">100%</button>
-        <button class="swap-btn" id="btnSwap" title="Tukar LIVE ↔ SUMBER"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/><line x1="12" y1="9" x2="12" y2="15"/></svg></button>
-      </div>
-      <div class="ctrl-row split-row">
-        <span class="split-label">RASIO</span>
-        <button class="split-btn" data-aspect="asli">ASLI</button>
-        <button class="split-btn" data-aspect="16:9">16:9</button>
-        <button class="split-btn active" data-aspect="9:16">9:16</button>
-      </div>
-      <button class="record-btn" id="btnRecord">
-        <span class="rec-indicator"></span>
-        <span class="rec-text">Mulai Rekam</span>
-      </button>
-    </div>
-    <div class="loader" id="loader"><div class="spinner"></div><span id="loaderText">Memproses...</span></div>
-  </div>
-</div>
-
-<input type="file" id="fileInput" accept="video/*" />
-
-<div class="modal" id="previewModal">
-  <div class="modal-card">
-    <div class="modal-header"><span>✅ Hasil Rekaman</span><button id="btnClosePreview">✕</button></div>
-    <div class="modal-body">
-      <video id="previewVideo" controls playsinline></video>
-      <div class="modal-info" id="previewInfo"></div>
-      <div class="modal-actions">
-        <button class="modal-btn primary" id="btnSaveGallery">Simpan ke Galeri</button>
-        <button class="modal-btn secondary" id="btnDownload">Unduh File</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal" id="inputModal">
-  <div class="modal-card">
-    <div class="modal-header"><span>⚙ Atur Perangkat Input</span><button id="btnCloseInputModal">✕</button></div>
-    <div class="modal-body">
-      <div class="input-list" id="inputList"></div>
-      <div class="modal-info" id="inputHint">Pilih perangkat untuk tiap slot input. Khusus WiFi/Hotspot, klik "Atur URL Stream".</div>
-      <div class="modal-actions">
-        <button class="modal-btn secondary" id="btnDisconnectInput">⏏ Putuskan Semua</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal" id="wifiModal">
-  <div class="modal-card">
-    <div class="modal-header"><span>📶 Sambung via Hotspot / WiFi</span><button id="btnCloseWifiModal">✕</button></div>
-    <div class="modal-body">
-      <div class="wifi-form">
-        <label>URL Kamera / Stream</label>
-        <input type="url" id="wifiUrlInput" placeholder="http://192.168.1.100:8080/video" autocomplete="off" inputmode="url" />
-        <label>Tipe Stream</label>
-        <select id="wifiTypeSelect">
-          <option value="auto">Deteksi Otomatis (disarankan)</option>
-          <option value="mjpeg">MJPEG (IP Webcam / DroidCam)</option>
-          <option value="hls">HLS (.m3u8)</option>
-          <option value="video">Video File URL (.mp4 / .webm)</option>
-        </select>
-      </div>
-      <div class="wifi-status" id="wifiStatus"></div>
-      <div class="wifi-examples">
-        <b>Contoh URL MJPEG:</b><br>
-        IP Webcam: <code>http://192.168.1.x:8080/video</code><br>
-        DroidCam: <code>http://192.168.1.x:4747/video</code><br>
-        Iriun/EpocCam: cek URL di aplikasi<br>
-        <b>HLS:</b> <code>http://192.168.1.x/live.m3u8</code><br>
-        <b>Video:</b> <code>http://server/file.mp4</code><br><br>
-        ⚠️ HP ini & HP kamera harus di WiFi/Hotspot yang sama.
-      </div>
-      <div class="modal-actions">
-        <button class="modal-btn primary" id="btnConnectWifi">📶 Hubungkan</button>
-        <button class="modal-btn secondary" id="btnTestWifi">🔍 Tes Koneksi</button>
-        <button class="modal-btn secondary" id="btnDisconnectWifi">⏏ Putuskan WiFi</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-/* ============ KONFIG ============ */
-const QUALITY_PRESETS = {
-  '480':  { w: 540,  bitrate: 2000000, label: 'SD'  },
-  '720':  { w: 720,  bitrate: 4000000, label: 'HD'  },
-  '1080': { w: 1080, bitrate: 8000000, label: 'FHD' }
-};
-const QUALITY_ORDER = ['480','720','1080'];
-const SEEK_STEP = 5;
-
-const INPUT_KINDS = [
-  { id: 'hdmi1', label: 'HDMI 1 INPUT',          short: 'HDMI 1',   icon: '🔌' },
-  { id: 'hdmi2', label: 'HDMI 2 INPUT',          short: 'HDMI 2',   icon: '🔌' },
-  { id: 'av',    label: 'VIDEO IN + LINE IN R/L', short: 'VIDEO IN', icon: '📼', audio: true },
-  { id: 'rgb',   label: 'RGB INPUT',             short: 'RGB',      icon: '🖥' },
-  { id: 'usb',   label: 'USB INPUT',             short: 'USB',      icon: '💾' },
-  { id: 'wifi',  label: 'HOTSPOT / WIFI',        short: 'WIFI',     icon: '📶', special: 'url' },
-];
-const INPUT_LABELS = Object.fromEntries(INPUT_KINDS.map(k => [k.id, k.short]));
-const WIFI_LAST_URL_KEY = 'wifi_last_url';
-
-/* ============ STATE ============ */
-const state = {
-  stream: null, facingMode: 'user',
-  micStream: null, micEnabled: false,
-  uploadReady: false, isRecording: false,
-  isExternalSource: false, activeInput: null,
-  externalStream: null, externalAudioSource: null,
-  audioCtx: null, micSource: null, uploadSource: null,
-  mediaRecorder: null, recordedChunks: [], recDest: null,
-  recStartTime: 0, timerInterval: null, drawRAF: null,
-  quality: '720', aspectMode: '9:16', splitRatio: 0.4, swapped: false,
-  previewBlob: null, previewUrl: null, previewMime: '',
-  wifi: { mode: null, url: '', hls: null }
-};
-
-/* ============ ELEMEN ============ */
-const $ = id => document.getElementById(id);
-const liveVideo = $('liveVideo'), uploadVideo = $('uploadVideo'), wifiImg = $('wifiImg');
-const liveScreen = $('liveScreen'), uploadScreen = $('uploadScreen');
-const videoArea = $('videoArea'), phoneFrame = $('phoneFrame');
-const livePlaceholder = $('livePlaceholder'), uploadPlaceholder = $('uploadPlaceholder');
-const divider = $('divider');
-const btnPlayPause = $('btnPlayPause'), btnBack = $('btnBack'), btnNext = $('btnNext'), btnStop = $('btnStop');
-const videoProgress = $('videoProgress'), videoProgressFill = $('videoProgressFill');
-const btnStartCam = $('btnStartCam'), btnSwitchCam = $('btnSwitchCam'), btnMic = $('btnMic');
-const btnUpload = $('btnUpload'), btnQuality = $('btnQuality'), btnSwap = $('btnSwap'), btnRecord = $('btnRecord');
-const fileInput = $('fileInput');
-const recBadge = $('recBadge'), recTimerEl = $('recTimer');
-const loader = $('loader'), loaderText = $('loaderText'), toast = $('toast');
-const previewModal = $('previewModal'), previewVideo = $('previewVideo'), previewInfo = $('previewInfo');
-const btnClosePreview = $('btnClosePreview'), btnSaveGallery = $('btnSaveGallery'), btnDownload = $('btnDownload');
-const qualityLabel = $('qualityLabel');
-const recText = btnRecord.querySelector('.rec-text');
-const uploadBadge = $('uploadBadge');
-const inputModal = $('inputModal'), inputList = $('inputList');
-const btnCloseInputModal = $('btnCloseInputModal'), btnDisconnectInput = $('btnDisconnectInput');
-const placeholderUploadBtn = $('placeholderUploadBtn'), btnConfigureInputs = $('btnConfigureInputs');
-const wifiModal = $('wifiModal'), wifiUrlInput = $('wifiUrlInput'), wifiTypeSelect = $('wifiTypeSelect');
-const btnCloseWifiModal = $('btnCloseWifiModal'), btnConnectWifi = $('btnConnectWifi');
-const btnTestWifi = $('btnTestWifi'), btnDisconnectWifi = $('btnDisconnectWifi'), wifiStatus = $('wifiStatus');
-
-const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
-const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
-
-/* ============ TOAST / LOADER ============ */
-let toastTimeout;
-function showToast(msg, type='') {
-  clearTimeout(toastTimeout);
-  toast.textContent = msg;
-  toast.className = 'toast show ' + type;
-  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2800);
-}
-function showLoader(t='Memproses...') { loaderText.textContent = t; loader.classList.add('show'); }
-function hideLoader() { loader.classList.remove('show'); }
-
-/* ============ CANVAS ============ */
-const canvas = document.createElement('canvas');
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
-
-function applyQuality(q) {
-  const p = QUALITY_PRESETS[q];
-  state.quality = q;
-  qualityLabel.textContent = p.label;
-  const mode = state.aspectMode;
-  const aw = videoArea.clientWidth || 1;
-  const ah = videoArea.clientHeight || 1;
-  if (mode === '9:16') {
-    canvas.width = p.w;
-    canvas.height = Math.round((p.w * 16 / 9) / 2) * 2;
-  } else if (mode === '16:9') {
-    canvas.height = p.w;
-    canvas.width = Math.round((p.w * 16 / 9) / 2) * 2;
-  } else {
-    const ratio = ah / aw;
-    if (ratio >= 1) { canvas.width = p.w; canvas.height = Math.max(2, Math.round((p.w * ratio) / 2) * 2); }
-    else { canvas.height = p.w; canvas.width = Math.max(2, Math.round((p.w / ratio) / 2) * 2); }
-  }
-}
-
-/* ============ ASPECT / ORIENTASI ============ */
-function isLandscapeMode() {
-  if (state.aspectMode === '16:9') return true;
-  if (state.aspectMode === '9:16') return false;
-  return videoArea.clientWidth > videoArea.clientHeight;
-}
-function updateDividerOrientation() {
-  const l = isLandscapeMode();
-  divider.classList.toggle('vert', l);
-  videoArea.style.flexDirection = l ? 'row' : 'column';
-}
-function setAspectMode(mode) {
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  state.aspectMode = mode;
-  phoneFrame.classList.remove('mode-9-16','mode-16-9','mode-asli');
-  phoneFrame.classList.add('mode-' + mode.replace(':', '-'));
-  document.querySelectorAll('[data-aspect]').forEach(b => b.classList.toggle('active', b.dataset.aspect === mode));
-  requestAnimationFrame(() => { updateDividerOrientation(); applyQuality(state.quality); applySplitToLayout(); });
-}
-
-/* ============ SPLIT LAYOUT ============ */
-function applySplitToLayout() {
-  const r = clamp(state.splitRatio, 0, 1);
-  state.splitRatio = r;
-  const first  = state.swapped ? uploadScreen : liveScreen;
-  const second = state.swapped ? liveScreen : uploadScreen;
-  first.style.order = '1'; divider.style.order = '2'; second.style.order = '3';
-  first.style.flex  = `${r} 1 0`;
-  second.style.flex = `${1 - r} 1 0`;
-  document.querySelectorAll('.split-btn[data-split]').forEach(b => {
-    b.classList.toggle('active', Math.abs(parseFloat(b.dataset.split) - r) < 0.012);
-  });
-}
-
-let splitDrag = null;
-divider.addEventListener('pointerdown', e => {
-  if (state.isRecording) return;
-  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-  const l = isLandscapeMode();
-  const total = l ? videoArea.clientWidth : videoArea.clientHeight;
-  if (total <= 0) return;
-  splitDrag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, startSplit: state.splitRatio, total, l };
-  try { divider.setPointerCapture(e.pointerId); } catch(_) {}
-  e.preventDefault();
-});
-divider.addEventListener('pointermove', e => {
-  if (!splitDrag || e.pointerId !== splitDrag.id) return;
-  const delta = splitDrag.l ? (e.clientX - splitDrag.startX) : (e.clientY - splitDrag.startY);
-  state.splitRatio = clamp(splitDrag.startSplit + delta / splitDrag.total, 0, 1);
-  applySplitToLayout();
-  e.preventDefault();
-});
-const endDivDrag = () => { if (!splitDrag) return; try { divider.releasePointerCapture(splitDrag.id); } catch(_) {} splitDrag = null; };
-divider.addEventListener('pointerup', endDivDrag);
-divider.addEventListener('pointercancel', endDivDrag);
-
-document.querySelectorAll('[data-split]').forEach(b => {
-  b.addEventListener('click', () => {
-    if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-    state.splitRatio = parseFloat(b.dataset.split);
-    applySplitToLayout();
-  });
-});
-document.querySelectorAll('[data-aspect]').forEach(b => {
-  b.addEventListener('click', () => setAspectMode(b.dataset.aspect));
-});
-btnSwap.addEventListener('click', () => {
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  state.swapped = !state.swapped;
-  btnSwap.classList.toggle('active', state.swapped);
-  applySplitToLayout();
-  showToast(state.swapped ? '🔄 Ditukar' : '🔄 Dikembalikan');
-});
-
-/* ============================================================
-   SOURCE UNIFIED
-   ============================================================ */
-function getUploadSource() {
-  if (state.isExternalSource && state.wifi.mode === 'mjpeg' && wifiImg) return wifiImg;
-  return uploadVideo;
-}
-function getSourceDim(source) {
-  if (!source) return 0;
-  if (source.naturalWidth !== undefined) return source.naturalWidth || 0;
-  return source.videoWidth || source.width || 0;
-}
-function getSourceDimH(source) {
-  if (!source) return 0;
-  if (source.naturalHeight !== undefined) return source.naturalHeight || 0;
-  return source.videoHeight || source.height || 0;
-}
-
-/* ============================================================
-   INPUT EKSTERNAL (HDMI / AV / RGB / USB / WIFI)
-   ============================================================ */
-function getSlotKey(kind) { return `slot_input_${kind}`; }
-
-function buildInputCards() {
-  inputList.innerHTML = '';
-  for (const k of INPUT_KINDS) {
-    const card = document.createElement('div');
-    card.className = 'input-card';
-    card.dataset.kind = k.id;
-
-    if (k.special === 'url') {
-      card.innerHTML = `
-        <div class="input-card-head">
-          <span class="input-icon">${k.icon}</span>
-          <div class="input-info">
-            <div class="input-title">${k.label}</div>
-            <div class="input-device" data-device="${k.id}">Belum terhubung</div>
-          </div>
-          <span class="input-status" data-status="${k.id}">○</span>
+    <!-- HERO SECTION -->
+    <section class="jt-hero">
+        <div class="hero-text">
+            <h1>Sparepart<br>Management</h1>
         </div>
-        <div class="input-controls">
-          <button class="input-btn" data-wifi-config style="flex:1">⚙ Atur URL Stream</button>
+        <div class="hero-image">
+            <!-- Placeholder Maskot J&T -->
         </div>
-      `;
-      inputList.appendChild(card);
-      card.querySelector('[data-wifi-config]').addEventListener('click', () => {
-        closeInputModal();
-        openWifiModal();
-      });
-      continue;
-    }
+    </section>
 
-    card.innerHTML = `
-      <div class="input-card-head">
-        <span class="input-icon">${k.icon}</span>
-        <div class="input-info">
-          <div class="input-title">${k.label}</div>
-          <div class="input-device" data-device="${k.id}">Belum terhubung</div>
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        <div class="card">
+            <!-- TABS -->
+            <nav class="tabs" role="tablist">
+                <button class="tab-button active" data-tab="tab1" role="tab"><i class="fas fa-upload"></i> Import Data</button>
+                <button class="tab-button" data-tab="tab2" role="tab"><i class="fas fa-file-export"></i> Proses & Export</button>
+                <button class="tab-button" data-tab="tab3" role="tab"><i class="fas fa-exchange-alt"></i> Extract SJOB</button>
+                <button class="tab-button" data-tab="tab4" role="tab"><i class="fas fa-boxes"></i> Surat Jalan</button>
+                <button class="tab-button" data-tab="tab5" role="tab"><i class="fas fa-truck-loading"></i> Tagihan RETURN</button>
+            </nav>
+
+            <!-- TAB 1 (Konten Asli Tetap) -->
+            <section id="tab1" class="tab-content active" role="tabpanel">
+                <div class="btn-group">
+                    <button class="btn-info" id="resetBtn"><i class="fas fa-sync-alt"></i> Reset Data</button>
+                    <button class="btn-danger" id="deleteSelectedBtn"><i class="fas fa-trash-alt"></i> Hapus Terpilih</button>
+                    <button class="btn-secondary" id="resetAllFiltersBtn"><i class="fas fa-filter-circle-xmark"></i> Reset Filter</button>
+                    <span class="btn-group-info"><span class="badge" id="dataCountBadge">0</span> baris data</span>
+                </div>
+                <div class="file-upload-wrapper">
+                    <label for="fileInput" class="sr-only">Pilih file Excel atau CSV</label>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+                </div>
+
+                <div class="filter-info-banner" id="filterInfoBanner">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="filterInfoText">Filter aktif</span>
+                    <button class="close-info" id="clearFilterInfo"><i class="fas fa-times-circle"></i> Bersihkan</button>
+                </div>
+                
+                <div class="filter-grid">
+                    <div style="position:relative;">
+                        <input type="text" id="search1" placeholder="Cari umum (Part, Serial, Catatan...)">
+                    </div>
+                    <div><select id="filterTeknisi"><option value="">Semua Teknisi</option></select></div>
+                    <div><select id="filterPengiriman"><option value="">Semua Status Pengiriman</option></select></div>
+                    <div><select id="filterReturn"><option value="">Semua Status Return</option><option value="yes">Return: YES</option><option value="no">Return: NO</option></select></div>
+                    <div><select id="filterClaim"><option value="">Semua Status Claim</option><option value="yes">Claim: YES</option><option value="no">Claim: NO</option></select></div>
+                    
+                    <div class="period-filter-label"><i class="fas fa-calendar-alt"></i> Filter Periode (Berdasarkan "Disetujui Pada")</div>
+                    <div><input type="date" id="filterStartDate" title="Dari Tanggal"></div>
+                    <div><input type="date" id="filterEndDate" title="Sampai Tanggal"></div>
+                </div>
+
+                <div class="table-container">
+                    <table id="table1"><thead><tr>
+                        <th class="col-check"><input type="checkbox" id="checkAll" class="cb-cell"></th>
+                        <th>Nomor</th><th>Catatan</th><th>Part</th><th>Qty Reservasi</th><th>Qty Transaksi</th><th>Part Demand</th><th>Serial Number</th><th>Status Pengiriman</th><th>Return To Factory</th><th>Claim To Factory</th><th>Teknisi Perbaikan</th><th>Disetujui Pada</th>
+                    </tr></thead><tbody id="tbody1"></tbody><tfoot><tr><td></td><td colspan="4" class="total-label">Total Qty</td><td id="totalQty1" class="total-value">0</td><td colspan="8"></td></tr></tfoot></table>
+                </div>
+            </section>
+
+            <!-- TAB 2 -->
+            <section id="tab2" class="tab-content" role="tabpanel">
+                <div class="btn-group">
+                    <button class="btn-success" id="addRowBtn"><i class="fas fa-plus-circle"></i> Tambah Baris</button>
+                    <button class="btn-primary" id="excelBtn"><i class="fas fa-file-excel"></i> Download Excel</button>
+                    <button class="btn-secondary" id="pdfBtn"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <span class="btn-group-info"><span class="badge" id="selectedCountBadge">0</span> baris diproses</span>
+                </div>
+                <input type="text" id="search2" placeholder="Cari data yang diproses...">
+                <div class="table-container">
+                    <table id="table2"><thead><tr>
+                        <th class="col-no">No. Urut</th><th>Catatan</th><th>Part</th><th>Qty Transaksi</th><th>Part Demand</th><th>Serial Number</th><th>Teknisi Perbaikan</th><th class="col-action">Aksi</th>
+                    </tr></thead><tbody id="tbody2"></tbody><tfoot><tr><td colspan="3" class="total-label">Total Qty</td><td id="totalQty2" class="total-value">0</td><td colspan="4"></td></tr></tfoot></table>
+                </div>
+                <div class="manual-notes-section">
+                    <div class="notes-header"><i class="fas fa-pen-nib"></i> Keterangan Tambahan (Manual)</div>
+                    <div id="manualNotesContainer">
+                        <div class="note-row"><div class="note-num">1.</div><div class="note-input" contenteditable="true" data-placeholder="Tulis keterangan..."></div></div>
+                        <div class="note-row"><div class="note-num">2.</div><div class="note-input" contenteditable="true" data-placeholder="Tulis keterangan..."></div></div>
+                        <div class="note-row"><div class="note-num">3.</div><div class="note-input" contenteditable="true" data-placeholder="Tulis keterangan..."></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3 -->
+            <section id="tab3" class="tab-content" role="tabpanel">
+                <div class="btn-group">
+                    <button class="btn-success" id="addRowBtn3"><i class="fas fa-plus-circle"></i> Tambah Baris</button>
+                    <button class="btn-primary" id="excelBtn3"><i class="fas fa-file-excel"></i> Download Excel</button>
+                    <button class="btn-secondary" id="pdfBtn3"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <span class="btn-group-info"><span class="badge" id="demandCountBadge">0</span> baris demand</span>
+                </div>
+                <input type="text" id="search3" placeholder="Cari part demand, lot, atribut...">
+                <div class="table-container">
+                    <table id="table3"><thead><tr>
+                        <th class="col-no">No. Urut</th><th>Part Demand / Part</th><th>Lot</th><th>Attribute</th><th>QTY / Qty Transaksi</th><th>QTY Konversi</th><th>UM Konversi</th><th>Remarks 1</th><th>Remarks 2</th><th>Nomor Service Job / Catatan</th><th class="col-action">Aksi</th>
+                    </tr></thead><tbody id="tbody3"></tbody><tfoot><tr><td colspan="4" class="total-label">Total QTY</td><td id="totalQty3a" class="total-value">0</td><td colspan="6"></td></tr></tfoot></table>
+                </div>
+            </section>
+
+            <!-- TAB 4 -->
+            <section id="tab4" class="tab-content" role="tabpanel">
+                <div class="btn-group">
+                    <button class="btn-success" id="addRowBtn4"><i class="fas fa-plus-circle"></i> Tambah Baris</button>
+                    <button class="btn-primary" id="excelBtn4"><i class="fas fa-file-excel"></i> Download Excel</button>
+                    <button class="btn-secondary" id="pdfBtn4"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <span class="btn-group-info"><span class="badge" id="stockCountBadge">0</span> baris surat jalan</span>
+                </div>
+                <input type="text" id="search4" placeholder="Cari data surat jalan...">
+                <div class="table-container">
+                    <table id="table4"><thead><tr>
+                        <th class="col-no">No. Urut</th><th>Catatan</th><th>Part</th><th>Qty Reservasi</th><th>Part Demand</th><th>Serial Number</th><th>Teknisi Perbaikan</th><th class="col-action">Aksi</th>
+                    </tr></thead><tbody id="tbody4"></tbody><tfoot><tr><td colspan="3" class="total-label">Total Qty</td><td id="totalQty4" class="total-value">0</td><td colspan="4"></td></tr></tfoot></table>
+                </div>
+            </section>
+
+            <!-- TAB 5 -->
+            <section id="tab5" class="tab-content" role="tabpanel">
+                <div class="btn-group">
+                    <button class="btn-primary" id="excelBtn5"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="btn-secondary" id="pdfBtn5"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button class="btn-info" id="jpegBtn5"><i class="fas fa-image"></i> JPEG (HD)</button>
+                    <span class="btn-group-info"><span class="badge" id="stockCountBadge5">0</span> baris tagihan</span>
+                </div>
+                <p style="font-size:13px; color:#666; margin-bottom:15px;"><i class="fas fa-info-circle" style="color:var(--jt-red)"></i> Data diambil dari Tab 1 (Data Terpilih). Kolom "Disetujui Pada" disembunyikan di export.</p>
+                <input type="text" id="search5" placeholder="Cari data tagihan return...">
+                <div class="table-container">
+                    <table id="table5"><thead><tr>
+                        <th class="col-no">No. Urut</th><th>Catatan</th><th>Part</th><th>Qty Reservasi</th><th>Part Demand</th><th>Serial Number</th><th>Teknisi Perbaikan</th><th>Disetujui Pada</th><th>Lamanya Hari</th><th class="col-action">Aksi</th>
+                    </tr></thead><tbody id="tbody5"></tbody><tfoot><tr><td colspan="3" class="total-label">Total Qty</td><td id="totalQty5" class="total-value">0</td><td colspan="6"></td></tr></tfoot></table>
+                </div>
+            </section>
         </div>
-        <span class="input-status" data-status="${k.id}">○</span>
-      </div>
-      <div class="input-controls">
-        <select class="input-select" data-select="${k.id}"></select>
-        <button class="input-btn" data-btn="${k.id}">Hubungkan</button>
-      </div>
-    `;
-    inputList.appendChild(card);
-    card.querySelector('[data-btn]').addEventListener('click', () => connectExternal(k.id));
-  }
-}
+    </div>
 
-async function probePermissions() {
-  try {
-    const s = await navigator.mediaDevices.getUserMedia({ video: true });
-    s.getTracks().forEach(t => t.stop());
-  } catch(e) {}
-}
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-async function refreshDeviceList() {
-  if (!navigator.mediaDevices?.enumerateDevices) {
-    document.getElementById('inputHint').textContent = 'Browser tidak mendukung enumerateDevices.';
-    return { video: [], audio: [] };
-  }
-  await probePermissions();
-  const devs = await navigator.mediaDevices.enumerateDevices();
-  const videoDevs = devs.filter(d => d.kind === 'videoinput');
-  const audioDevs = devs.filter(d => d.kind === 'audioinput');
+    <!-- J&T COOKIE BANNER -->
+    <div class="jt-cookie-banner" id="cookieBanner">
+        <p style="margin:0;">Kami menggunakan cookie untuk meningkatkan pengalaman Anda. Dengan mengklik 'Setuju', Anda menyetujui Kebijakan Cookie.</p>
+        <button id="btnSetuju">Setuju</button>
+    </div>
 
-  for (const k of INPUT_KINDS) {
-    if (k.special === 'url') continue;
-    const sel = inputList.querySelector(`[data-select="${k.id}"]`);
-    if (!sel) continue;
-    sel.innerHTML = '';
+    <!-- JAVASCRIPT ORIGINAL (TIDAK DIUBAH SAMA SEKALI) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-    if (videoDevs.length === 0) {
-      const o = document.createElement('option');
-      o.value = ''; o.textContent = '-- Tidak ada perangkat --';
-      sel.appendChild(o);
-      continue;
-    }
+    <script>
+    (function() {
+        "use strict";
+        const { jsPDF } = window.jspdf;
 
-    videoDevs.forEach((d, i) => {
-      const o = document.createElement('option');
-      o.value = d.deviceId;
-      o.textContent = d.label || `Perangkat ${i + 1}`;
-      sel.appendChild(o);
-    });
+        // ========== STATE ==========
+        let data1 = [], selectedIndexes = new Set(), data2 = [], data3 = [], data4 = [], data5 = [];
+        let currentFilter1 = "", currentFilter2 = "", currentFilter3 = "", currentFilter4 = "", currentFilter5 = "";
+        let filterTeknisiVal = "", filterReturnVal = "", filterClaimVal = "", filterPengirimanVal = "";
+        let filterStartDateVal = "", filterEndDateVal = "";
+        
+        // ========== DOM ==========
+        const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
+        const fileInput = $("#fileInput"), 
+              search1 = $("#search1"), search2 = $("#search2"), search3 = $("#search3"), search4 = $("#search4"), search5 = $("#search5");
+        const filterTeknisi = $("#filterTeknisi"), filterReturn = $("#filterReturn"), filterClaim = $("#filterClaim"), filterPengiriman = $("#filterPengiriman");
+        const filterStartDate = $("#filterStartDate"), filterEndDate = $("#filterEndDate");
+        const filterInfoBanner = $("#filterInfoBanner"), filterInfoText = $("#filterInfoText"), clearFilterInfo = $("#clearFilterInfo");
+        const addRowBtn = $("#addRowBtn"), addRowBtn3 = $("#addRowBtn3"), addRowBtn4 = $("#addRowBtn4");
+        const resetBtn = $("#resetBtn"), checkAllCb = $("#checkAll"), deleteSelectedBtn = $("#deleteSelectedBtn");
+        const resetAllFiltersBtn = $("#resetAllFiltersBtn");
+        const tbody1 = $("#tbody1"), tbody2 = $("#tbody2"), tbody3 = $("#tbody3"), tbody4 = $("#tbody4"), tbody5 = $("#tbody5");
+        const totalQty1El = $("#totalQty1"), totalQty2El = $("#totalQty2"), totalQty3aEl = $("#totalQty3a"), totalQty4El = $("#totalQty4"), totalQty5El = $("#totalQty5");
+        const countBadge = $("#dataCountBadge"), selectedBadge = $("#selectedCountBadge"), demandBadge = $("#demandCountBadge"), stockBadge = $("#stockCountBadge"), stockBadge5 = $("#stockCountBadge5");
+        const toastContainer = $("#toastContainer");
+        
+        const KEYS_TAB1 = ["Nomor","Catatan","Part","Qty Reservasi","Qty Transaksi","Part Demand","Serial Number","Status Pengiriman","Return To Factory","Claim To Factory","Teknisi Perbaikan","Disetujui Pada"];
+        const KEYS_TAB2 = ["No_Urut","Catatan","Part","Qty Transaksi","Part Demand","Serial Number","Teknisi Perbaikan"];
+        const KEYS_TAB3 = ["No_Urut","Part Demand / Part","Lot","Attribute","QTY / Qty Transaksi","QTY Konversi","UM Konversi","Remarks 1","Remarks 2","Nomor Service Job / Catatan"];
+        const KEYS_TAB4 = ["No_Urut","Catatan","Part","Qty Reservasi","Part Demand","Serial Number","Teknisi Perbaikan"];
+        const KEYS_TAB5 = ["No_Urut","Catatan","Part","Qty Reservasi","Part Demand","Serial Number","Teknisi Perbaikan","Disetujui Pada","Lamanya Hari"];
 
-    const saved = localStorage.getItem(getSlotKey(k.id));
-    if (saved && videoDevs.some(d => d.deviceId === saved)) {
-      sel.value = saved;
-    } else {
-      const idx = INPUT_KINDS.filter(x => !x.special).findIndex(x => x.id === k.id);
-      const def = videoDevs[idx] || videoDevs[0];
-      if (def) sel.value = def.deviceId;
-    }
-
-    sel.addEventListener('change', () => {
-      localStorage.setItem(getSlotKey(k.id), sel.value);
-      updatePlaceholderDevNames(videoDevs);
-    });
-  }
-
-  updatePlaceholderDevNames(videoDevs);
-  return { video: videoDevs, audio: audioDevs };
-}
-
-function updatePlaceholderDevNames(videoDevs = []) {
-  for (const k of INPUT_KINDS) {
-    const el = document.querySelector(`[data-devname="${k.id}"]`);
-    if (!el) continue;
-    if (k.special === 'url') {
-      const saved = localStorage.getItem(WIFI_LAST_URL_KEY);
-      el.textContent = saved ? (saved.replace(/^https?:\/\//, '').slice(0, 22) + (saved.length > 25 ? '…' : '')) : 'Belum diatur';
-      el.title = saved || '';
-      continue;
-    }
-    let dev = null;
-    const saved = localStorage.getItem(getSlotKey(k.id));
-    if (saved) dev = videoDevs.find(d => d.deviceId === saved);
-    if (!dev) {
-      const idx = INPUT_KINDS.filter(x => !x.special).findIndex(x => x.id === k.id);
-      dev = videoDevs[idx] || videoDevs[0];
-    }
-    el.textContent = dev ? (dev.label || 'Perangkat') : '—';
-    el.title = dev ? dev.label : '';
-  }
-}
-
-function updateInputStatus() {
-  inputList.querySelectorAll('.input-card').forEach(card => {
-    const kind = card.dataset.kind;
-    const connected = state.isExternalSource && state.activeInput === kind;
-    card.classList.toggle('connected', connected);
-    const st = card.querySelector(`[data-status="${kind}"]`);
-    if (st) st.textContent = connected ? '●' : '○';
-    const devEl = card.querySelector(`[data-device="${kind}"]`);
-    if (devEl) {
-      if (connected && kind === 'wifi') {
-        devEl.textContent = `${state.wifi.mode.toUpperCase()} · ${state.wifi.url}`;
-      } else if (connected && state.externalStream) {
-        const vTrack = state.externalStream.getVideoTracks()[0];
-        devEl.textContent = (vTrack && vTrack.label) || 'Terhubung';
-      } else {
-        devEl.textContent = 'Belum terhubung';
-      }
-    }
-  });
-
-  document.querySelectorAll('.source-btn').forEach(btn => {
-    const kind = btn.dataset.input;
-    btn.classList.toggle('connected', state.isExternalSource && state.activeInput === kind);
-  });
-}
-
-function updateUploadBadge() {
-  if (state.isExternalSource) {
-    uploadBadge.textContent = INPUT_LABELS[state.activeInput] || 'EXTERNAL';
-    uploadBadge.classList.add('connected');
-  } else if (state.uploadReady) {
-    uploadBadge.textContent = 'FILE';
-    uploadBadge.classList.remove('connected');
-  } else {
-    uploadBadge.textContent = 'UPLOAD';
-    uploadBadge.classList.remove('connected');
-  }
-}
-
-function disconnectExternal(silent = false) {
-  // WiFi MJPEG cleanup
-  wifiImg.classList.remove('active');
-  wifiImg.onload = null;
-  wifiImg.onerror = null;
-  wifiImg.src = '';
-  // WiFi HLS cleanup
-  if (state.wifi.hls) {
-    try { state.wifi.hls.destroy(); } catch(e){}
-    state.wifi.hls = null;
-  }
-  state.wifi.mode = null;
-  state.wifi.url = '';
-
-  // Hardware stream cleanup
-  if (state.externalStream) {
-    state.externalStream.getTracks().forEach(t => t.stop());
-    state.externalStream = null;
-  }
-  if (state.externalAudioSource) {
-    try { state.externalAudioSource.disconnect(); } catch(e){}
-    state.externalAudioSource = null;
-  }
-  state.isExternalSource = false;
-  state.activeInput = null;
-
-  try { uploadVideo.pause(); } catch(e){}
-  try { uploadVideo.srcObject = null; } catch(e){}
-  try { uploadVideo.removeAttribute('src'); uploadVideo.load(); } catch(e){}
-  uploadVideo.style.display = '';
-
-  state.uploadReady = false;
-  uploadPlaceholder.classList.remove('hidden');
-
-  updateUploadBadge();
-  updateInputStatus();
-  if (!silent) showToast('⏏ Koneksi input diputus');
-}
-
-async function connectExternal(kind) {
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  if (kind === 'wifi') { openWifiModal(); return; }
-  if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('Browser tidak mendukung input eksternal', 'error');
-    return;
-  }
-
-  let deviceId = localStorage.getItem(getSlotKey(kind));
-  const sel = inputList.querySelector(`[data-select="${kind}"]`);
-  if (sel && sel.value) deviceId = sel.value;
-
-  if (!deviceId) {
-    const devs = await refreshDeviceList();
-    if (devs.video.length === 0) {
-      showToast('Tidak ada perangkat video terdeteksi', 'error');
-      return;
-    }
-    const idx = INPUT_KINDS.filter(x => !x.special).findIndex(x => x.id === kind);
-    deviceId = (devs.video[idx] || devs.video[0]).deviceId;
-  }
-
-  disconnectExternal(true);
-
-  const inputMeta = INPUT_KINDS.find(x => x.id === kind);
-  const constraints = {
-    video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-  };
-  if (inputMeta.audio) constraints.audio = true;
-
-  showLoader(`Menghubungkan ${inputMeta.short}...`);
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    if (!inputMeta.audio) {
-      stream.getAudioTracks().forEach(t => { t.stop(); stream.removeTrack(t); });
-    }
-
-    state.externalStream = stream;
-    state.activeInput = kind;
-    state.isExternalSource = true;
-    state.uploadReady = true;
-
-    uploadVideo.srcObject = stream;
-    uploadVideo.muted = true;
-    uploadVideo.playsInline = true;
-    uploadVideo.style.display = '';
-    try { await uploadVideo.play(); } catch(e) {}
-
-    if (stream.getAudioTracks().length > 0) {
-      ensureAudioCtx();
-      const audioOnly = new MediaStream(stream.getAudioTracks());
-      state.externalAudioSource = state.audioCtx.createMediaStreamSource(audioOnly);
-    }
-
-    uploadPlaceholder.classList.add('hidden');
-    updateUploadBadge();
-    updateInputStatus();
-    closeInputModal();
-
-    const trackLabel = stream.getVideoTracks()[0]?.label || inputMeta.label;
-    showToast(`✅ ${inputMeta.short} terhubung — ${trackLabel}`, 'success');
-  } catch (err) {
-    hideLoader();
-    disconnectExternal(true);
-    showToast('Gagal konek: ' + err.message, 'error');
-    return;
-  }
-  hideLoader();
-}
-
-function openInputModal() {
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  inputModal.classList.add('show');
-  refreshDeviceList();
-  updateInputStatus();
-}
-function closeInputModal() { inputModal.classList.remove('show'); }
-
-/* ============ WIFI / HOTSPOT ============ */
-function setWifiStatus(msg, type='') {
-  if (!msg) { wifiStatus.className = 'wifi-status'; return; }
-  wifiStatus.textContent = msg;
-  wifiStatus.className = 'wifi-status show ' + type;
-}
-
-function detectStreamType(url) {
-  const u = url.toLowerCase();
-  if (u.endsWith('.m3u8') || u.includes('.m3u8?') || u.includes('.m3u8&')) return 'hls';
-  if (/\.(mp4|webm|ogg|mov|m4v)(\?|&|$)/.test(u)) return 'video';
-  if (/\/(video|videofeed)(\?|$)/.test(u)) return 'mjpeg';
-  if (u.includes('action=stream') || u.includes('mjpeg') || u.includes('/mjpeg')) return 'mjpeg';
-  return 'mjpeg';
-}
-
-function openWifiModal() {
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  const savedUrl = localStorage.getItem(WIFI_LAST_URL_KEY) || '';
-  wifiUrlInput.value = savedUrl;
-  if (savedUrl && wifiTypeSelect.value === 'auto') {
-    // leave as auto
-  }
-  setWifiStatus('');
-  wifiModal.classList.add('show');
-  setTimeout(() => wifiUrlInput.focus(), 100);
-}
-function closeWifiModal() { wifiModal.classList.remove('show'); }
-
-async function testWifi(url) {
-  if (!url) { setWifiStatus('URL kosong', 'err'); return false; }
-  setWifiStatus('Menguji koneksi...', 'loading');
-  return new Promise(resolve => {
-    const img = new Image();
-    const timer = setTimeout(() => {
-      img.src = '';
-      setWifiStatus('❌ Timeout — periksa URL, WiFi/Hotspot, dan HP lain', 'err');
-      resolve(false);
-    }, 7000);
-    img.onload = () => { clearTimeout(timer); img.src = ''; setWifiStatus('✅ Stream terdeteksi', 'ok'); resolve(true); };
-    img.onerror = () => { clearTimeout(timer); setWifiStatus('❌ Tidak dapat memuat stream', 'err'); resolve(false); };
-    img.src = url;
-  });
-}
-
-async function connectWifi(url, forceType = 'auto') {
-  if (!url) { showToast('URL wajib diisi', 'error'); return; }
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-
-  let type = forceType;
-  if (type === 'auto') type = detectStreamType(url);
-
-  disconnectExternal(true);
-  showLoader(`Menghubungkan ${type.toUpperCase()}...`);
-  setWifiStatus(`Menghubungkan via ${type.toUpperCase()}...`, 'loading');
-
-  try {
-    if (type === 'mjpeg') {
-      // MJPEG: load via img, draw to canvas during recording
-      await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Timeout memuat MJPEG')), 10000);
-        wifiImg.onload = () => { clearTimeout(timer); resolve(); };
-        wifiImg.onerror = () => { clearTimeout(timer); reject(new Error('Gagal load MJPEG')); };
-        wifiImg.src = url;
-      });
-
-      wifiImg.classList.add('active');
-      uploadVideo.style.display = 'none';
-
-      state.wifi.mode = 'mjpeg';
-      state.wifi.url = url;
-      state.isExternalSource = true;
-      state.activeInput = 'wifi';
-      state.uploadReady = true;
-
-      wifiImg.onerror = () => {
-        if (state.wifi.mode === 'mjpeg') {
-          showToast('⚠️ Koneksi MJPEG terputus — coba reconnect', 'error');
+        // ========== UTILITAS ==========
+        function extractSjob(t) { if(!t||typeof t!=="string")return""; var i=t.toUpperCase().indexOf("SJOB"); if(i===-1)return""; var m=t.substring(i).match(/^(SJOB[A-Za-z0-9\/\-_.]+)/i); return m?m[0]:""; }
+        function calcTotal(a, k) { var s=0; for(var i=0;i<a.length;i++) s+=parseFloat(a[i][k])||0; return s; }
+        function debounce(fn, d) { var t; return function(){ clearTimeout(t); t=setTimeout(fn, d); }; }
+        function checkYesNo(val, target) {
+            if (!target) return true;
+            var v = String(val).toLowerCase().trim();
+            var isYes = (v === "yes" || v === "y" || v === "true" || v === "1");
+            return (target === "yes") ? isYes : !isYes;
         }
-      };
+        function showToast(msg, type) {
+            const ic = { success:"fa-check-circle", danger:"fa-exclamation-circle", info:"fa-info-circle" };
+            const t = document.createElement("div"); t.className = "toast toast-"+type;
+            t.innerHTML = '<i class="fas '+(ic[type]||ic.info)+'"></i><span>'+msg+'</span>';
+            toastContainer.appendChild(t); setTimeout(()=>{ if(t.parentNode) t.remove(); }, 3200);
+        }
 
-    } else if (type === 'hls') {
-      // HLS: try native first (Safari), else hls.js
-      const native = uploadVideo.canPlayType('application/vnd.apple.mpegurl');
-      if (native) {
-        uploadVideo.src = url;
-        await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('Timeout HLS')), 12000);
-          uploadVideo.onloadedmetadata = () => { clearTimeout(timer); resolve(); };
-          uploadVideo.onerror = () => { clearTimeout(timer); reject(new Error('Gagal load HLS')); };
-          uploadVideo.load();
+        function calculateDays(dateStr) {
+            if (!dateStr) return "";
+            dateStr = String(dateStr).trim();
+            var parts, date;
+            if (dateStr.indexOf('/') !== -1) {
+                parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    var d = parseInt(parts[0]), m = parseInt(parts[1]), y = parseInt(parts[2]);
+                    if (y < 100) y += 2000;
+                    date = new Date(y, m - 1, d);
+                }
+            } else if (dateStr.indexOf('-') !== -1) {
+                parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    } else {
+                        var d2 = parseInt(parts[0]), m2 = parseInt(parts[1]), y2 = parseInt(parts[2]);
+                        if (y2 < 100) y2 += 2000;
+                        date = new Date(y2, m2 - 1, d2);
+                    }
+                }
+            }
+            if (!date || isNaN(date.getTime())) return ""; 
+            var today = new Date();
+            today.setHours(0, 0, 0, 0); 
+            var diffTime = today - date;
+            var diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+            return diffDays >= 0 ? diffDays : 0;
+        }
+
+        function parseDateToYMD(dateStr) {
+            if (!dateStr) return null;
+            dateStr = String(dateStr).trim();
+            if (dateStr === "") return null;
+            var parts, date;
+            if (dateStr.indexOf('/') !== -1) {
+                parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    var d = parseInt(parts[0]), m = parseInt(parts[1]), y = parseInt(parts[2]);
+                    if (y < 100) y += 2000;
+                    date = new Date(y, m - 1, d);
+                }
+            } else if (dateStr.indexOf('-') !== -1) {
+                parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    } else {
+                        var d2 = parseInt(parts[0]), m2 = parseInt(parts[1]), y2 = parseInt(parts[2]);
+                        if (y2 < 100) y2 += 2000;
+                        date = new Date(y2, m2 - 1, d2);
+                    }
+                }
+            }
+            if (!date || isNaN(date.getTime())) return null;
+            return date;
+        }
+
+        function formatYMD(date) {
+            if (!date) return "";
+            var y = date.getFullYear();
+            var m = String(date.getMonth() + 1).padStart(2, '0');
+            var d = String(date.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+
+        function formatDateDisplay(dateStr) {
+            var d = parseDateToYMD(dateStr);
+            if (!d) return dateStr || "";
+            var dd = String(d.getDate()).padStart(2, '0');
+            var mm = String(d.getMonth() + 1).padStart(2, '0');
+            var yyyy = d.getFullYear();
+            return dd + '/' + mm + '/' + yyyy;
+        }
+
+        var BASE_NAME_5_HD  = "Tagihan SOB OPEN Sparepart Bekas HD";
+        var BASE_NAME_5_STD = "Tagihan SOB OPEN Sparepart Bekas";
+
+        function getTeknisiSuffix5() {
+            var set = new Set();
+            for (var i = 0; i < data5.length; i++) {
+                var t = data5[i] && data5[i]["Teknisi Perbaikan"];
+                if (t !== undefined && t !== null && String(t).trim() !== "") {
+                    set.add(String(t).trim());
+                }
+            }
+            var arr = Array.from(set).sort();
+            if (!arr.length) return "";          
+            return " " + arr.join(", ");         
+        }
+
+        function sanitizeFileName(name) {
+            return String(name).replace(/[\\/:*?"<>|\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
+        }
+
+        function buildFileName5(ext, pakaiHD) {
+            var base = pakaiHD ? BASE_NAME_5_HD : BASE_NAME_5_STD;
+            return sanitizeFileName(base + getTeknisiSuffix5()) + "." + ext;
+        }
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && e.target.hasAttribute("contenteditable")) { e.preventDefault(); e.target.blur(); }
         });
-      } else {
-        const ok = await loadHlsLib();
-        if (!ok) throw new Error('Gagal load hls.js (periksa internet)');
-        await new Promise((resolve, reject) => {
-          state.wifi.hls = new window.Hls();
-          state.wifi.hls.loadSource(url);
-          state.wifi.hls.attachMedia(uploadVideo);
-          state.wifi.hls.on(window.Hls.Events.MANIFEST_PARSED, () => resolve());
-          state.wifi.hls.on(window.Hls.Events.ERROR, (e, data) => {
-            if (data && data.fatal) reject(new Error('HLS fatal: ' + (data.details || 'error')));
-          });
-          setTimeout(() => reject(new Error('Timeout HLS manifest')), 12000);
+
+        // ========== NAVIGASI TAB ==========
+        $$(".tab-button").forEach(btn => {
+            btn.addEventListener("click", function() {
+                $$(".tab-button").forEach(b => { b.classList.remove("active"); b.setAttribute("aria-selected","false"); });
+                $$(".tab-content").forEach(c => c.classList.remove("active"));
+                btn.classList.add("active"); btn.setAttribute("aria-selected","true");
+                $("#" + btn.dataset.tab).classList.add("active");
+            });
         });
-      }
 
-      state.wifi.mode = 'hls';
-      state.wifi.url = url;
-      state.isExternalSource = true;
-      state.activeInput = 'wifi';
-      state.uploadReady = true;
-
-      uploadVideo.style.display = '';
-      uploadVideo.muted = false;
-      ensureAudioCtx();
-      try {
-        if (!state.uploadSource) {
-          state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
-          state.uploadSource.connect(state.audioCtx.destination);
+        // ========== UPDATE BANNER INFO FILTER ==========
+        function updateFilterInfoBanner() {
+            var parts = [];
+            if (currentFilter1) parts.push('Pencarian: "' + search1.value + '"');
+            if (filterTeknisiVal) parts.push('Teknisi: ' + filterTeknisiVal);
+            if (filterPengirimanVal) parts.push('Pengiriman: ' + filterPengirimanVal);
+            if (filterReturnVal) parts.push('Return: ' + filterReturnVal.toUpperCase());
+            if (filterClaimVal) parts.push('Claim: ' + filterClaimVal.toUpperCase());
+            if (filterStartDateVal || filterEndDateVal) {
+                var start = filterStartDateVal ? formatDateDisplay(filterStartDateVal) : "…";
+                var end = filterEndDateVal ? formatDateDisplay(filterEndDateVal) : "…";
+                parts.push('Periode: ' + start + ' s/d ' + end);
+            }
+            if (parts.length > 0) {
+                filterInfoText.innerHTML = '<strong>Filter Aktif:</strong> ' + parts.join(' • ');
+                filterInfoBanner.classList.add('active');
+            } else {
+                filterInfoBanner.classList.remove('active');
+            }
         }
-      } catch(e) { console.warn('Audio routing HLS gagal:', e); }
-      try { await uploadVideo.play(); } catch(e) { uploadVideo.muted = true; try { await uploadVideo.play(); } catch(e2){} }
 
-    } else if (type === 'video') {
-      uploadVideo.src = url;
-      await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Timeout video')), 12000);
-        uploadVideo.onloadedmetadata = () => { clearTimeout(timer); resolve(); };
-        uploadVideo.onerror = () => { clearTimeout(timer); reject(new Error('Gagal load video')); };
-        uploadVideo.load();
-      });
-
-      state.wifi.mode = 'video';
-      state.wifi.url = url;
-      state.isExternalSource = true;
-      state.activeInput = 'wifi';
-      state.uploadReady = true;
-
-      uploadVideo.style.display = '';
-      uploadVideo.muted = false;
-      ensureAudioCtx();
-      try {
-        if (!state.uploadSource) {
-          state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
-          state.uploadSource.connect(state.audioCtx.destination);
+        // ========== RESET SEMUA FILTER ==========
+        function resetAllFilters(silent) {
+            currentFilter1 = ""; filterTeknisiVal = ""; filterReturnVal = ""; filterClaimVal = ""; filterPengirimanVal = "";
+            filterStartDateVal = ""; filterEndDateVal = "";
+            search1.value = ""; filterTeknisi.value = ""; filterReturn.value = ""; filterClaim.value = ""; filterPengiriman.value = "";
+            filterStartDate.value = ""; filterEndDate.value = "";
+            renderTable1();
+            updateFilterInfoBanner();
+            if (!silent) showToast("Semua filter direset.", "info");
         }
-      } catch(e) { console.warn('Audio routing video gagal:', e); }
-      try { await uploadVideo.play(); } catch(e) { uploadVideo.muted = true; try { await uploadVideo.play(); } catch(e2){} }
-    } else {
-      throw new Error('Tipe stream tidak dikenal');
-    }
 
-    localStorage.setItem(WIFI_LAST_URL_KEY, url);
-    uploadPlaceholder.classList.add('hidden');
-    updateUploadBadge();
-    updateInputStatus();
-    closeWifiModal();
-    setWifiStatus('✅ Terhubung', 'ok');
-    showToast(`✅ WiFi/${type.toUpperCase()} terhubung`, 'success');
+        resetAllFiltersBtn.addEventListener("click", function() { resetAllFilters(false); });
+        clearFilterInfo.addEventListener("click", function() { resetAllFilters(false); });
 
-    if (state.wifi.mode !== 'mjpeg') {
-      updatePlayPauseIcon();
-      updateProgressBar();
-    }
-  } catch (err) {
-    console.error(err);
-    setWifiStatus('❌ ' + err.message, 'err');
-    showToast('Gagal WiFi: ' + err.message, 'error');
-    disconnectExternal(true);
-  } finally {
-    hideLoader();
-  }
-}
+        // ========== RESET SEMUA DATA ==========
+        resetBtn.addEventListener("click", function() {
+            if (!confirm("Apakah Anda yakin ingin mereset semua data?")) return;
+            data1=[]; data2=[]; data3=[]; data4=[]; data5=[]; selectedIndexes.clear();
+            currentFilter1=""; currentFilter2=""; currentFilter3=""; currentFilter4=""; currentFilter5="";
+            filterTeknisiVal=""; filterReturnVal=""; filterClaimVal=""; filterPengirimanVal="";
+            filterStartDateVal=""; filterEndDateVal="";
+            tbody1.innerHTML=""; tbody2.innerHTML=""; tbody3.innerHTML=""; tbody4.innerHTML=""; tbody5.innerHTML="";
+            totalQty1El.textContent="0"; totalQty2El.textContent="0"; totalQty3aEl.textContent="0"; totalQty4El.textContent="0"; totalQty5El.textContent="0";
+            fileInput.value=""; search1.value=""; search2.value=""; search3.value=""; search4.value=""; search5.value="";
+            filterStartDate.value=""; filterEndDate.value="";
+            filterTeknisi.innerHTML = '<option value="">Semua Teknisi</option>'; filterReturn.value=""; filterClaim.value=""; filterPengiriman.innerHTML = '<option value="">Semua Status Pengiriman</option>';
+            checkAllCb.checked=false; checkAllCb.indeterminate=false;
+            countBadge.textContent="0"; selectedBadge.textContent="0"; demandBadge.textContent="0"; stockBadge.textContent="0"; stockBadge5.textContent="0";
+            $$(".note-input").forEach(el => el.innerText="");
+            updateFilterInfoBanner();
+            showToast("Semua data berhasil direset.", "info");
+        });
 
-function disconnectWifi() {
-  if (!state.isExternalSource || state.activeInput !== 'wifi') {
-    showToast('WiFi tidak sedang terhubung');
-    return;
-  }
-  disconnectExternal();
-  setWifiStatus('⏏ WiFi diputus', 'ok');
-}
+        // ========== UPLOAD FILE ==========
+        fileInput.addEventListener("change", function(e) {
+            var file = e.target.files[0]; if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    var wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array" });
+                    var parsed = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    if (!parsed.length) { showToast("File kosong atau format tidak dikenali.", "danger"); return; }
+                    data1 = parsed; selectedIndexes.clear();
+                    checkAllCb.checked=false; checkAllCb.indeterminate=false; 
+                    currentFilter1=""; search1.value=""; 
+                    filterTeknisiVal=""; filterReturnVal=""; filterClaimVal=""; filterPengirimanVal="";
+                    filterStartDateVal=""; filterEndDateVal="";
+                    filterTeknisi.value=""; filterReturn.value=""; filterClaim.value=""; filterPengiriman.value="";
+                    filterStartDate.value=""; filterEndDate.value="";
+                    populateTeknisiDropdown(data1);
+                    populatePengirimanDropdown(data1);
+                    renderTable1(); syncToTab2(); syncToTab3(); syncToTab4(); syncToTab5();
+                    updateFilterInfoBanner();
+                    showToast(parsed.length + " baris data berhasil diimpor.", "success");
+                } catch (err) { showToast("Gagal membaca file: " + err.message, "danger"); }
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
-/* hls.js optional loader */
-let hlsLibPromise = null;
-function loadHlsLib() {
-  if (window.Hls) return Promise.resolve(true);
-  if (hlsLibPromise) return hlsLibPromise;
-  hlsLibPromise = new Promise((resolve) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
-    s.crossOrigin = 'anonymous';
-    s.onload = () => resolve(true);
-    s.onerror = () => { hlsLibPromise = null; resolve(false); };
-    document.head.appendChild(s);
-  });
-  return hlsLibPromise;
-}
+        // ========== FUNGSI ISI DROPDOWN ==========
+        function populateTeknisiDropdown(arr) {
+            var teknisiSet = new Set();
+            for (var i = 0; i < arr.length; i++) {
+                var t = arr[i]["Teknisi Perbaikan"];
+                if (t && String(t).trim() !== "") teknisiSet.add(String(t).trim());
+            }
+            var sortedArr = Array.from(teknisiSet).sort();
+            filterTeknisi.innerHTML = '<option value="">Semua Teknisi</option>';
+            for (var j = 0; j < sortedArr.length; j++) {
+                var opt = document.createElement("option");
+                opt.value = sortedArr[j]; opt.textContent = sortedArr[j];
+                filterTeknisi.appendChild(opt);
+            }
+        }
+        function populatePengirimanDropdown(arr) {
+            var pengirimanSet = new Set();
+            for (var i = 0; i < arr.length; i++) {
+                var t = arr[i]["Status Pengiriman"];
+                if (t && String(t).trim() !== "") pengirimanSet.add(String(t).trim());
+            }
+            var sortedArr = Array.from(pengirimanSet).sort();
+            filterPengiriman.innerHTML = '<option value="">Semua Status Pengiriman</option>';
+            for (var j = 0; j < sortedArr.length; j++) {
+                var opt = document.createElement("option");
+                opt.value = sortedArr[j]; opt.textContent = sortedArr[j];
+                filterPengiriman.appendChild(opt);
+            }
+        }
 
-/* Wiring */
-buildInputCards();
-btnUpload.addEventListener('click', openInputModal);
-btnConfigureInputs.addEventListener('click', openInputModal);
-btnCloseInputModal.addEventListener('click', closeInputModal);
-inputModal.addEventListener('click', e => { if (e.target === inputModal) closeInputModal(); });
-btnDisconnectInput.addEventListener('click', () => { disconnectExternal(); closeInputModal(); });
+        // ========== CHECKALL ==========
+        checkAllCb.addEventListener("change", function() {
+            var isC = checkAllCb.checked;
+            getFilteredData1().forEach(item => { if(isC) selectedIndexes.add(item._origIdx); else selectedIndexes.delete(item._origIdx); });
+            tbody1.querySelectorAll("input[type='checkbox']").forEach(cb => {
+                var idx = parseInt(cb.dataset.idx); cb.checked = selectedIndexes.has(idx);
+                var row = cb.closest("tr"); if(cb.checked) row.classList.add("selected-row"); else row.classList.remove("selected-row");
+            });
+            syncToTab2(); syncToTab3(); syncToTab4(); syncToTab5();
+        });
 
-btnCloseWifiModal.addEventListener('click', closeWifiModal);
-wifiModal.addEventListener('click', e => { if (e.target === wifiModal) closeWifiModal(); });
-btnConnectWifi.addEventListener('click', () => connectWifi(wifiUrlInput.value.trim(), wifiTypeSelect.value));
-btnTestWifi.addEventListener('click', () => testWifi(wifiUrlInput.value.trim()));
-btnDisconnectWifi.addEventListener('click', () => { disconnectWifi(); });
+        // ========== PENCARIAN & FILTER ==========
+        search1.addEventListener("input", debounce(function() { currentFilter1 = search1.value.toLowerCase(); renderTable1(); updateFilterInfoBanner(); }, 300));
+        filterTeknisi.addEventListener("change", function() { filterTeknisiVal = filterTeknisi.value; renderTable1(); updateFilterInfoBanner(); });
+        filterPengiriman.addEventListener("change", function() { filterPengirimanVal = filterPengiriman.value; renderTable1(); updateFilterInfoBanner(); });
+        filterReturn.addEventListener("change", function() { filterReturnVal = filterReturn.value; renderTable1(); updateFilterInfoBanner(); });
+        filterClaim.addEventListener("change", function() { filterClaimVal = filterClaim.value; renderTable1(); updateFilterInfoBanner(); });
+        filterStartDate.addEventListener("change", function() { filterStartDateVal = filterStartDate.value; renderTable1(); updateFilterInfoBanner(); });
+        filterEndDate.addEventListener("change", function() { filterEndDateVal = filterEndDate.value; renderTable1(); updateFilterInfoBanner(); });
 
-document.querySelectorAll('.source-btn').forEach(btn => {
-  btn.addEventListener('click', () => connectExternal(btn.dataset.input));
-});
-placeholderUploadBtn.addEventListener('click', () => {
-  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
-  fileInput.value = '';
-  fileInput.click();
-});
+        search2.addEventListener("input", debounce(function() { currentFilter2 = search2.value.toLowerCase(); renderTable2(); }, 300));
+        search3.addEventListener("input", debounce(function() { currentFilter3 = search3.value.toLowerCase(); renderTable3(); }, 300));
+        search4.addEventListener("input", debounce(function() { currentFilter4 = search4.value.toLowerCase(); renderTable4(); }, 300));
+        search5.addEventListener("input", debounce(function() { currentFilter5 = search5.value.toLowerCase(); renderTable5(); }, 300));
 
-/* ============ KAMERA ============ */
-async function startCamera(silent=false) {
-  try {
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Tidak didukung');
-    if (state.stream) state.stream.getTracks().forEach(t => t.stop());
-    state.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: state.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    liveVideo.srcObject = state.stream;
-    livePlaceholder.classList.add('hidden');
-    btnSwitchCam.classList.remove('hidden');
-    btnStartCam.classList.add('active');
-    if (!silent) showToast('Kamera aktif', 'success');
-    return true;
-  } catch (err) {
-    if (!silent) showToast('Kamera gagal: ' + err.message, 'error');
-    return false;
-  }
-}
-btnStartCam.addEventListener('click', () => startCamera());
-btnSwitchCam.addEventListener('click', () => {
-  state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
-  startCamera();
-});
+        // ========== TAMBAH BARIS ==========
+        addRowBtn.addEventListener("click", function() { 
+            data2.push({ "No_Urut":"", "Catatan":"", "Part":"", "Qty Transaksi":"", "Part Demand":"", "Serial Number":"", "Teknisi Perbaikan":"", _isNew:true }); 
+            renderTable2(); showToast("Baris baru ditambahkan.", "success"); 
+        });
+        addRowBtn3.addEventListener("click", function() { 
+            data3.push({ "No_Urut":"", "Part Demand / Part":"", "Lot":"", "Attribute":"", "QTY / Qty Transaksi":"", "QTY Konversi":"", "UM Konversi":"", "Remarks 1":"", "Remarks 2":"", "Nomor Service Job / Catatan":"", _isNew:true }); 
+            renderTable3(); showToast("Baris demand baru ditambahkan.", "success"); 
+        });
+        addRowBtn4.addEventListener("click", function() { 
+            data4.push({ "No_Urut":"", "Catatan":"", "Part":"", "Qty Reservasi":"", "Part Demand":"", "Serial Number":"", "Teknisi Perbaikan":"", _isNew:true }); 
+            renderTable4(); showToast("Baris baru ditambahkan.", "success"); 
+        });
+        
+        // ========== DELETE SELECTED ==========
+        deleteSelectedBtn.addEventListener("click", function() {
+            if (selectedIndexes.size === 0) { showToast("Tidak ada baris yang dipilih untuk dihapus.", "danger"); return; }
+            if (!confirm("Anda yakin ingin menghapus " + selectedIndexes.size + " baris terpilih secara permanen?")) return;
+            var toDelete = Array.from(selectedIndexes).sort((a, b) => b - a);
+            toDelete.forEach(function(idx) { data1.splice(idx, 1); });
+            selectedIndexes.clear();
+            populateTeknisiDropdown(data1);
+            populatePengirimanDropdown(data1);
+            renderTable1();
+            syncToTab2(); syncToTab3(); syncToTab4(); syncToTab5();
+            updateFilterInfoBanner();
+            showToast(toDelete.length + " baris berhasil dihapus.", "success");
+        });
 
-/* ============ MIC ============ */
-async function toggleMic() {
-  if (state.micEnabled) {
-    if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
-    if (state.micSource) { try { state.micSource.disconnect(); } catch(e){} state.micSource = null; }
-    state.micStream = null; state.micEnabled = false;
-    btnMic.classList.remove('active');
-    showToast('Mic dimatikan');
-    return;
-  }
-  try {
-    const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
-    state.micStream = ms;
-    ensureAudioCtx();
-    state.micSource = state.audioCtx.createMediaStreamSource(ms);
-    state.micEnabled = true;
-    btnMic.classList.add('active');
-    showToast('Mic aktif', 'success');
-  } catch (err) { showToast('Mic gagal: ' + err.message, 'error'); }
-}
-btnMic.addEventListener('click', toggleMic);
+        // ========== FILTER LOGIKA ==========
+        function getFilteredData1() {
+            var fText = currentFilter1, fTek = filterTeknisiVal, fRet = filterReturnVal, fClm = filterClaimVal, fKirim = filterPengirimanVal;
+            var fStart = filterStartDateVal, fEnd = filterEndDateVal;
+            var res = [];
+            for(var i=0; i<data1.length; i++) {
+                var row = data1[i];
+                var matchText = true;
+                if (fText) { matchText = false; for(var k in row) { if(k.charAt(0)==="_") continue; if(String(row[k]).toLowerCase().indexOf(fText)!==-1) { matchText=true; break; } } }
+                if(!matchText) continue;
+                var matchTek = true; if (fTek) matchTek = (String(row["Teknisi Perbaikan"]).trim() === fTek); if(!matchTek) continue;
+                var matchKirim = true; if (fKirim) matchKirim = (String(row["Status Pengiriman"]).trim() === fKirim); if(!matchKirim) continue;
+                var matchRet = true; if (fRet) matchRet = checkYesNo(row["Return To Factory"], fRet); if(!matchRet) continue;
+                var matchClm = true; if (fClm) matchClm = checkYesNo(row["Claim To Factory"], fClm); if(!matchClm) continue;
+                
+                if (fStart || fEnd) {
+                    var tgl = parseDateToYMD(row["Disetujui Pada"]);
+                    if (!tgl) continue;
+                    var ymd = formatYMD(tgl);
+                    if (fStart && ymd < fStart) continue;
+                    if (fEnd && ymd > fEnd) continue;
+                }
+                
+                res.push(Object.assign({}, row, {_origIdx:i}));
+            }
+            return res;
+        }
+        
+        function getFiltered(arr, f) { if(!f) return arr; return arr.filter(row => { for(var k in row) { if(k.charAt(0)==="_") continue; if(String(row[k]).toLowerCase().indexOf(f)!==-1) return true; } return false; }); }
+        function updateCheckAllState() { var fil=getFilteredData1(), t=fil.length, c=0; fil.forEach(i => { if(selectedIndexes.has(i._origIdx)) c++; }); checkAllCb.checked = (t>0 && c===t); checkAllCb.indeterminate = (c>0 && c<t); }
 
-/* ============ AUDIO ============ */
-function ensureAudioCtx() {
-  if (!state.audioCtx) {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    state.audioCtx = new AC();
-  }
-  if (state.audioCtx.state === 'suspended') state.audioCtx.resume().catch(()=>{});
-  return state.audioCtx;
-}
+        // ========== RENDER TABEL 1 ==========
+        function renderTable1() {
+            var frag = document.createDocumentFragment(), filtered = getFilteredData1(), total = 0;
+            if (!filtered.length && !data1.length) { 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML = '<td colspan="13"><div class="empty-state"><i class="fas fa-file-upload"></i><p>Belum ada data. Silakan upload file Excel/CSV.</p></div></td>'; 
+                frag.appendChild(tr); 
+            }
+            else if (!filtered.length) { 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML = '<td colspan="13"><div class="empty-state"><i class="fas fa-search"></i><p>Tidak ditemukan data yang sesuai dengan filter.</p></div></td>'; 
+                frag.appendChild(tr); 
+            }
+            else { 
+                for (var fi=0; fi<filtered.length; fi++) { 
+                    var row=filtered[fi], origIdx=row._origIdx; 
+                    total += parseFloat(row["Qty Transaksi"]) || 0; 
+                    var isC = selectedIndexes.has(origIdx); 
+                    var tr=document.createElement("tr"); 
+                    if(isC) tr.className = "selected-row"; 
+                    var tdCb=document.createElement("td"); 
+                    tdCb.className="col-check"; 
+                    var cb=document.createElement("input"); 
+                    cb.type="checkbox"; cb.className="cb-cell"; cb.dataset.idx=origIdx; 
+                    if(isC) cb.checked=true; 
+                    tdCb.appendChild(cb); 
+                    tr.appendChild(tdCb); 
+                    for (var ki=0; ki<KEYS_TAB1.length; ki++) { 
+                        var td=document.createElement("td"); 
+                        var key = KEYS_TAB1[ki];
+                        td.contentEditable="true"; 
+                        td.dataset.key=key; 
+                        td.dataset.idx=origIdx; 
+                        td.textContent=row[key]||""; 
+                        if (key === "Disetujui Pada") {
+                            td.style.fontWeight = "600";
+                            td.style.color = "var(--jt-red)";
+                        }
+                        tr.appendChild(td); 
+                    } 
+                    frag.appendChild(tr); 
+                } 
+            }
+            tbody1.innerHTML=""; tbody1.appendChild(frag); 
+            totalQty1El.textContent=total.toLocaleString("id-ID"); 
+            countBadge.textContent=data1.length; 
+            updateCheckAllState();
+            updateFilterInfoBanner();
+        }
 
-/* ============ UPLOAD FILE ============ */
-fileInput.addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('video/')) { showToast('File harus video', 'error'); return; }
-  if (state.isExternalSource) disconnectExternal(true);
+        // Event Delegasi Tab 1
+        tbody1.addEventListener("change", function(e) { 
+            if(e.target.type==="checkbox"){ 
+                var idx=parseInt(e.target.dataset.idx),tr=e.target.closest("tr"); 
+                if(e.target.checked){selectedIndexes.add(idx);tr.classList.add("selected-row");}
+                else{selectedIndexes.delete(idx);tr.classList.remove("selected-row");} 
+                updateCheckAllState();syncToTab2();syncToTab3();syncToTab4();syncToTab5(); 
+            } 
+        });
+        tbody1.addEventListener("focusout", function(e) { 
+            if(e.target.hasAttribute("contenteditable")){ 
+                var idx=parseInt(e.target.dataset.idx),key=e.target.dataset.key; 
+                if(data1[idx]!==undefined){ 
+                    data1[idx][key]=e.target.textContent; 
+                    if(key==="Qty Transaksi"){
+                        totalQty1El.textContent=calcTotal(data1,"Qty Transaksi").toLocaleString("id-ID");
+                        if(selectedIndexes.has(idx)){syncToTab2();syncToTab3();syncToTab4();syncToTab5();}
+                    } 
+                    if(key==="Catatan"&&selectedIndexes.has(idx)){syncToTab2();syncToTab4();syncToTab5();} 
+                    if(key==="Status Pengiriman"){ populatePengirimanDropdown(data1); } 
+                    if(key==="Teknisi Perbaikan"){
+                        populateTeknisiDropdown(data1); 
+                        if(selectedIndexes.has(idx)){syncToTab2();syncToTab4();syncToTab5();}
+                    } 
+                    if(key==="Return To Factory"||key==="Claim To Factory"){ renderTable1(); } 
+                    if(key==="Disetujui Pada"){ 
+                        if(selectedIndexes.has(idx)){ syncToTab5(); }
+                    }
+                } 
+            } 
+        });
 
-  showLoader('Memuat video...');
-  try {
-    const url = URL.createObjectURL(file);
-    uploadVideo.srcObject = null;
-    uploadVideo.muted = false;
-    uploadVideo.src = url;
-    uploadVideo.load();
+        // ========== SINKRONISASI ==========
+        function syncToTab2() { 
+            var fromTab1=[]; 
+            selectedIndexes.forEach(idx => { 
+                if(data1[idx]){ 
+                    var r=Object.assign({},data1[idx],{_sourceIdx:idx,_isNew:false}); 
+                    fromTab1.push(r); 
+                } 
+            }); 
+            var manual=data2.filter(r=>r._isNew); 
+            data2=fromTab1.concat(manual); 
+            selectedBadge.textContent=data2.length; 
+            renderTable2(); 
+        }
+        function syncToTab3() { 
+            var fromTab1=[]; 
+            selectedIndexes.forEach(idx => { 
+                if(data1[idx]){ 
+                    var src=data1[idx]; 
+                    var t2r=null; 
+                    for(var i=0; i<data2.length; i++){ 
+                        if(data2[i]._sourceIdx === idx) { t2r = data2[i]; break; } 
+                    } 
+                    var cs=(t2r&&t2r["Catatan"])?t2r["Catatan"]:(src["Catatan"]||""); 
+                    var r={
+                        _sourceIdx:idx,
+                        _isNew:false,
+                        "Part Demand / Part":(t2r&&t2r["Part"])?t2r["Part"]:(src["Part"]||""),
+                        "Lot":"",
+                        "Attribute":"",
+                        "QTY / Qty Transaksi":(t2r&&t2r["Qty Transaksi"])?t2r["Qty Transaksi"]:(src["Qty Transaksi"]||""),
+                        "QTY Konversi":"",
+                        "UM Konversi":"",
+                        "Remarks 1":"",
+                        "Remarks 2":"",
+                        "Nomor Service Job / Catatan":extractSjob(cs)
+                    }; 
+                    fromTab1.push(r); 
+                } 
+            }); 
+            var manual=data3.filter(r=>r._isNew); 
+            data3=fromTab1.concat(manual); 
+            demandBadge.textContent=data3.length; 
+            renderTable3(); 
+        }
+        function syncToTab4() { 
+            var fromTab1=[]; 
+            selectedIndexes.forEach(idx => { 
+                if(data1[idx]){ 
+                    var r=Object.assign({},data1[idx],{_sourceIdx:idx,_isNew:false}); 
+                    fromTab1.push(r); 
+                } 
+            }); 
+            var manual=data4.filter(r=>r._isNew); 
+            data4=fromTab1.concat(manual); 
+            stockBadge.textContent=data4.length; 
+            renderTable4(); 
+        }
+        
+        function syncToTab5() { 
+            var fromTab1=[]; 
+            selectedIndexes.forEach(idx => { 
+                if(data1[idx]){ 
+                    var src = data1[idx];
+                    var days = calculateDays(src["Disetujui Pada"]);
+                    
+                    var r=Object.assign({}, src, {
+                        _sourceIdx:idx,
+                        _isNew:false,
+                        "Lamanya Hari": days
+                    }); 
+                    fromTab1.push(r); 
+                } 
+            }); 
+            data5=fromTab1; 
+            stockBadge5.textContent=data5.length; 
+            renderTable5(); 
+        }
 
-    await new Promise((resolve, reject) => {
-      const done = () => { uploadVideo.onloadedmetadata=null; uploadVideo.onerror=null; resolve(); };
-      const fail = () => { uploadVideo.onloadedmetadata=null; uploadVideo.onerror=null; reject(new Error('Gagal memuat')); };
-      uploadVideo.onloadedmetadata = done;
-      uploadVideo.onerror = fail;
-      setTimeout(() => { if (uploadVideo.readyState < 1) fail(); }, 15000);
-    });
+        // ========== RENDER TABEL 2 ==========
+        function renderTable2() { 
+            var frag=document.createDocumentFragment(), filtered=getFiltered(data2,currentFilter2), total=0; 
+            if(!filtered.length && !data2.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="8"><div class="empty-state"><i class="fas fa-clipboard-list"></i><p>Belum ada data diproses.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else if(!filtered.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="8"><div class="empty-state"><i class="fas fa-search"></i><p>Tidak ditemukan.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else { 
+                for(var fi=0; fi<filtered.length; fi++){ 
+                    var row=filtered[fi]; 
+                    var ri = data2.indexOf(row); 
+                    total+=parseFloat(row["Qty Transaksi"])||0; 
+                    var tr=document.createElement("tr"); 
+                    if(row._isNew) tr.className="new-row"; 
+                    var tdN=document.createElement("td"); 
+                    tdN.className="no-urut"; 
+                    tdN.textContent=fi+1; 
+                    tr.appendChild(tdN); 
+                    for(var ki=1; ki<KEYS_TAB2.length; ki++){ 
+                        var td=document.createElement("td"); 
+                        td.contentEditable="true"; 
+                        td.dataset.key=KEYS_TAB2[ki]; 
+                        td.dataset.ridx=ri; 
+                        td.textContent=row[KEYS_TAB2[ki]]||""; 
+                        tr.appendChild(td); 
+                    } 
+                    var tdA=document.createElement("td"); 
+                    tdA.className="col-action"; 
+                    var btn=document.createElement("button"); 
+                    btn.className="btn-danger"; 
+                    btn.dataset.ridx=ri; 
+                    btn.innerHTML='<i class="fas fa-trash-alt"></i>'; 
+                    tdA.appendChild(btn); 
+                    tr.appendChild(tdA); 
+                    frag.appendChild(tr); 
+                } 
+            } 
+            tbody2.innerHTML=""; 
+            tbody2.appendChild(frag); 
+            totalQty2El.textContent=total.toLocaleString("id-ID"); 
+        }
+        
+        function renderTable3() { 
+            var frag=document.createDocumentFragment(), filtered=getFiltered(data3,currentFilter3), totalA=0; 
+            if(!filtered.length && !data3.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="11"><div class="empty-state"><i class="fas fa-exchange-alt"></i><p>Belum ada data SJOB.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else if(!filtered.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="11"><div class="empty-state"><i class="fas fa-search"></i><p>Tidak ditemukan.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else { 
+                for(var fi=0; fi<filtered.length; fi++){ 
+                    var row=filtered[fi]; 
+                    var ri = data3.indexOf(row); 
+                    totalA+=parseFloat(row["QTY / Qty Transaksi"])||0; 
+                    var tr=document.createElement("tr"); 
+                    if(row._isNew) tr.className="new-row"; 
+                    var tdN=document.createElement("td"); 
+                    tdN.className="no-urut"; 
+                    tdN.textContent=fi+1; 
+                    tr.appendChild(tdN); 
+                    for(var ki=1; ki<KEYS_TAB3.length; ki++){ 
+                        var td=document.createElement("td"); 
+                        td.contentEditable="true"; 
+                        td.dataset.key=KEYS_TAB3[ki]; 
+                        td.dataset.ridx3=ri; 
+                        td.textContent=row[KEYS_TAB3[ki]]||""; 
+                        tr.appendChild(td); 
+                    } 
+                    var tdA=document.createElement("td"); 
+                    tdA.className="col-action"; 
+                    var btn=document.createElement("button"); 
+                    btn.className="btn-danger"; 
+                    btn.dataset.ridx3=ri; 
+                    btn.innerHTML='<i class="fas fa-trash-alt"></i>'; 
+                    tdA.appendChild(btn); 
+                    tr.appendChild(tdA); 
+                    frag.appendChild(tr); 
+                } 
+            } 
+            tbody3.innerHTML=""; 
+            tbody3.appendChild(frag); 
+            totalQty3aEl.textContent=totalA.toLocaleString("id-ID"); 
+            demandBadge.textContent=data3.length; 
+        }
+        
+        function renderTable4() { 
+            var frag=document.createDocumentFragment(), filtered=getFiltered(data4,currentFilter4), total=0; 
+            if(!filtered.length && !data4.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="8"><div class="empty-state"><i class="fas fa-boxes"></i><p>Belum ada data surat jalan.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else if(!filtered.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="8"><div class="empty-state"><i class="fas fa-search"></i><p>Tidak ditemukan.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else { 
+                for(var fi=0; fi<filtered.length; fi++){ 
+                    var row=filtered[fi]; 
+                    var ri = data4.indexOf(row); 
+                    total+=parseFloat(row["Qty Reservasi"])||0; 
+                    var tr=document.createElement("tr"); 
+                    if(row._isNew) tr.className="new-row"; 
+                    var tdN=document.createElement("td"); 
+                    tdN.className="no-urut"; 
+                    tdN.textContent=fi+1; 
+                    tr.appendChild(tdN); 
+                    for(var ki=1; ki<KEYS_TAB4.length; ki++){ 
+                        var td=document.createElement("td"); 
+                        td.contentEditable="true"; 
+                        td.dataset.key=KEYS_TAB4[ki]; 
+                        td.dataset.ridx4=ri; 
+                        td.textContent=row[KEYS_TAB4[ki]]||""; 
+                        tr.appendChild(td); 
+                    } 
+                    var tdA=document.createElement("td"); 
+                    tdA.className="col-action"; 
+                    var btn=document.createElement("button"); 
+                    btn.className="btn-danger"; 
+                    btn.dataset.ridx4=ri; 
+                    btn.innerHTML='<i class="fas fa-trash-alt"></i>'; 
+                    tdA.appendChild(btn); 
+                    tr.appendChild(tdA); 
+                    frag.appendChild(tr); 
+                } 
+            } 
+            tbody4.innerHTML=""; 
+            tbody4.appendChild(frag); 
+            totalQty4El.textContent=total.toLocaleString("id-ID"); 
+        }
+        
+        // ========== RENDER TABEL 5 ==========
+        function renderTable5() { 
+            var frag=document.createDocumentFragment(), filtered=getFiltered(data5,currentFilter5), total=0; 
+            
+            if(!filtered.length && !data5.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="10"><div class="empty-state"><i class="fas fa-truck-loading"></i><p>Belum ada data tagihan return. Pilih data di Tab 1.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else if(!filtered.length){ 
+                var tr=document.createElement("tr"); 
+                tr.innerHTML='<td colspan="10"><div class="empty-state"><i class="fas fa-search"></i><p>Tidak ditemukan.</p></div></td>'; 
+                frag.appendChild(tr); 
+            } else { 
+                for(var fi=0; fi<filtered.length; fi++){ 
+                    var row=filtered[fi]; 
+                    var ri = data5.indexOf(row); 
+                    total+=parseFloat(row["Qty Reservasi"])||0; 
+                    var tr=document.createElement("tr"); 
+                    
+                    if(row._isNew) tr.className="new-row"; 
+                    
+                    var tdN=document.createElement("td"); 
+                    tdN.className="no-urut"; 
+                    tdN.textContent=fi+1; 
+                    tr.appendChild(tdN); 
+                    
+                    for(var ki=1; ki<KEYS_TAB5.length; ki++){ 
+                        var key=KEYS_TAB5[ki];
+                        var td=document.createElement("td"); 
+                        
+                        if(key === "Lamanya Hari") {
+                            td.className = "days-count";
+                            td.textContent = row[key] || ""; 
+                        } else {
+                            td.className = "read-only-cell"; 
+                            td.textContent = row[key]||""; 
+                        }
+                        tr.appendChild(td); 
+                    } 
+                    
+                    var tdA=document.createElement("td"); 
+                    tdA.className="col-action"; 
+                    var btn=document.createElement("button"); 
+                    btn.className="btn-danger"; 
+                    btn.dataset.ridx5=ri; 
+                    btn.title="Hapus baris ini";
+                    btn.innerHTML='<i class="fas fa-trash-alt"></i>'; 
+                    tdA.appendChild(btn); 
+                    tr.appendChild(tdA);
+                    
+                    frag.appendChild(tr); 
+                } 
+            } 
+            tbody5.innerHTML=""; 
+            tbody5.appendChild(frag); 
+            totalQty5El.textContent=total.toLocaleString("id-ID"); 
+        }
 
-    uploadPlaceholder.classList.add('hidden');
-    state.uploadReady = true;
-    state.isExternalSource = false;
-    state.activeInput = null;
+        // Event Delegasi Tab 2
+        tbody2.addEventListener("focusout", function(e) { 
+            if(e.target.hasAttribute("contenteditable")){ 
+                var ri=parseInt(e.target.dataset.ridx), k=e.target.dataset.key; 
+                if(data2[ri]!==undefined){ 
+                    data2[ri][k]=e.target.textContent; 
+                    if(k==="Qty Transaksi") totalQty2El.textContent=calcTotal(data2,"Qty Transaksi").toLocaleString("id-ID"); 
+                    if(k==="Catatan"||k==="Part") syncToTab3(); 
+                } 
+            } 
+        });
+        tbody2.addEventListener("click", function(e) { 
+            if(e.target.closest(".btn-danger")){ 
+                var ri=parseInt(e.target.closest(".btn-danger").dataset.ridx); 
+                var row=data2[ri]; 
+                if(row && row._sourceIdx !== undefined){ 
+                    selectedIndexes.delete(row._sourceIdx); 
+                    updateCheckAllState(); 
+                    renderTable1(); 
+                    syncToTab3(); 
+                    syncToTab4(); 
+                    syncToTab5(); 
+                } 
+                data2.splice(ri,1); 
+                selectedBadge.textContent=data2.length; 
+                renderTable2(); 
+                showToast("Baris berhasil dihapus.","danger"); 
+            } 
+        });
+        
+        tbody3.addEventListener("focusout", function(e) { 
+            if(e.target.hasAttribute("contenteditable")){ 
+                var ri=parseInt(e.target.dataset.ridx3), k=e.target.dataset.key; 
+                if(data3[ri]!==undefined){ 
+                    data3[ri][k]=e.target.textContent; 
+                    if(k==="QTY / Qty Transaksi") totalQty3aEl.textContent=calcTotal(data3,"QTY / Qty Transaksi").toLocaleString("id-ID"); 
+                } 
+            } 
+        });
+        tbody3.addEventListener("click", function(e) { 
+            if(e.target.closest(".btn-danger")){ 
+                var ri=parseInt(e.target.closest(".btn-danger").dataset.ridx3); 
+                var row=data3[ri]; 
+                if(row && row._sourceIdx !== undefined){ 
+                    selectedIndexes.delete(row._sourceIdx); 
+                    updateCheckAllState(); 
+                    renderTable1(); 
+                    syncToTab2(); 
+                    syncToTab4(); 
+                    syncToTab5(); 
+                } 
+                data3.splice(ri,1); 
+                demandBadge.textContent=data3.length; 
+                renderTable3(); 
+                showToast("Baris demand berhasil dihapus.","danger"); 
+            } 
+        });
+        
+        tbody4.addEventListener("focusout", function(e) { 
+            if(e.target.hasAttribute("contenteditable")){ 
+                var ri=parseInt(e.target.dataset.ridx4), k=e.target.dataset.key; 
+                if(data4[ri]!==undefined){ 
+                    data4[ri][k]=e.target.textContent; 
+                    if(k==="Qty Reservasi") totalQty4El.textContent=calcTotal(data4,"Qty Reservasi").toLocaleString("id-ID"); 
+                } 
+            } 
+        });
+        tbody4.addEventListener("click", function(e) { 
+            if(e.target.closest(".btn-danger")){ 
+                var ri=parseInt(e.target.closest(".btn-danger").dataset.ridx4); 
+                var row=data4[ri]; 
+                if(row && row._sourceIdx !== undefined){ 
+                    selectedIndexes.delete(row._sourceIdx); 
+                    updateCheckAllState(); 
+                    renderTable1(); 
+                    syncToTab2(); 
+                    syncToTab3(); 
+                    syncToTab5(); 
+                } 
+                data4.splice(ri,1); 
+                stockBadge.textContent=data4.length; 
+                renderTable4(); 
+                showToast("Baris surat jalan berhasil dihapus.","danger"); 
+            } 
+        });
 
-    ensureAudioCtx();
-    try {
-      if (!state.uploadSource) {
-        state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
-        state.uploadSource.connect(state.audioCtx.destination);
-      }
-    } catch(e) { console.warn('Audio routing gagal:', e); }
+        // Event Delegasi Tab 5
+        tbody5.addEventListener("click", function(e) { 
+            if(e.target.closest(".btn-danger")){ 
+                var ri=parseInt(e.target.closest(".btn-danger").dataset.ridx5); 
+                var row=data5[ri]; 
+                if(row && row._sourceIdx !== undefined){ 
+                    selectedIndexes.delete(row._sourceIdx); 
+                    updateCheckAllState(); 
+                    renderTable1(); 
+                    syncToTab2(); 
+                    syncToTab3(); 
+                    syncToTab4(); 
+                } 
+                data5.splice(ri,1); 
+                stockBadge5.textContent=data5.length; 
+                renderTable5(); 
+                showToast("Baris tagihan return berhasil dihapus.","danger"); 
+            } 
+        });
 
-    try {
-      uploadVideo.muted = false;
-      await uploadVideo.play();
-      showToast('📁 Video file dimuat', 'success');
-    } catch (err) {
-      uploadVideo.muted = true;
-      try { await uploadVideo.play(); } catch(e){}
-      showToast('Video dimuat — ketuk ▶ untuk audio');
-    }
+        // ========== EXPORTS ==========
+        // Tab 2
+        $("#excelBtn").addEventListener("click", function() { 
+            if(!data2.length){showToast("Tidak ada data.","danger");return;} 
+            var exp=[],gt=calcTotal(data2,"Qty Transaksi"); 
+            for(var i=0;i<data2.length;i++){
+                var r=data2[i]; 
+                exp.push({
+                    "No":i+1,
+                    "Catatan":r["Catatan"]||"",
+                    "Part":r["Part"]||"",
+                    "Qty Transaksi":r["Qty Transaksi"]||"",
+                    "Part Demand":r["Part Demand"]||"",
+                    "Serial Number":r["Serial Number"]||"",
+                    "Teknisi Perbaikan":r["Teknisi Perbaikan"]||""
+                });
+            } 
+            exp.push({"No":"","Catatan":"","Part":"TOTAL QTY","Qty Transaksi":gt,"Part Demand":"","Serial Number":"","Teknisi Perbaikan":""}); 
+            appendNotes(exp); 
+            var ws=XLSX.utils.json_to_sheet(exp); 
+            ws["!cols"]=[{wch:6},{wch:30},{wch:35},{wch:14},{wch:14},{wch:25},{wch:25}]; 
+            var wb=XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb,ws,"Data Sparepart"); 
+            XLSX.writeFile(wb,"Laporan Data Sparepart Bekas.xlsx"); 
+            showToast("File Excel berhasil diunduh.","success"); 
+        });
+        $("#pdfBtn").addEventListener("click", function() { 
+            if(!data2.length){showToast("Tidak ada data.","danger");return;} 
+            var doc=new jsPDF({orientation:"p",unit:"mm",format:"a4"}),pw=doc.internal.pageSize.getWidth(),mg={left:8,right:8},uw=pw-mg.left-mg.right,col=["No","Catatan","Part","Qty","Demand","Serial","Teknisi"],rows=[]; 
+            for(var i=0;i<data2.length;i++){var r=data2[i]; rows.push([String(i+1),String(r["Catatan"]||""),String(r["Part"]||""),String(r["Qty Transaksi"]||""),String(r["Part Demand"]||""),String(r["Serial Number"]||""),String(r["Teknisi Perbaikan"]||"")]);} 
+            doc.setFontSize(16); doc.setTextColor(30,41,59); doc.text("Laporan Data Sparepart Bekas",mg.left,18); 
+            doc.setFontSize(8); doc.setTextColor(100,116,139); doc.text("Dicetak: "+new Date().toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"}),mg.left,24); 
+            doc.autoTable({head:[col],body:rows,startY:28,margin:mg,styles:{font:"helvetica",fontStyle:"normal",fontSize:7,lineColor:[226,232,240],lineWidth:0.3,textColor:[51,65,85],cellPadding:2.5,overflow:"linebreak"},headStyles:{fillColor:[248,250,252],textColor:[30,41,59],fontStyle:"bold",fontSize:7.5,lineColor:[203,213,225],lineWidth:0.4,halign:"center",valign:"middle"},tableWidth:"auto",columnStyles:{0:{halign:"center",cellWidth:8},3:{halign:"center",cellWidth:10},4:{halign:"left",cellWidth:"auto"}},alternateRowStyles:{fillColor:[248,250,252]},theme:"grid"}); 
+            var fy=doc.lastAutoTable.finalY,gt=calcTotal(data2,"Qty Transaksi"); 
+            doc.setFontSize(9); doc.setTextColor(30,41,59); doc.setFont(undefined,"bold"); doc.text("TOTAL QTY:",uw-35,fy+7,{align:"right"}); 
+            doc.setTextColor(5,150,105); doc.text(String(gt),uw-8,fy+7,{align:"right"}); 
+            appendNotesPDF(doc,fy); 
+            doc.save("Laporan Data Sparepart Bekas.pdf"); 
+            showToast("File PDF berhasil diunduh.","success"); 
+        });
+        
+        // Tab 3
+        $("#excelBtn3").addEventListener("click", function() { 
+            if(!data3.length){showToast("Tidak ada data.","danger");return;} 
+            var exp=[]; 
+            for(var i=0;i<data3.length;i++){
+                var r=data3[i]; 
+                exp.push({
+                    "Part Demand":r["Part Demand / Part"]||"",
+                    "Lot":r["Lot"]||"",
+                    "Attribute":r["Attribute"]||"",
+                    "QTY":r["QTY / Qty Transaksi"]||"",
+                    "QTY Konversi":r["QTY Konversi"]||"",
+                    "UM Konversi":r["UM Konversi"]||"",
+                    "Remarks 1":r["Remarks 1"]||"",
+                    "Remarks 2":r["Remarks 2"]||"",
+                    "Nomor Service Job":r["Nomor Service Job / Catatan"]||""
+                });
+            } 
+            var ws=XLSX.utils.json_to_sheet(exp); 
+            ws["!cols"]=[{wch:35},{wch:18},{wch:18},{wch:14},{wch:18},{wch:16},{wch:20},{wch:20},{wch:30}]; 
+            var wb=XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb,ws,"Part Demand"); 
+            XLSX.writeFile(wb,"Data SJOB Part Bekas.xlsx"); 
+            showToast("File Excel berhasil diunduh.","success"); 
+        });
+        $("#pdfBtn3").addEventListener("click", function() { 
+            if(!data3.length){showToast("Tidak ada data.","danger");return;} 
+            var doc=new jsPDF({orientation:"l",unit:"mm",format:"a4"}),pw=doc.internal.pageSize.getWidth(),mg={left:8,right:8},uw=pw-mg.left-mg.right,col=["No","Part Demand / Part","Lot","Attribute","QTY","QTY Konv.","UM Konv.","Remarks 1","Remarks 2","No. Svc Job"],rows=[]; 
+            for(var i=0;i<data3.length;i++){var r=data3[i]; rows.push([String(i+1),String(r["Part Demand / Part"]||""),String(r["Lot"]||""),String(r["Attribute"]||""),String(r["QTY / Qty Transaksi"]||""),String(r["QTY Konversi"]||""),String(r["UM Konversi"]||""),String(r["Remarks 1"]||""),String(r["Remarks 2"]||""),String(r["Nomor Service Job / Catatan"]||"")]);} 
+            doc.setFontSize(16); doc.setTextColor(30,41,59); doc.text("Data SJOB Part Bekas",mg.left,16); 
+            doc.setFontSize(8); doc.setTextColor(100,116,139); doc.text("Dicetak: "+new Date().toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"}),mg.left,22); 
+            doc.autoTable({head:[col],body:rows,startY:26,margin:mg,styles:{font:"helvetica",fontStyle:"normal",fontSize:6.5,lineColor:[226,232,240],lineWidth:0.3,textColor:[51,65,85],cellPadding:2.5,overflow:"linebreak"},headStyles:{fillColor:[248,250,252],textColor:[30,41,59],fontStyle:"bold",fontSize:7,lineColor:[203,213,225],lineWidth:0.4,halign:"center",valign:"middle"},columnStyles:{0:{halign:"center",cellWidth:8},4:{halign:"center",cellWidth:14},5:{halign:"center",cellWidth:14}},alternateRowStyles:{fillColor:[248,250,252]},theme:"grid"}); 
+            var fy=doc.lastAutoTable.finalY,gtA=calcTotal(data3,"QTY / Qty Transaksi"),gtB=calcTotal(data3,"QTY Konversi"); 
+            doc.setFontSize(8); doc.setTextColor(30,41,59); doc.setFont(undefined,"bold"); doc.text("TOTAL QTY:",uw-80,fy+7,{align:"right"}); 
+            doc.setTextColor(5,150,105); doc.text(String(gtA),uw-60,fy+7,{align:"left"}); 
+            doc.setTextColor(30,41,59); doc.text("TOTAL KONV.:",uw-30,fy+7,{align:"right"}); 
+            doc.setTextColor(37,99,235); doc.text(String(gtB),uw-10,fy+7,{align:"left"}); 
+            doc.save("Data SJOB Part Bekast.pdf"); 
+            showToast("File PDF Part Demand berhasil diunduh.","success"); 
+        });
 
-    updatePlayPauseIcon();
-    updateProgressBar();
-    updateUploadBadge();
-    updateInputStatus();
-  } catch (err) {
-    showToast('Gagal: ' + err.message, 'error');
-  } finally {
-    hideLoader();
-  }
-});
+        // Tab 4 (SURAT JALAN)
+        $("#excelBtn4").addEventListener("click", function() { 
+            if(!data4.length){showToast("Tidak ada data.","danger");return;} 
+            var wb = XLSX.utils.book_new();
+            var wsData = [];
+            
+            wsData.push(["SURAT JALAN"]); wsData.push([]);
+            wsData.push(["Kepada Yth : Bp. MUHAMMAD FAUZI"]);
+            wsData.push(["D/a. Ktr. POLYTRON"]);
+            wsData.push(["SERVICE CENTER"]);
+            wsData.push(["JL. FRANS SEDA NO. 08 KOMPLEK RUKO ( RUKOKU )"]);
+            wsData.push(["KEL. FATULULI"]);
+            wsData.push(["KEC. OEBOBO - KOTA KUPANG"]);
+            wsData.push(["TELP. +62 813 2816 2259"]);
+            wsData.push([]); wsData.push(["Tanggal: " + new Date().toLocaleDateString("id-ID", {day:"numeric", month:"long", year:"numeric"})]); wsData.push([]);
+            wsData.push(["No", "Catatan", "Part", "Qty Reservasi", "Part Demand", "Serial Number", "Teknisi Perbaikan"]);
+            var gt=calcTotal(data4,"Qty Reservasi"); 
+            for(var i=0;i<data4.length;i++){var r=data4[i]; wsData.push([i+1, r["Catatan"]||"", r["Part"]||"", r["Qty Reservasi"]||"", r["Part Demand"]||"", r["Serial Number"]||"", r["Teknisi Perbaikan"]||""]);}
+            wsData.push(["", "", "TOTAL QTY", gt, "", "", ""]); wsData.push([]); 
+            wsData.push(["", "Dibuat oleh,", "Mengetahui,", "Expedisi,", "Diterima,"]);
+            wsData.push([]); wsData.push([]); wsData.push([]); 
+            wsData.push(["", "(.........................)", "(.........................)", "(.........................)", "(.........................)"]);
+            var ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws["!cols"]=[{wch:6},{wch:30},{wch:30},{wch:14},{wch:14},{wch:25},{wch:25}];
+            XLSX.utils.book_append_sheet(wb,ws,"Surat Jalan");
+            XLSX.writeFile(wb,"Surat Jalan.xlsx");
+            showToast("File Excel berhasil diunduh.","success"); 
+        });
 
-/* ============ PLAYBACK ============ */
-function updatePlayPauseIcon() { btnPlayPause.innerHTML = uploadVideo.paused ? ICON_PLAY : ICON_PAUSE; }
-function updateProgressBar() {
-  const dur = uploadVideo.duration;
-  if (!dur || !isFinite(dur)) { videoProgressFill.style.width = '0%'; return; }
-  videoProgressFill.style.width = (uploadVideo.currentTime / dur * 100) + '%';
-}
-async function togglePlayPause() {
-  if (!state.uploadReady) { showToast('Sambungkan sumber dulu', 'error'); return; }
-  if (state.wifi.mode === 'mjpeg') {
-    showToast('MJPEG stream berjalan otomatis');
-    return;
-  }
-  ensureAudioCtx();
-  if (uploadVideo.paused) {
-    if (uploadVideo.ended) uploadVideo.currentTime = 0;
-    uploadVideo.muted = false;
-    try { await uploadVideo.play(); } catch(e){ showToast('Gagal play', 'error'); }
-  } else uploadVideo.pause();
-}
-btnPlayPause.addEventListener('click', togglePlayPause);
-btnBack.addEventListener('click', () => {
-  if (!state.uploadReady || state.wifi.mode === 'mjpeg' || state.wifi.mode === 'hls') return;
-  uploadVideo.currentTime = Math.max(0, uploadVideo.currentTime - SEEK_STEP);
-  updateProgressBar();
-});
-btnNext.addEventListener('click', () => {
-  if (!state.uploadReady || state.wifi.mode === 'mjpeg' || state.wifi.mode === 'hls') return;
-  const d = uploadVideo.duration || 0;
-  uploadVideo.currentTime = Math.min(d, uploadVideo.currentTime + SEEK_STEP);
-  updateProgressBar();
-});
-btnStop.addEventListener('click', () => {
-  if (!state.uploadReady || state.wifi.mode === 'mjpeg' || state.wifi.mode === 'hls') return;
-  uploadVideo.pause();
-  uploadVideo.currentTime = 0;
-  updatePlayPauseIcon();
-  updateProgressBar();
-});
-uploadVideo.addEventListener('play', updatePlayPauseIcon);
-uploadVideo.addEventListener('pause', updatePlayPauseIcon);
-uploadVideo.addEventListener('timeupdate', updateProgressBar);
-uploadVideo.addEventListener('ended', () => {
-  updatePlayPauseIcon();
-  if (state.isRecording) { stopRecording(); showToast('Sumber selesai — rekaman berhenti', 'success'); return; }
-  if (state.isExternalSource) return;
-  uploadVideo.currentTime = 0;
-  uploadVideo.play().catch(()=>{});
-});
-videoProgress.addEventListener('click', e => {
-  if (!state.uploadReady || state.isExternalSource) return;
-  const rect = videoProgress.getBoundingClientRect();
-  const pct = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-  if (uploadVideo.duration && isFinite(uploadVideo.duration)) {
-    uploadVideo.currentTime = pct * uploadVideo.duration;
-    updateProgressBar();
-  }
-});
+        $("#pdfBtn4").addEventListener("click", function() { 
+            if(!data4.length){showToast("Tidak ada data.","danger");return;} 
+            var doc=new jsPDF({orientation:"p",unit:"mm",format:"a4"}), pw=doc.internal.pageSize.getWidth(), mg={left:12,right:12};
+            var col=["No","Catatan","Part","Qty","Demand","Serial","Teknisi"], rows=[]; 
+            
+            doc.setFontSize(18); doc.setTextColor(30,41,59); doc.setFont(undefined,"bold"); doc.text("SURAT JALAN", pw/2, 20, {align: "center"});
+            doc.setFontSize(11); doc.setFont(undefined,"bold"); doc.text("Kepada Yth : Bp. MUHAMMAD FAUZI", mg.left, 35);
+            doc.setFontSize(10); doc.setFont(undefined,"normal");
+            doc.text("D/a. Ktr. POLYTRON", mg.left, 41); doc.text("SERVICE CENTER", mg.left, 46);
+            doc.text("JL. FRANS SEDA NO. 08 KOMPLEK RUKO ( RUKOKU )", mg.left, 51);
+            doc.text("KEL. FATULULI", mg.left, 56); doc.text("KEC. OEBOBO - KOTA KUPANG", mg.left, 61);
+            doc.text("TELP. +62 813 2816 2259", mg.left, 66);
+            doc.setFontSize(10); doc.text("Tanggal: " + new Date().toLocaleDateString("id-ID", {day:"numeric", month:"long", year:"numeric"}), pw - mg.right, 66, {align: "right"});
+            doc.setDrawColor(200,200,200); doc.line(mg.left, 71, pw-mg.right, 71);
+            
+            for(var i=0;i<data4.length;i++){var r=data4[i]; rows.push([String(i+1),String(r["Catatan"]||""),String(r["Part"]||""),String(r["Qty Reservasi"]||""),String(r["Part Demand"]||""),String(r["Serial Number"]||""),String(r["Teknisi Perbaikan"]||"")]);} 
+            doc.autoTable({head:[col], body:rows, startY:74, margin:mg, styles:{font:"helvetica",fontStyle:"normal",fontSize:7,lineColor:[226,232,240],lineWidth:0.3,textColor:[51,65,85],cellPadding:2,overflow:"linebreak"}, headStyles:{fillColor:[240,240,240],textColor:[0,0,0],fontStyle:"bold",fontSize:8,lineColor:[200,200,200],halign:"center",valign:"middle"}, columnStyles:{0:{halign:"center",cellWidth:8},3:{halign:"center",cellWidth:14}}, theme:"grid"}); 
+            
+            var fy=doc.lastAutoTable.finalY, gt=calcTotal(data4,"Qty Reservasi"); 
+            var totX = mg.left + 58; 
+            doc.setFontSize(10); doc.setTextColor(30,41,59); doc.setFont(undefined,"bold"); 
+            doc.text("TOTAL QTY:", totX, fy+7, {align:"left"}); 
+            doc.setTextColor(5,150,105); doc.text(String(gt), totX + 25, fy+7, {align:"left"}); 
 
-/* ============ KUALITAS ============ */
-btnQuality.addEventListener('click', () => {
-  const i = QUALITY_ORDER.indexOf(state.quality);
-  const next = QUALITY_ORDER[(i + 1) % QUALITY_ORDER.length];
-  applyQuality(next);
-  showToast('Kualitas: ' + QUALITY_PRESETS[next].label);
-});
+            var closingY = fy + 18;
+            if(closingY > 260) { doc.addPage(); closingY = 20; }
+            doc.setFontSize(10); doc.setTextColor(30,41,59); doc.setFont(undefined,"normal");
+            doc.text("Demikian Surat Jalan ini kami buat untuk dapat dipergunakan sebagaimana mestinya.", mg.left, closingY);
+            doc.text("Atas perhatian dan kerja samanya kami ucapkan terima kasih.", mg.left, closingY + 5);
 
-/* ============ DRAW KE CANVAS ============ */
-function drawVideoCover(source, dx, dy, dw, dh) {
-  if (dw <= 0 || dh <= 0) return;
-  const vw = getSourceDim(source), vh = getSourceDimH(source);
-  if (!vw || !vh) { ctx.fillStyle = '#0d0d0f'; ctx.fillRect(dx, dy, dw, dh); return; }
-  const s0 = Math.max(dw / vw, dh / vh);
-  const sw = dw / s0, sh = dh / s0;
-  const sx = (vw - sw) / 2, sy = (vh - sh) / 2;
-  try { ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh); } catch(e) {}
-}
-function drawSplitLayout(W, H) {
-  const l = isLandscapeMode();
-  const uploadSrc = getUploadSource();
-  const first  = state.swapped ? uploadSrc : liveVideo;
-  const second = state.swapped ? liveVideo : uploadSrc;
-  if (l) {
-    const splitX = Math.max(1, Math.min(W - 1, Math.round(W * state.splitRatio)));
-    drawVideoCover(first, 0, 0, splitX, H);
-    drawVideoCover(second, splitX, 0, W - splitX, H);
-    ctx.fillStyle = 'rgba(255,255,255,.5)';
-    ctx.fillRect(splitX - 1, 0, 2, H);
-  } else {
-    const splitY = Math.max(1, Math.min(H - 1, Math.round(H * state.splitRatio)));
-    drawVideoCover(first, 0, 0, W, splitY);
-    drawVideoCover(second, 0, splitY, W, H - splitY);
-    ctx.fillStyle = 'rgba(255,255,255,.5)';
-    ctx.fillRect(0, splitY - 1, W, 2);
-  }
-}
-function startDrawLoop() {
-  if (state.drawRAF) return;
-  const tick = () => {
-    const W = canvas.width, H = canvas.height;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-    drawSplitLayout(W, H);
-    state.drawRAF = requestAnimationFrame(tick);
-  };
-  tick();
-}
-function stopDrawLoop() {
-  if (state.drawRAF) cancelAnimationFrame(state.drawRAF);
-  state.drawRAF = null;
-}
+            var signY = closingY + 20; 
+            if(signY > 250) { doc.addPage(); signY = 20; }
+            doc.setFontSize(10); doc.setTextColor(30,41,59); doc.setFont(undefined,"normal");
+            var signW = (pw - mg.left - mg.right) / 4;
+            var x1 = mg.left + (signW/2);
+            var x2 = mg.left + signW + (signW/2);
+            var x3 = mg.left + (2*signW) + (signW/2);
+            var x4 = mg.left + (3*signW) + (signW/2);
 
-/* ============ REKAM ============ */
-function waitForVideoDim(video, timeoutMs=1500) {
-  return new Promise(resolve => {
-    const start = Date.now();
-    const check = () => {
-      if (getSourceDim(video) > 0) return resolve(true);
-      if (Date.now() - start > timeoutMs) return resolve(false);
-      setTimeout(check, 50);
-    };
-    check();
-  });
-}
-async function startRecording() {
-  if (state.isRecording) return;
-  if (!state.stream) await startCamera(true);
-  if (!state.stream && !state.uploadReady) { showToast('Aktifkan kamera atau sambungkan sumber', 'error'); return; }
-  if (!('MediaRecorder' in window)) { showToast('Tidak didukung', 'error'); return; }
-  if (typeof canvas.captureStream !== 'function') { showToast('Tidak didukung', 'error'); return; }
-  ensureAudioCtx();
+            doc.text("Dibuat oleh,", x1, signY, {align:"center"});
+            doc.text("Mengetahui,", x2, signY, {align:"center"});
+            doc.text("Expedisi,", x3, signY, {align:"center"});
+            doc.text("Diterima,", x4, signY, {align:"center"});
 
-  if (state.uploadReady && !state.isExternalSource && uploadVideo.paused) {
-    if (uploadVideo.ended) uploadVideo.currentTime = 0;
-    try { uploadVideo.muted = false; await uploadVideo.play(); }
-    catch(e) { uploadVideo.muted = true; try { await uploadVideo.play(); } catch(e){} }
-  }
-  if (state.stream) await waitForVideoDim(liveVideo, 1500);
-  if (state.uploadReady) await waitForVideoDim(getUploadSource(), 1500);
-  applyQuality(state.quality);
+            var lineY = signY + 25;
+            doc.setDrawColor(150,150,150);
+            doc.line(x1-20, lineY, x1+20, lineY);
+            doc.line(x2-20, lineY, x2+20, lineY);
+            doc.line(x3-20, lineY, x3+20, lineY);
+            doc.line(x4-20, lineY, x4+20, lineY);
+            
+            doc.save("Surat Jalan.pdf"); 
+            showToast("File PDF berhasil diunduh.","success"); 
+        });
 
-  const videoStream = canvas.captureStream(30);
-  const tracks = [...videoStream.getVideoTracks()];
+        // Tab 5 (TAGIHAN RETURN) - Export Excel
+        $("#excelBtn5").addEventListener("click", function() { 
+            if(!data5.length){showToast("Tidak ada data.","danger");return;} 
+            var wb = XLSX.utils.book_new();
+            var wsData = [];
+            
+            wsData.push(["Tagihan SOB OPEN Sparepart Bekas"]); 
+            wsData.push([]);
+            wsData.push(["Tanggal: " + new Date().toLocaleDateString("id-ID", {day:"numeric", month:"long", year:"numeric"})]); 
+            wsData.push([]);
+            
+            wsData.push(["No", "Catatan", "Part", "Qty Reservasi", "Part Demand", "Serial Number", "Teknisi Perbaikan", "Lamanya Hari"]);
+            
+            var gt=calcTotal(data5,"Qty Reservasi"); 
+            for(var i=0;i<data5.length;i++){
+                var r=data5[i]; 
+                wsData.push([
+                    i+1, 
+                    r["Catatan"]||"", 
+                    r["Part"]||"", 
+                    r["Qty Reservasi"]||"", 
+                    r["Part Demand"]||"", 
+                    r["Serial Number"]||"", 
+                    r["Teknisi Perbaikan"]||"",
+                    r["Lamanya Hari"]||""
+                ]); 
+            }
+            wsData.push(["", "", "TOTAL QTY", gt, "", "", "", ""]); 
+            
+            var ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws["!cols"]=[{wch:6},{wch:30},{wch:30},{wch:14},{wch:14},{wch:25},{wch:25},{wch:15}];
+            
+            XLSX.utils.book_append_sheet(wb,ws,"Tagihan SOB OPEN Sparepart Bekas");
+            XLSX.writeFile(wb, buildFileName5("xlsx", false));
+            showToast("File Excel berhasil diunduh.","success"); 
+        });
 
-  if (state.audioCtx) {
-    const recDest = state.audioCtx.createMediaStreamDestination();
-    let hasAudio = false;
-    if (state.micSource) { state.micSource.connect(recDest); hasAudio = true; }
-    if (state.externalAudioSource) { state.externalAudioSource.connect(recDest); hasAudio = true; }
+        // Tab 5 (TAGIHAN RETURN) - Export PDF
+        $("#pdfBtn5").addEventListener("click", function() { 
+            if(!data5.length){showToast("Tidak ada data.","danger");return;} 
+            var doc=new jsPDF({orientation:"l", unit:"mm", format:"a4"}), pw=doc.internal.pageSize.getWidth(), mg={left:12, right:12}; 
+            
+            var col=["No","Catatan","Part","Qty","Demand","Serial","Teknisi","Lama Hari"], rows=[]; 
+            
+            doc.setFontSize(18); doc.setTextColor(30,41,59); doc.setFont(undefined,"bold"); doc.text("Tagihan SOB OPEN Sparepart Bekas", pw/2, 20, {align: "center"});
+            
+            doc.setFontSize(10); doc.setTextColor(100,116,139); doc.setFont(undefined,"normal");
+            doc.text("Tanggal: " + new Date().toLocaleDateString("id-ID", {day:"numeric", month:"long", year:"numeric"}), pw - mg.right, 20, {align: "right"});
+            
+            doc.setDrawColor(200,200,200); doc.line(mg.left, 26, pw-mg.right, 26);
+            
+            for(var i=0;i<data5.length;i++){
+                var r=data5[i]; 
+                rows.push([
+                    String(i+1),
+                    String(r["Catatan"]||""),
+                    String(r["Part"]||""),
+                    String(r["Qty Reservasi"]||""),
+                    String(r["Part Demand"]||""),
+                    String(r["Serial Number"]||""),
+                    String(r["Teknisi Perbaikan"]||""),
+                    String(r["Lamanya Hari"]||"")
+                ]);
+            } 
+            doc.autoTable({
+                head:[col], 
+                body:rows, 
+                startY:30, 
+                margin:mg, 
+                styles:{font:"helvetica",fontStyle:"normal",fontSize:7,lineColor:[226,232,240],lineWidth:0.3,textColor:[51,65,85],cellPadding:2,overflow:"linebreak"}, 
+                headStyles:{fillColor:[240,240,240],textColor:[0,0,0],fontStyle:"bold",fontSize:8,lineColor:[200,200,200],halign:"center",valign:"middle"}, 
+                columnStyles:{0:{halign:"center",cellWidth:8},3:{halign:"center",cellWidth:10},7:{halign:"center",cellWidth:15}}, 
+                theme:"grid"
+            }); 
+            
+            var fy=doc.lastAutoTable.finalY, gt=calcTotal(data5,"Qty Reservasi"); 
+            var totX = mg.left + 60; 
+            doc.setFontSize(10); doc.setTextColor(30,41,59); doc.setFont(undefined,"bold"); 
+            doc.text("TOTAL QTY:", totX, fy+7, {align:"left"}); 
+            doc.setTextColor(5,150,105); doc.text(String(gt), totX + 25, fy+7, {align:"left"}); 
+            
+            doc.save(buildFileName5("pdf", false)); 
+            showToast("File PDF berhasil diunduh.","success"); 
+        });
 
-    // Audio dari video element (file / HLS / video URL) — TIDAK untuk MJPEG & hardware external
-    const isMjpegOnly = state.isExternalSource && state.wifi.mode === 'mjpeg';
-    const isHardwareExt = state.isExternalSource && !state.wifi.mode;
-    if (state.uploadSource && state.uploadReady && !isMjpegOnly && !isHardwareExt) {
-      try { state.uploadSource.connect(recDest); hasAudio = true; } catch(e){}
-    }
-    if (hasAudio) { tracks.push(...recDest.stream.getAudioTracks()); state.recDest = recDest; }
-  }
+        // --- FITUR JPEG HD TAB 5 ---
+        $("#jpegBtn5").addEventListener("click", function() {
+            if(!data5.length){showToast("Tidak ada data untuk di-export.","danger");return;}
+            
+            showToast("Memproses gambar HD...", "info");
 
-  const combinedStream = new MediaStream(tracks);
-  const candidates = [
-    'video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4',
-    'video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'
-  ];
-  let mimeType = '';
-  for (const m of candidates) if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
-  if (!mimeType) { showToast('Format tidak didukung', 'error'); return; }
+            var container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.style.backgroundColor = '#ffffff';
+            container.style.padding = '40px';
+            container.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+            document.body.appendChild(container);
 
-  const p = QUALITY_PRESETS[state.quality];
-  try {
-    state.recordedChunks = [];
-    state.mediaRecorder = new MediaRecorder(combinedStream, {
-      mimeType, videoBitsPerSecond: p.bitrate, audioBitsPerSecond: 128000
-    });
-    state.previewMime = mimeType;
-    state.mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) state.recordedChunks.push(e.data); };
-    state.mediaRecorder.onstop = () => {
-      stopDrawLoop();
-      if (state.recDest) {
-        try {
-          if (state.micSource) state.micSource.disconnect(state.recDest);
-          if (state.externalAudioSource) state.externalAudioSource.disconnect(state.recDest);
-          if (state.uploadSource) state.uploadSource.disconnect(state.recDest);
-        } catch(e){}
-        state.recDest = null;
-      }
-      const baseType = mimeType.split(';')[0];
-      const blob = new Blob(state.recordedChunks, { type: baseType });
-      state.recordedChunks = [];
-      if (blob.size < 1000) { showToast('Rekaman kosong', 'error'); return; }
-      showPreview(blob);
-    };
-    startDrawLoop();
-    state.mediaRecorder.start(1000);
-    state.isRecording = true;
-    state.recStartTime = Date.now();
-    recBadge.classList.add('show');
-    btnRecord.classList.add('recording');
-    recText.textContent = 'Stop Rekam';
-    state.timerInterval = setInterval(updateRecTimer, 500);
-    updateRecTimer();
-    showToast('🔴 Merekam', 'success');
-  } catch (err) { showToast('Rekam gagal: ' + err.message, 'error'); }
-}
-function stopRecording() {
-  if (!state.isRecording) return;
-  state.isRecording = false;
-  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-    try { state.mediaRecorder.stop(); } catch(e){}
-  }
-  if (state.timerInterval) clearInterval(state.timerInterval);
-  state.timerInterval = null;
-  recBadge.classList.remove('show');
-  btnRecord.classList.remove('recording');
-  recText.textContent = 'Mulai Rekam';
-}
-function updateRecTimer() {
-  const sec = Math.floor((Date.now() - state.recStartTime) / 1000);
-  const mm = String(Math.floor(sec / 60)).padStart(2, '0');
-  const ss = String(sec % 60).padStart(2, '0');
-  recTimerEl.textContent = `${mm}:${ss}`;
-}
-btnRecord.addEventListener('click', () => { state.isRecording ? stopRecording() : startRecording(); });
+            var header = document.createElement('div');
+            header.style.marginBottom = '30px';
+            header.innerHTML = `
+                <h2 style="margin:0; font-size:32px; color:#1e293b; text-align:center; font-weight:800;">Tagihan SOB OPEN Sparepart Bekas</h2>
+                <p style="margin:10px 0 0 0; font-size:16px; color:#64748b; text-align:right;">Tanggal: ${new Date().toLocaleDateString("id-ID", {day:"numeric", month:"long", year:"numeric"})}</p>
+                <hr style="border:0; border-top:2px solid #e2e8f0; margin-top:15px;">
+            `;
+            container.appendChild(header);
 
-/* ============ PREVIEW / SIMPAN ============ */
-function showPreview(blob) {
-  if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
-  const url = URL.createObjectURL(blob);
-  state.previewBlob = blob;
-  state.previewUrl = url;
-  previewVideo.src = url;
-  previewInfo.textContent = `Ukuran: ${formatBytes(blob.size)} · Format: ${blob.type}`;
-  previewModal.classList.add('show');
-  setTimeout(() => previewVideo.play().catch(()=>{}), 100);
-}
-function closePreview() {
-  previewModal.classList.remove('show');
-  previewVideo.pause();
-  previewVideo.src = '';
-  if (state.previewUrl) { URL.revokeObjectURL(state.previewUrl); state.previewUrl = null; }
-  state.previewBlob = null;
-}
-async function saveToGallery() {
-  if (!state.previewBlob) return;
-  const baseType = state.previewMime.split(';')[0];
-  const ext = baseType.includes('mp4') ? 'mp4' : 'webm';
-  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-  const file = new File([state.previewBlob], `split-${stamp}.${ext}`, { type: baseType });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: 'Split Screen Video' });
-      showToast('Tersimpan ke galeri', 'success');
-      return;
-    } catch (err) {
-      if (err.name === 'AbortError') { showToast('Dibatalkan'); return; }
-    }
-  }
-  downloadFile();
-}
-function downloadFile() {
-  if (!state.previewBlob) return;
-  const baseType = state.previewMime.split(';')[0];
-  const ext = baseType.includes('mp4') ? 'mp4' : 'webm';
-  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-  const url = URL.createObjectURL(state.previewBlob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `split-${stamp}.${ext}`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-  showToast('File diunduh', 'success');
-}
-function formatBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-  return (b / 1048576).toFixed(1) + ' MB';
-}
-btnClosePreview.addEventListener('click', closePreview);
-btnSaveGallery.addEventListener('click', saveToGallery);
-btnDownload.addEventListener('click', downloadFile);
+            var table = document.createElement('table');
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+            
+            var thead = ['No','Catatan','Part','Qty','Demand','Serial','Teknisi','Lama Hari'];
+            var htmlHeader = '<thead><tr>';
+            thead.forEach(h => {
+                htmlHeader += `<th style="background-color:#f8fafc; color:#1e293b; font-weight:700; font-size:16px; padding:12px; border:1px solid #e2e8f0; text-align:center; text-transform:uppercase;">${h}</th>`;
+            });
+            htmlHeader += '</tr></thead>';
+            
+            var htmlBody = '<tbody>';
+            for(var i=0; i<data5.length; i++){
+                var r = data5[i];
+                htmlBody += '<tr>';
+                htmlBody += `<td style="text-align:center; padding:10px; border:1px solid #e2e8f0; font-size:15px;">${i+1}</td>`;
+                htmlBody += `<td style="padding:10px; border:1px solid #e2e8f0; font-size:15px;">${r["Catatan"]||""}</td>`;
+                htmlBody += `<td style="padding:10px; border:1px solid #e2e8f0; font-size:15px;">${r["Part"]||""}</td>`;
+                htmlBody += `<td style="text-align:center; padding:10px; border:1px solid #e2e8f0; font-size:15px;">${r["Qty Reservasi"]||""}</td>`;
+                htmlBody += `<td style="padding:10px; border:1px solid #e2e8f0; font-size:15px;">${r["Part Demand"]||""}</td>`;
+                htmlBody += `<td style="padding:10px; border:1px solid #e2e8f0; font-size:15px;">${r["Serial Number"]||""}</td>`;
+                htmlBody += `<td style="padding:10px; border:1px solid #e2e8f0; font-size:15px;">${r["Teknisi Perbaikan"]||""}</td>`;
+                htmlBody += `<td style="text-align:center; padding:10px; border:1px solid #e2e8f0; font-size:15px; background:#f8fafc; font-weight:600;">${r["Lamanya Hari"]||""}</td>`;
+                htmlBody += '</tr>';
+            }
+            htmlBody += '</tbody>';
 
-/* ============ RESIZE ============ */
-let resizeTimeout;
-function handleResize() {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(() => {
-    if (state.aspectMode === 'asli') updateDividerOrientation();
-    applySplitToLayout();
-    applyQuality(state.quality);
-  }, 150);
-}
-window.addEventListener('resize', handleResize);
-window.addEventListener('orientationchange', handleResize);
+            var gt = calcTotal(data5, "Qty Reservasi");
+            htmlBody += `<tfoot><tr>
+                <td colspan="3" style="text-align:right; padding:12px; font-weight:bold; font-size:16px; border:1px solid #e2e8f0;">TOTAL QTY</td>
+                <td style="text-align:center; padding:12px; font-weight:800; font-size:18px; color:#10b981; border:1px solid #e2e8f0; background:#ecfdf5;">${gt}</td>
+                <td colspan="4" style="border:1px solid #e2e8f0;"></td>
+            </tr></tfoot>`;
 
-/* ============ PERANGKAT BARU ============ */
-if (navigator.mediaDevices?.addEventListener) {
-  navigator.mediaDevices.addEventListener('devicechange', () => {
-    if (inputModal.classList.contains('show')) {
-      refreshDeviceList();
-      showToast('Perangkat berubah — daftar diperbarui');
-    }
-  });
-}
+            table.innerHTML = htmlHeader + htmlBody;
+            container.appendChild(table);
 
-/* ============ CLEANUP ============ */
-window.addEventListener('pagehide', () => {
-  if (state.stream) state.stream.getTracks().forEach(t => t.stop());
-  if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
-  if (state.externalStream) state.externalStream.getTracks().forEach(t => t.stop());
-  if (state.wifi.hls) { try { state.wifi.hls.destroy(); } catch(e){} }
-  if (state.isRecording) stopRecording();
-});
+            html2canvas(container, { 
+                scale: 2, 
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff"
+            }).then(function(canvas) {
+                document.body.removeChild(container);
+                var link = document.createElement('a');
+                link.download = buildFileName5("jpeg", true);
+                link.href = canvas.toDataURL('image/jpeg', 0.95); 
+                link.click();
+                showToast("File JPEG HD berhasil diunduh.", "success");
+            }).catch(function(err) {
+                document.body.removeChild(container);
+                showToast("Gagal membuat gambar: " + err.message, "danger");
+            });
+        });
 
-/* ============ INIT ============ */
-applyQuality('720');
-requestAnimationFrame(() => {
-  updateDividerOrientation();
-  applySplitToLayout();
-  applyQuality(state.quality);
-  updateUploadBadge();
-  updateInputStatus();
-  updatePlaceholderDevNames([]);
-});
-updatePlayPauseIcon();
-</script>
+        function appendNotes(exp) { 
+            var n=$$("#manualNotesContainer .note-input"),h=false; 
+            for(var i=0;i<n.length;i++){if(n[i].innerText.trim()){h=true;break;}} 
+            if(!h)return; 
+            exp.push({"No":"","Catatan":"","Part":"","Qty Transaksi":"","Part Demand":"","Serial Number":"","Teknisi Perbaikan":""}); 
+            exp.push({"No":"Keterangan:","Catatan":"","Part":"","Qty Transaksi":"","Part Demand":"","Serial Number":"","Teknisi Perbaikan":""}); 
+            for(var i=0;i<n.length;i++){
+                var t=n[i].innerText.trim();
+                if(t)exp.push({"No":(i+1)+".","Catatan":t,"Part":"","Qty Transaksi":"","Part Demand":"","Serial Number":"","Teknisi Perbaikan":""});
+            } 
+        }
+        function appendNotesPDF(doc,fy){
+            var n=$$("#manualNotesContainer .note-input"),nc=[];
+            for(var i=0;i<n.length;i++){var t=n[i].innerText.trim();if(t)nc.push((i+1)+". "+t);} 
+            if(!nc.length)return;
+            var cy=fy+18;
+            if(cy>260){doc.addPage();cy=20;} 
+            doc.setFontSize(10);doc.setTextColor(100,116,139);doc.setFont(undefined,"bold");doc.text("Keterangan Tambahan:",10,cy);
+            doc.setFontSize(8);doc.setTextColor(51,65,85);doc.setFont(undefined,"normal");
+            for(var i=0;i<nc.length;i++){cy+=6;if(cy>280){doc.addPage();cy=20;}doc.text(nc[i],10,cy);}
+        }
+
+        renderTable1(); renderTable2(); renderTable3(); renderTable4(); renderTable5();
+
+        // Fitur Cookie Banner J&T
+        document.getElementById('btnSetuju').addEventListener('click', function() {
+            document.getElementById('cookieBanner').style.display = 'none';
+            document.body.style.paddingBottom = '0';
+        });
+
+    })();
+    </script>
 </body>
 </html>
