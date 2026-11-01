@@ -1,1400 +1,298 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#000000" />
-  <title>Split Screen Recorder</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#000000" />
+<title>Split Screen Recorder — Multi Input</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#000;--panel:#0a0a0c;--border:rgba(255,255,255,.08);--surface:rgba(255,255,255,.06);--surface-hover:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.55);--accent:#6366f1;--accent-2:#8b5cf6;--green:#10b981;--red:#ef4444;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-font-smoothing:antialiased}
+.app{height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center}
+.phone-frame{position:relative;background:#000;display:flex;flex-direction:column;overflow:hidden;width:min(100vw,calc(100dvh*9/16));height:min(100dvh,calc(100vw*16/9))}
+.phone-frame.mode-16-9{width:min(100vw,calc(100dvh*16/9));height:min(100dvh,calc(100vw*9/16))}
+.phone-frame.mode-asli{width:100vw;height:100dvh}
+.video-area{flex:1 1 0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}
+.phone-frame.mode-16-9 .video-area{flex-direction:row}
+.screen{position:relative;flex:1 1 0;min-height:0;overflow:hidden;background:#0d0d0f;display:flex;align-items:center;justify-content:center}
+.screen video,.screen .wifi-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;display:block}
+.screen .wifi-img{display:none}
+.screen .wifi-img.active{display:block}
+.divider{flex:0 0 2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);z-index:20;position:relative;cursor:ns-resize;touch-action:none}
+.divider::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);pointer-events:none}
+.divider.vert{background:linear-gradient(180deg,transparent,rgba(255,255,255,.4),transparent);cursor:ew-resize}
+.badge{position:absolute;top:12px;left:12px;padding:5px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.8px;color:#fff;z-index:10;display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.15);pointer-events:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:background .2s}
+.badge.live{background:rgba(239,68,68,.85)}
+.badge.live .dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.5s ease-in-out infinite}
+.badge.upload{background:rgba(99,102,241,.85)}
+.badge.upload.connected{background:rgba(16,185,129,.85)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
 
-    :root {
-      --bg: #000;
-      --panel: #0a0a0c;
-      --border: rgba(255,255,255,0.08);
-      --surface: rgba(255,255,255,0.06);
-      --surface-hover: rgba(255,255,255,0.12);
-      --text: #fff;
-      --muted: rgba(255,255,255,0.55);
-      --accent: #6366f1;
-      --accent-2: #8b5cf6;
-      --green: #10b981;
-      --red: #ef4444;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --ticker-offset: 0px;
-    }
+.placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;text-align:center;padding:14px;pointer-events:none;transition:opacity .3s;z-index:5}
+.placeholder.hidden{opacity:0;pointer-events:none !important}
+.ph-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.75);letter-spacing:.5px}
+.source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;width:100%;max-width:300px;pointer-events:auto}
+.source-btn{padding:9px 6px;border-radius:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:background .2s,border-color .2s,transform .15s;font-family:inherit;backdrop-filter:blur(10px)}
+.source-btn .src-icon{font-size:18px;line-height:1}
+.source-btn .src-label{font-size:10px;font-weight:800;letter-spacing:.3px}
+.source-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+.source-btn:active{transform:scale(.95)}
+.source-btn.connected{background:rgba(16,185,129,.22);border-color:rgba(16,185,129,.6);color:#a7f3d0}
+.source-btn .dev-name{font-size:8px;font-weight:600;color:rgba(255,255,255,.5);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.source-file-btn{padding:9px 14px;border-radius:10px;border:1px solid rgba(99,102,241,.4);background:rgba(99,102,241,.2);color:#c7c9ff;font-size:10px;font-weight:700;cursor:pointer;pointer-events:auto;font-family:inherit;transition:background .2s}
+.source-file-btn:hover{background:rgba(99,102,241,.3)}
+.source-config-btn{padding:4px 10px;border:none;background:transparent;color:rgba(255,255,255,.45);font-size:10px;font-weight:600;cursor:pointer;pointer-events:auto;text-decoration:underline;font-family:inherit}
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-font-smoothing: antialiased;
-    }
+.video-progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.12);z-index:12;cursor:pointer}
+.video-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.control-panel{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--border);padding:12px 14px calc(12px + var(--safe-bottom));display:flex;flex-direction:column;gap:10px;z-index:25}
+.ctrl-row{display:flex;align-items:center;justify-content:center;gap:8px}
+.circle-btn{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .15s,background .2s}
+.circle-btn svg{width:18px;height:18px}
+.circle-btn:active{transform:scale(.9)}
+.circle-btn.primary{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
+.circle-btn.primary svg{width:22px;height:22px}
+.circle-btn:disabled{opacity:.3;pointer-events:none}
+.pill{padding:8px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:transform .15s,background .2s}
+.pill:active{transform:scale(.95)}
+.pill.active{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4);color:var(--green)}
+.pill.icon-only{padding:8px;width:34px;justify-content:center}
+.split-row{gap:6px}
+.split-label{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--muted)}
+.split-btn{flex:1 1 0;padding:7px 2px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:10px;font-weight:800;cursor:pointer;transition:transform .15s,background .2s,border-color .2s,color .2s}
+.split-btn.active{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.55);color:#c7c9ff}
+.swap-btn{flex:0 0 42px;padding:9px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s,color .2s}
+.swap-btn svg{width:14px;height:14px}
+.swap-btn.active{background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.55);color:var(--green)}
+.record-btn{width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#ff3366,#e60045);color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 20px rgba(255,51,102,.35);transition:transform .15s,background .25s}
+.record-btn:active{transform:scale(.97)}
+.record-btn:disabled{opacity:.5;pointer-events:none}
+.record-btn .rec-indicator{width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.6);transition:border-radius .25s}
+.record-btn.recording{background:linear-gradient(135deg,#2a2a2e,#1a1a1e)}
+.record-btn.recording .rec-indicator{border-radius:3px}
+.rec-badge{position:absolute;top:calc(12px + var(--safe-top));left:50%;transform:translateX(-50%) translateY(-10px);padding:7px 14px;border-radius:999px;background:rgba(239,68,68,.95);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;gap:7px;z-index:30;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+.rec-badge.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.rec-badge .rec-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1s ease-in-out infinite}
+input[type="file"]{display:none}
 
-    .app {
-      height: 100vh;
-      height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex}
+.modal-card{width:100%;max-width:420px;background:#16161a;border-radius:24px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;max-height:100%}
+.modal-header{padding:18px 20px;font-size:16px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header button{background:var(--surface);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:16px}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.modal-body video{width:100%;border-radius:14px;background:#000;max-height:55vh}
+.modal-info{font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.modal-actions{display:flex;gap:8px;flex-direction:column}
+.modal-actions .modal-btn{padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:700;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.modal-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.modal-btn.secondary{background:var(--surface);border:1px solid var(--border)}
 
-    .phone-frame {
-      position: relative;
-      background: #000;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+.input-list{display:flex;flex-direction:column;gap:8px}
+.input-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:10px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s,background .2s}
+.input-card.connected{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.5)}
+.input-card-head{display:flex;align-items:center;gap:10px}
+.input-icon{font-size:18px}
+.input-info{flex:1;min-width:0;text-align:left}
+.input-title{font-size:11px;font-weight:800;letter-spacing:.4px;color:#fff}
+.input-device{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.input-status{font-size:14px;color:var(--muted)}
+.input-card.connected .input-status{color:var(--green)}
+.input-controls{display:flex;gap:6px}
+.input-select{flex:1;min-width:0;padding:7px 8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-size:11px;font-family:inherit;outline:none}
+.input-select:focus{border-color:rgba(99,102,241,.6)}
+.input-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(99,102,241,.5);background:rgba(99,102,241,.2);color:#c7c9ff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:transform .15s}
+.input-btn:active{transform:scale(.95)}
+.input-card.connected .input-btn{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5);color:#fca5a5}
 
-    .phone-frame.mode-9-16 {
-      width: min(100vw, calc(100dvh * 9 / 16));
-      height: min(100dvh, calc(100vw * 16 / 9));
-    }
-    .phone-frame.mode-16-9 {
-      width: min(100vw, calc(100dvh * 16 / 9));
-      height: min(100dvh, calc(100vw * 9 / 16));
-    }
-    .phone-frame.mode-asli {
-      width: 100vw;
-      height: 100dvh;
-    }
+.wifi-form{display:flex;flex-direction:column;gap:10px}
+.wifi-form label{font-size:11px;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:.3px;text-align:left}
+.wifi-form input,.wifi-form select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.wifi-form input:focus,.wifi-form select:focus{border-color:rgba(99,102,241,.6)}
+.wifi-form input::placeholder{color:rgba(255,255,255,.35)}
+.wifi-examples{font-size:10px;line-height:1.7;color:rgba(255,255,255,.55);text-align:left;padding:8px 10px;background:rgba(99,102,241,.08);border-radius:8px;border:1px solid rgba(99,102,241,.2)}
+.wifi-examples b{color:rgba(255,255,255,.8)}
+.wifi-examples code{font-family:ui-monospace,monospace;color:#c7c9ff;font-size:10px;background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px}
+.wifi-status{font-size:11px;padding:8px 10px;border-radius:8px;text-align:center;display:none}
+.wifi-status.show{display:block}
+.wifi-status.ok{background:rgba(16,185,129,.2);color:#a7f3d0;border:1px solid rgba(16,185,129,.4)}
+.wifi-status.err{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
+.wifi-status.loading{background:rgba(99,102,241,.2);color:#c7c9ff;border:1px solid rgba(99,102,241,.4)}
 
-    .video-area {
-      flex: 1 1 0;
-      min-height: 0;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .phone-frame.mode-16-9 .video-area {
-      flex-direction: row;
-    }
-
-    .screen {
-      position: relative;
-      flex: 1 1 0;
-      min-height: 0;
-      overflow: hidden;
-      background: #0d0d0f;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .screen-live   { flex: 0.8 1 0; }
-    .screen-upload { flex: 1.2 1 0; }
-
-    .screen video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #000;
-      display: block;
-      touch-action: none;
-      cursor: grab;
-      will-change: width, height, left, top;
-    }
-    .screen video.grabbing { cursor: grabbing; }
-
-    .live-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      touch-action: none;
-      pointer-events: none;
-      z-index: 6;
-      will-change: width, height, left, top;
-    }
-
-    .pan-reset {
-      position: absolute;
-      right: 10px;
-      bottom: calc(12px + var(--ticker-offset));
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(0,0,0,0.55);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 7;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition: transform 0.15s, background 0.2s, opacity 0.2s;
-    }
-    .pan-reset svg { width: 16px; height: 16px; }
-    .pan-reset:active { transform: scale(0.9); }
-    .pan-reset:hover { background: rgba(0,0,0,0.75); }
-
-    .pan-hint {
-      position: absolute;
-      left: 50%;
-      bottom: calc(14px + var(--ticker-offset));
-      transform: translateX(-50%) translateY(6px);
-      padding: 6px 11px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      color: #fff;
-      background: rgba(0,0,0,0.65);
-      border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 7;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s, transform 0.3s;
-      white-space: nowrap;
-    }
-    .pan-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    .screen-tools {
-      position: absolute;
-      right: 10px;
-      bottom: calc(12px + var(--ticker-offset));
-      z-index: 9;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      pointer-events: none;
-    }
-    .screen-tools > * { pointer-events: auto; }
-
-    .tool-toggle {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(0,0,0,0.55);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition: transform 0.15s, background 0.2s;
-    }
-    .tool-toggle svg { width: 16px; height: 16px; }
-    .tool-toggle:active { transform: scale(0.9); }
-    .tool-toggle.open { background: rgba(99,102,241,0.85); border-color: transparent; }
-
-    .tool-panel {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      padding: 10px;
-      border-radius: 14px;
-      background: rgba(12,12,16,0.92);
-      border: 1px solid rgba(255,255,255,0.12);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.55);
-      animation: modalIn 0.18s ease;
-    }
-    .tool-panel.open { display: flex; }
-
-    .pos-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      width: 96px;
-    }
-    .pos-grid button {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.06);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: background 0.15s;
-    }
-    .pos-grid button::after {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.35);
-      transition: background 0.2s, transform 0.2s;
-    }
-    .pos-grid button:hover { background: rgba(255,255,255,0.15); }
-    .pos-grid button.active { background: rgba(99,102,241,0.25); border-color: rgba(99,102,241,0.6); }
-    .pos-grid button.active::after { background: var(--accent); transform: scale(1.5); }
-
-    .tool-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .tool-row button {
-      width: 26px; height: 26px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.06);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 700;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 0.12s, background 0.2s;
-    }
-    .tool-row button:hover { background: rgba(255,255,255,0.15); }
-    .tool-row button:active { transform: scale(0.9); }
-    .tool-row button svg { width: 13px; height: 13px; }
-    .zoom-label {
-      flex: 1;
-      text-align: center;
-      font-size: 10px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      color: rgba(255,255,255,0.8);
-      letter-spacing: 0.3px;
-    }
-
-    .divider {
-      flex: 0 0 2px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-      z-index: 20;
-      position: relative;
-      cursor: ns-resize;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .divider::before {
-      content: '';
-      position: absolute;
-      left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      width: 64px; height: 44px;
-      background: transparent;
-    }
-    .divider::after {
-      content: '';
-      position: absolute;
-      left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.16);
-      border: 1px solid rgba(255,255,255,0.32);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-      pointer-events: none;
-      transition: transform 0.15s, background 0.2s, border-color 0.2s;
-      z-index: 1;
-    }
-    .divider:hover::after,
-    .divider.dragging::after {
-      background: rgba(99,102,241,0.55);
-      border-color: rgba(139,92,246,0.7);
-      transform: translate(-50%, -50%) scale(1.15);
-    }
-    .divider.vert {
-      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.4), transparent);
-      cursor: ew-resize;
-    }
-    .divider.vert::before { width: 44px; height: 64px; }
-
-    .split-pct {
-      position: absolute;
-      left: calc(50% + 22px);
-      top: 50%;
-      transform: translateY(-50%);
-      padding: 4px 8px;
-      border-radius: 8px;
-      background: rgba(99,102,241,0.95);
-      color: #fff;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.3px;
-      font-variant-numeric: tabular-nums;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s;
-      z-index: 2;
-      white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .divider.dragging .split-pct { opacity: 1; }
-
-    .badge {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      padding: 5px 10px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.8px;
-      color: #fff;
-      z-index: 10;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.15);
-      pointer-events: none;
-    }
-    .badge.live { background: rgba(239,68,68,0.85); }
-    .badge.live .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #fff;
-      animation: pulseDot 1.5s ease-in-out infinite;
-    }
-    .badge.upload { background: rgba(99,102,241,0.85); }
-
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: 0.4; transform: scale(0.8); }
-    }
-
-    .rec-badge {
-      position: absolute;
-      top: calc(12px + var(--safe-top));
-      left: 50%;
-      transform: translateX(-50%) translateY(-10px);
-      padding: 7px 14px;
-      border-radius: 999px;
-      background: rgba(239,68,68,0.95);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.6px;
-      font-variant-numeric: tabular-nums;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      z-index: 30;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s, transform 0.25s;
-      box-shadow: 0 4px 24px rgba(239,68,68,0.5);
-    }
-    .rec-badge.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .rec-badge .rec-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #fff;
-      animation: pulseDot 1s ease-in-out infinite;
-    }
-
-    .placeholder {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-      padding: 20px;
-      pointer-events: none;
-      transition: opacity 0.3s;
-      z-index: 5;
-    }
-    .placeholder svg {
-      width: 40px; height: 40px;
-      opacity: 0.4;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.5;
-    }
-    .placeholder.hidden { opacity: 0; }
-
-    .video-progress {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 3px;
-      background: rgba(255,255,255,0.12);
-      z-index: 12;
-      cursor: pointer;
-      transition: height 0.2s;
-    }
-    .video-progress:hover { height: 5px; }
-    .video-progress-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      transition: width 0.1s linear;
-      box-shadow: 0 0 8px rgba(99,102,241,0.6);
-    }
-
-    .control-panel {
-      flex: 0 0 auto;
-      background: var(--panel);
-      border-top: 1px solid var(--border);
-      padding: 12px 14px calc(12px + var(--safe-bottom));
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 25;
-      overflow-y: auto;
-      max-height: 55vh;
-    }
-
-    .ctrl-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .circle-btn {
-      width: 42px; height: 42px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.15s, background 0.2s, opacity 0.2s;
-    }
-    .circle-btn svg { width: 18px; height: 18px; }
-    .circle-btn:active { transform: scale(0.9); }
-    .circle-btn:disabled { opacity: 0.3; pointer-events: none; }
-    .circle-btn:hover { background: var(--surface-hover); }
-    .circle-btn.primary {
-      width: 52px; height: 52px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      border-color: transparent;
-      box-shadow: 0 4px 16px rgba(99,102,241,0.4);
-    }
-    .circle-btn.primary svg { width: 22px; height: 22px; }
-
-    .pill {
-      padding: 8px 12px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      transition: transform 0.15s, background 0.2s, opacity 0.2s;
-      white-space: nowrap;
-    }
-    .pill svg { width: 14px; height: 14px; }
-    .pill:active { transform: scale(0.95); }
-    .pill:disabled { opacity: 0.35; pointer-events: none; }
-    .pill:hover { background: var(--surface-hover); }
-    .pill.active {
-      background: rgba(16,185,129,0.15);
-      border-color: rgba(16,185,129,0.4);
-      color: var(--green);
-    }
-    .pill.bg-active {
-      background: rgba(139,92,246,0.18);
-      border-color: rgba(139,92,246,0.5);
-      color: #c4b5fd;
-    }
-    .pill.icon-only { padding: 8px; width: 34px; justify-content: center; }
-
-    .split-row {
-      gap: 6px;
-      padding: 0 2px;
-    }
-    .split-label {
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-right: 2px;
-    }
-    .split-btn {
-      flex: 1 1 0;
-      padding: 7px 2px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 10px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      cursor: pointer;
-      transition: transform 0.15s, background 0.2s, border-color 0.2s, color 0.2s;
-    }
-    .split-btn:hover { background: var(--surface-hover); }
-    .split-btn:active { transform: scale(0.94); }
-    .split-btn.active {
-      background: rgba(99,102,241,0.2);
-      border-color: rgba(99,102,241,0.55);
-      color: #c7c9ff;
-    }
-
-    /* ====== EXPAND BUTTONS ====== */
-    .expand-row { gap: 6px; padding: 0 2px; }
-    .expand-btn {
-      flex: 1 1 0;
-      padding: 9px 4px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.3px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      transition: transform 0.15s, background 0.2s, border-color 0.2s, color 0.2s;
-      white-space: nowrap;
-      position: relative;
-    }
-    .expand-btn:hover { background: var(--surface-hover); }
-    .expand-btn:active { transform: scale(0.94); }
-    .expand-btn.open {
-      background: rgba(99,102,241,0.2);
-      border-color: rgba(99,102,241,0.55);
-      color: #c7c9ff;
-    }
-    .expand-btn .expand-icon { font-size: 12px; }
-    .expand-btn .expand-value {
-      font-variant-numeric: tabular-nums;
-      color: #c7c9ff;
-    }
-    .expand-btn .expand-dot {
-      position: absolute;
-      top: 4px;
-      right: 5px;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--green);
-      display: none;
-    }
-    .expand-btn.has-value .expand-dot { display: block; }
-
-    /* ====== SWAP QUICK BUTTON ====== */
-    .expand-btn.swap-quick {
-      flex: 0 0 42px;
-      padding: 9px 6px;
-      font-size: 14px;
-    }
-    .expand-btn.swap-quick.active {
-      background: rgba(16,185,129,0.2);
-      border-color: rgba(16,185,129,0.55);
-      color: var(--green);
-    }
-    .expand-btn.swap-quick svg { width: 14px; height: 14px; }
-
-    /* ====== SWAP IN PANEL ====== */
-    .swap-full-btn {
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.3px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: 100%;
-      transition: transform 0.15s, background 0.2s, border-color 0.2s;
-    }
-    .swap-full-btn:hover { background: var(--surface-hover); }
-    .swap-full-btn:active { transform: scale(0.97); }
-    .swap-full-btn.active {
-      background: rgba(16,185,129,0.18);
-      border-color: rgba(16,185,129,0.5);
-      color: var(--green);
-    }
-    .swap-full-btn svg { width: 14px; height: 14px; }
-
-    .expand-panel {
-      display: none;
-      padding-top: 2px;
-      animation: panelIn 0.18s ease;
-    }
-    .expand-panel.open { display: block; }
-    @keyframes panelIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ====== TICKER ====== */
-    .ticker-row { gap: 6px; }
-    .ticker-input {
-      flex: 1 1 0;
-      min-width: 0;
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 11px;
-      font-weight: 600;
-      outline: none;
-      transition: border-color 0.2s, background 0.2s;
-      font-family: inherit;
-    }
-    .ticker-input:focus {
-      border-color: rgba(99,102,241,0.6);
-      background: rgba(255,255,255,0.1);
-    }
-    .ticker-input::placeholder { color: var(--muted); }
-
-    .ticker-btn {
-      flex: 0 0 auto;
-      width: 34px; height: 34px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 11px;
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.12s, background 0.2s;
-    }
-    .ticker-btn:hover { background: var(--surface-hover); }
-    .ticker-btn:active { transform: scale(0.9); }
-
-    .ticker-overlay {
-      position: absolute;
-      left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7);
-      overflow: hidden;
-      z-index: 15;
-      pointer-events: none;
-      display: none;
-    }
-    .ticker-overlay.show { display: block; }
-    .ticker-track {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-    }
-    .ticker-item {
-      position: absolute;
-      left: 0;
-      top: 50%;
-      white-space: nowrap;
-      font-weight: 800;
-      color: #fff;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
-      will-change: transform;
-      font-family: -apple-system, system-ui, sans-serif;
-    }
-
-    .ticker-speed-row {
-      padding-top: 6px;
-      gap: 8px;
-    }
-    .ticker-speed-icon {
-      font-size: 15px;
-      flex: 0 0 auto;
-      user-select: none;
-      line-height: 1;
-    }
-    .ticker-speed-range {
-      flex: 1 1 0;
-      min-width: 0;
-      height: 6px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: rgba(255,255,255,0.12);
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
-    }
-    .ticker-speed-range::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 0 8px rgba(99,102,241,0.7);
-      margin-top: -5px;
-      transition: transform 0.15s;
-    }
-    .ticker-speed-range::-webkit-slider-thumb:active { transform: scale(1.2); }
-    .ticker-speed-range::-moz-range-thumb {
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 0 8px rgba(99,102,241,0.7);
-    }
-    .ticker-speed-range::-webkit-slider-runnable-track {
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(255,255,255,0.12);
-    }
-    .ticker-speed-range::-moz-range-track {
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(255,255,255,0.12);
-    }
-    .ticker-speed-value {
-      flex: 0 0 auto;
-      font-size: 10px;
-      font-weight: 800;
-      color: #c7c9ff;
-      font-variant-numeric: tabular-nums;
-      min-width: 34px;
-      text-align: center;
-      padding: 3px 6px;
-      border-radius: 6px;
-      background: rgba(99,102,241,0.18);
-      border: 1px solid rgba(99,102,241,0.35);
-    }
-
-    .record-btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 14px;
-      border: none;
-      background: linear-gradient(135deg, #ff3366, #e60045);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: transform 0.15s, background 0.25s, box-shadow 0.25s;
-      box-shadow: 0 4px 20px rgba(255,51,102,0.35);
-      margin-top: 2px;
-    }
-    .record-btn:active { transform: scale(0.97); }
-    .record-btn:disabled { opacity: 0.5; pointer-events: none; }
-    .record-btn .rec-indicator {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      background: #fff;
-      transition: border-radius 0.25s;
-      box-shadow: 0 0 8px rgba(255,255,255,0.6);
-    }
-    .record-btn.recording {
-      background: linear-gradient(135deg, #2a2a2e, #1a1a1e);
-      animation: recPulse 1.5s infinite;
-    }
-    .record-btn.recording .rec-indicator { border-radius: 3px; }
-
-    @keyframes recPulse {
-      0%, 100% { box-shadow: 0 4px 20px rgba(239,68,68,0.3); }
-      50%      { box-shadow: 0 4px 24px rgba(239,68,68,0.7); }
-    }
-
-    input[type="file"] { display: none; }
-
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      padding-top: calc(16px + var(--safe-top));
-      padding-bottom: calc(16px + var(--safe-bottom));
-    }
-    .modal.show { display: flex; }
-
-    .modal-card {
-      width: 100%;
-      max-width: 420px;
-      background: #16161a;
-      border-radius: 24px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      max-height: 100%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-      animation: modalIn 0.25s ease;
-    }
-    @keyframes modalIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
-    .modal-header {
-      padding: 18px 20px;
-      font-size: 16px;
-      font-weight: 700;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .modal-header button {
-      background: var(--surface);
-      border: none;
-      color: var(--muted);
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-    .modal-header button:hover { background: var(--surface-hover); }
-    .modal-header button svg { width: 16px; height: 16px; }
-
-    .modal-body {
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      overflow-y: auto;
-    }
-    .modal-body video {
-      width: 100%;
-      border-radius: 14px;
-      background: #000;
-      max-height: 55vh;
-    }
-    .modal-info {
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-    }
-    .modal-actions {
-      display: flex;
-      gap: 8px;
-      flex-direction: column;
-    }
-    .modal-actions .modal-btn {
-      padding: 14px;
-      border-radius: 14px;
-      border: none;
-      font-size: 14px;
-      font-weight: 700;
-      color: #fff;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: transform 0.15s, opacity 0.2s;
-    }
-    .modal-actions .modal-btn:active { transform: scale(0.97); }
-    .modal-actions .modal-btn svg { width: 18px; height: 18px; }
-    .modal-btn.primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      box-shadow: 0 4px 16px rgba(99,102,241,0.4);
-    }
-    .modal-btn.secondary {
-      background: var(--surface);
-      border: 1px solid var(--border);
-    }
-
-    .bg-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-    .bg-option {
-      aspect-ratio: 16 / 10;
-      border-radius: 12px;
-      border: 2px solid rgba(255,255,255,0.12);
-      background: #1a1a1e;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 800;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      position: relative;
-      transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-    }
-    .bg-option:hover { transform: translateY(-1px); }
-    .bg-option.active {
-      border-color: #a78bfa;
-      box-shadow: 0 0 0 3px rgba(139,92,246,0.25);
-    }
-    .bg-option.off-bg { background: #131316; color: var(--muted); }
-    .bg-option.blur-bg { background: linear-gradient(135deg, #4b5563, #1f2937); }
-
-    .bg-upload-label {
-      padding: 14px;
-      border-radius: 14px;
-      background: var(--surface);
-      border: 1px dashed rgba(255,255,255,0.25);
-      color: var(--text);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      transition: background 0.2s;
-    }
-    .bg-upload-label:hover { background: var(--surface-hover); }
-    .bg-upload-label svg { width: 18px; height: 18px; }
-
-    .toast {
-      position: fixed;
-      bottom: calc(240px + var(--safe-bottom));
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: rgba(30,30,35,0.98);
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 14px;
-      font-size: 13px;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      box-shadow: 0 12px 32px rgba(0,0,0,0.6);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s, transform 0.25s;
-      z-index: 200;
-      max-width: 85%;
-      text-align: center;
-      backdrop-filter: blur(20px);
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast.error { background: rgba(239,68,68,0.95); }
-    .toast.success { background: rgba(16,185,129,0.95); }
-
-    .loader {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 14px;
-      z-index: 50;
-      color: #fff;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .loader.show { display: flex; }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid rgba(255,255,255,0.15);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .hidden { display: none !important; }
-
-    @media (max-height: 700px) {
-      .control-panel { padding: 8px 12px calc(8px + var(--safe-bottom)); gap: 8px; }
-      .circle-btn { width: 38px; height: 38px; }
-      .circle-btn.primary { width: 46px; height: 46px; }
-      .pill { padding: 7px 10px; font-size: 10px; }
-      .record-btn { padding: 12px; font-size: 13px; }
-      .split-btn { padding: 6px 2px; font-size: 9px; }
-      .expand-btn { padding: 8px 3px; font-size: 9px; }
-    }
-  </style>
+.toast{position:fixed;bottom:calc(40px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,35,.98);color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-weight:600;border:1px solid var(--border);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:200;max-width:85%;text-align:center;backdrop-filter:blur(20px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.error{background:rgba(239,68,68,.95)}
+.toast.success{background:rgba(16,185,129,.95)}
+.loader{position:absolute;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;color:#fff;font-size:13px;font-weight:600}
+.loader.show{display:flex}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+@media (max-height:700px){
+  .source-btn{padding:7px 5px}
+  .source-btn .src-icon{font-size:15px}
+  .source-btn .src-label{font-size:9px}
+  .source-grid{gap:5px}
+}
+</style>
 </head>
 <body>
-
 <div class="app">
-  <div class="phone-frame mode-9-16" id="phoneFrame">
+  <div class="phone-frame" id="phoneFrame">
     <div class="video-area" id="videoArea">
-
-      <div class="screen screen-live" id="liveScreen">
-        <span class="badge live">
-          <span class="dot"></span>
-          LIVE
-        </span>
+      <div class="screen" id="liveScreen">
+        <span class="badge live"><span class="dot"></span>LIVE</span>
         <video id="liveVideo" autoplay playsinline muted></video>
-        <canvas class="live-canvas" id="liveCanvas"></canvas>
         <div class="placeholder" id="livePlaceholder">
-          <svg viewBox="0 0 24 24">
-            <path d="M23 7l-7 5 7 5V7z"/>
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-          </svg>
+          <svg viewBox="0 0 24 24" style="width:40px;height:40px;opacity:.4;stroke:currentColor;fill:none;stroke-width:1.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           <span>Kamera belum aktif</span>
         </div>
-
-        <div class="pan-hint" id="liveHint">✋ Geser · cubit untuk zoom</div>
-
-        <div class="screen-tools hidden" id="liveTools">
-          <div class="tool-panel" data-panel>
-            <div class="pos-grid" data-grid></div>
-            <div class="tool-row">
-              <button type="button" data-zoom="-" title="Zoom out">−</button>
-              <span class="zoom-label" data-zoom-label>1.0×</span>
-              <button type="button" data-zoom="+" title="Zoom in">+</button>
-              <button type="button" data-reset title="Reset tampilan">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 12a9 9 0 1 0 3-6.7"/>
-                  <polyline points="3 4 3 10 9 10"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <button class="tool-toggle" type="button" data-toggle title="Atur posisi & zoom">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="5 9 2 12 5 15"/>
-              <polyline points="9 5 12 2 15 5"/>
-              <polyline points="15 19 12 22 9 19"/>
-              <polyline points="19 9 22 12 19 15"/>
-              <line x1="2" y1="12" x2="22" y2="12"/>
-              <line x1="12" y1="2" x2="12" y2="22"/>
-            </svg>
-          </button>
-        </div>
       </div>
-
-      <div class="divider" id="divider" title="Geser untuk atur ukuran LIVE / UPLOAD">
-        <span class="split-pct" id="splitPct">40% / 60%</span>
-      </div>
-
-      <div class="screen screen-upload" id="uploadScreen">
-        <span class="badge upload">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          UPLOAD
-        </span>
+      <div class="divider" id="divider"></div>
+      <div class="screen" id="uploadScreen">
+        <span class="badge upload" id="uploadBadge">UPLOAD</span>
         <video id="uploadVideo" playsinline preload="metadata"></video>
+        <img id="wifiImg" class="wifi-img" alt="" />
+
         <div class="placeholder" id="uploadPlaceholder">
-          <svg viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          <span>Upload video dari galeri HP<br>lalu geser / cubit untuk atur</span>
-        </div>
-
-        <div class="pan-hint" id="uploadHint">✋ Geser · cubit untuk zoom</div>
-
-        <div class="screen-tools hidden" id="uploadTools">
-          <div class="tool-panel" data-panel>
-            <div class="pos-grid" data-grid></div>
-            <div class="tool-row">
-              <button type="button" data-zoom="-" title="Zoom out">−</button>
-              <span class="zoom-label" data-zoom-label>1.0×</span>
-              <button type="button" data-zoom="+" title="Zoom in">+</button>
-              <button type="button" data-reset title="Reset tampilan">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 12a9 9 0 1 0 3-6.7"/>
-                  <polyline points="3 4 3 10 9 10"/>
-                </svg>
-              </button>
-            </div>
+          <div class="ph-title">📺 PILIH SUMBER INPUT</div>
+          <div class="source-grid">
+            <button class="source-btn" data-input="hdmi1">
+              <span class="src-icon">🔌</span>
+              <span class="src-label">HDMI 1</span>
+              <span class="dev-name" data-devname="hdmi1">—</span>
+            </button>
+            <button class="source-btn" data-input="hdmi2">
+              <span class="src-icon">🔌</span>
+              <span class="src-label">HDMI 2</span>
+              <span class="dev-name" data-devname="hdmi2">—</span>
+            </button>
+            <button class="source-btn" data-input="av">
+              <span class="src-icon">📼</span>
+              <span class="src-label">VIDEO IN + LINE</span>
+              <span class="dev-name" data-devname="av">—</span>
+            </button>
+            <button class="source-btn" data-input="rgb">
+              <span class="src-icon">🖥</span>
+              <span class="src-label">RGB</span>
+              <span class="dev-name" data-devname="rgb">—</span>
+            </button>
+            <button class="source-btn" data-input="usb">
+              <span class="src-icon">💾</span>
+              <span class="src-label">USB</span>
+              <span class="dev-name" data-devname="usb">—</span>
+            </button>
+            <button class="source-btn" data-input="wifi">
+              <span class="src-icon">📶</span>
+              <span class="src-label">WIFI / HOTSPOT</span>
+              <span class="dev-name" data-devname="wifi">—</span>
+            </button>
           </div>
-          <button class="tool-toggle" type="button" data-toggle title="Atur posisi & zoom">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="5 9 2 12 5 15"/>
-              <polyline points="9 5 12 2 15 5"/>
-              <polyline points="15 19 12 22 9 19"/>
-              <polyline points="19 9 22 12 19 15"/>
-              <line x1="2" y1="12" x2="22" y2="12"/>
-              <line x1="12" y1="2" x2="12" y2="22"/>
-            </svg>
-          </button>
+          <button class="source-file-btn" id="placeholderUploadBtn">📁 Upload dari Galeri</button>
+          <button class="source-config-btn" id="btnConfigureInputs">⚙ Atur Perangkat</button>
         </div>
 
-        <div class="video-progress" id="videoProgress">
-          <div class="video-progress-fill" id="videoProgressFill"></div>
-        </div>
+        <div class="video-progress" id="videoProgress"><div class="video-progress-fill" id="videoProgressFill"></div></div>
       </div>
-
-      <div class="ticker-overlay" id="tickerOverlay">
-        <div class="ticker-track" id="tickerTrack">
-          <span class="ticker-item"></span>
-          <span class="ticker-item"></span>
-        </div>
-      </div>
-
-    </div><!-- /video-area -->
-
-    <div class="rec-badge" id="recBadge">
-      <span class="rec-dot"></span>
-      <span id="recTimer">00:00</span>
     </div>
-
+    <div class="rec-badge" id="recBadge"><span class="rec-dot"></span><span id="recTimer">00:00</span></div>
     <div class="control-panel">
-
       <div class="ctrl-row">
-        <button class="circle-btn" id="btnBack" title="Mundur 5 detik">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-        </button>
-        <button class="circle-btn primary" id="btnPlayPause" title="Play/Pause">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button class="circle-btn" id="btnNext" title="Maju 5 detik">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-        </button>
-        <button class="circle-btn" id="btnStop" title="Stop video">
-          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-        </button>
+        <button class="circle-btn" id="btnBack" title="Mundur 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+        <button class="circle-btn primary" id="btnPlayPause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="circle-btn" id="btnNext" title="Maju 5s"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+        <button class="circle-btn" id="btnStop" title="Stop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
       </div>
-
       <div class="ctrl-row">
-        <button class="pill" id="btnStartCam">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 7l-7 5 7 5V7z"/>
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-          </svg>
-          Kamera
-        </button>
-        <button class="pill icon-only hidden" id="btnSwitchCam" title="Ganti kamera">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="17 1 21 5 17 9"/>
-            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-            <polyline points="7 23 3 19 7 15"/>
-            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-          </svg>
-        </button>
-        <button class="pill" id="btnMic">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line x1="8" y1="23" x2="16" y2="23"/>
-          </svg>
-          Mic
-        </button>
-        <button class="pill" id="btnBg" title="Ganti background LIVE">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
-            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
-            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
-            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
-            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
-          </svg>
-          BG
-        </button>
-        <button class="pill" id="btnUpload">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Upload
-        </button>
-        <button class="pill" id="btnQuality">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-            <line x1="1" y1="14" x2="7" y2="14"/>
-            <line x1="9" y1="8" x2="15" y2="8"/>
-            <line x1="17" y1="16" x2="23" y2="16"/>
-          </svg>
-          <span id="qualityLabel">HD</span>
-        </button>
+        <button class="pill" id="btnStartCam">📷 Kamera</button>
+        <button class="pill icon-only hidden" id="btnSwitchCam" title="Ganti kamera">🔄</button>
+        <button class="pill" id="btnMic">🎤 Mic</button>
+        <button class="pill" id="btnUpload">📺 Sumber</button>
+        <button class="pill" id="btnQuality"><span id="qualityLabel">HD</span></button>
       </div>
-
-      <div class="ctrl-row expand-row">
-        <button class="expand-btn" data-expand="split" id="expandSplitBtn" type="button">
-          <span class="expand-icon">📐</span>
-          <span>Split</span>
-          <span class="expand-value" id="expandSplitLabel">40%</span>
-          <span class="expand-dot"></span>
-        </button>
-        <button class="expand-btn" data-expand="aspect" id="expandAspectBtn" type="button">
-          <span class="expand-icon">📱</span>
-          <span>Rasio</span>
-          <span class="expand-value" id="expandAspectLabel">9:16</span>
-          <span class="expand-dot"></span>
-        </button>
-        <button class="expand-btn" data-expand="ticker" id="expandTickerBtn" type="button">
-          <span class="expand-icon">📝</span>
-          <span>Teks</span>
-          <span class="expand-value" id="expandTickerLabel"></span>
-          <span class="expand-dot"></span>
-        </button>
-        <button class="expand-btn swap-quick" id="btnSwapScreens" type="button" title="Tukar posisi LIVE ↔ UPLOAD">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="7 4 12 9 17 4"/>
-            <polyline points="7 20 12 15 17 20"/>
-            <line x1="12" y1="9" x2="12" y2="15"/>
-          </svg>
-        </button>
+      <div class="ctrl-row split-row">
+        <span class="split-label">SPLIT</span>
+        <button class="split-btn" data-split="0">0%</button>
+        <button class="split-btn" data-split="0.3">30%</button>
+        <button class="split-btn" data-split="0.5">50%</button>
+        <button class="split-btn" data-split="0.7">70%</button>
+        <button class="split-btn" data-split="1">100%</button>
+        <button class="swap-btn" id="btnSwap" title="Tukar LIVE ↔ SUMBER"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="7 4 12 9 17 4"/><polyline points="7 20 12 15 17 20"/><line x1="12" y1="9" x2="12" y2="15"/></svg></button>
       </div>
-
-      <div class="expand-panel" data-panel-for="split">
-        <div class="ctrl-row split-row">
-          <span class="split-label">SPLIT</span>
-          <button class="split-btn" data-split="0">0%</button>
-          <button class="split-btn" data-split="0.3">30%</button>
-          <button class="split-btn" data-split="0.5">50%</button>
-          <button class="split-btn" data-split="0.7">70%</button>
-          <button class="split-btn" data-split="1">100%</button>
-        </div>
-        <div class="ctrl-row" style="padding-top: 6px;">
-          <button class="swap-full-btn" id="btnSwapFull" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="17 1 21 5 17 9"/>
-              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-              <polyline points="7 23 3 19 7 15"/>
-              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-            </svg>
-            <span id="swapFullText">Tukar Posisi LIVE ↔ UPLOAD</span>
-          </button>
-        </div>
+      <div class="ctrl-row split-row">
+        <span class="split-label">RASIO</span>
+        <button class="split-btn" data-aspect="asli">ASLI</button>
+        <button class="split-btn" data-aspect="16:9">16:9</button>
+        <button class="split-btn active" data-aspect="9:16">9:16</button>
       </div>
-
-      <div class="expand-panel" data-panel-for="aspect">
-        <div class="ctrl-row split-row">
-          <span class="split-label">RASIO</span>
-          <button class="split-btn" data-aspect="asli">ASLI</button>
-          <button class="split-btn" data-aspect="16:9">16:9</button>
-          <button class="split-btn active" data-aspect="9:16">9:16</button>
-        </div>
-      </div>
-
-      <div class="expand-panel" data-panel-for="ticker">
-        <div class="ctrl-row ticker-row">
-          <input type="text" id="tickerInput" class="ticker-input" placeholder="Teks berjalan di bawah..." maxlength="200">
-          <button class="ticker-btn" id="tickerSizeDown" title="Perkecil teks">A−</button>
-          <button class="ticker-btn" id="tickerSizeUp" title="Perbesar teks">A+</button>
-          <button class="pill icon-only" id="tickerToggle" title="Tampilkan ticker">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-          </button>
-        </div>
-        <div class="ctrl-row ticker-row ticker-speed-row">
-          <span class="ticker-speed-icon" title="Lambat">🐢</span>
-          <input type="range" id="tickerSpeedRange" class="ticker-speed-range"
-                 min="30" max="500" step="10" value="100" title="Atur kecepatan teks">
-          <span class="ticker-speed-icon" title="Cepat">🐇</span>
-          <span class="ticker-speed-value" id="tickerSpeedValue">100</span>
-        </div>
-      </div>
-
       <button class="record-btn" id="btnRecord">
         <span class="rec-indicator"></span>
         <span class="rec-text">Mulai Rekam</span>
       </button>
-
     </div>
-
-    <div class="loader" id="loader">
-      <div class="spinner"></div>
-      <span id="loaderText">Memproses...</span>
-    </div>
-
+    <div class="loader" id="loader"><div class="spinner"></div><span id="loaderText">Memproses...</span></div>
   </div>
 </div>
 
 <input type="file" id="fileInput" accept="video/*" />
 
-<div class="modal" id="bgModal">
-  <div class="modal-card">
-    <div class="modal-header">
-      <span>🎨 Ganti Background</span>
-      <button id="btnCloseBgModal">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="bg-grid" id="bgGrid">
-        <button class="bg-option off-bg" data-bg="off">🚫 Nonaktif</button>
-        <button class="bg-option blur-bg" data-bg="blur">💨 Blur</button>
-        <button class="bg-option" data-bg="gradient1" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">Gradient</button>
-        <button class="bg-option" data-bg="gradient2" style="background:linear-gradient(135deg,#f97316,#ec4899)">Sunset</button>
-        <button class="bg-option" data-bg="gradient3" style="background:linear-gradient(135deg,#10b981,#06b6d4)">Ocean</button>
-        <button class="bg-option" data-bg="gradient4" style="background:linear-gradient(135deg,#1f2937,#111827)">Dark</button>
-      </div>
-      <label class="bg-upload-label">
-        <input type="file" id="bgImageInput" accept="image/*" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5"/>
-          <polyline points="21 15 16 10 5 21"/>
-        </svg>
-        Upload Gambar Background
-      </label>
-      <div class="modal-info" id="bgInfo">Ganti latar belakang video LIVE — orang tetap terlihat, background disamarkan.</div>
-    </div>
-  </div>
-</div>
-
 <div class="modal" id="previewModal">
   <div class="modal-card">
-    <div class="modal-header">
-      <span>✅ Hasil Rekaman</span>
-      <button id="btnClosePreview">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
+    <div class="modal-header"><span>✅ Hasil Rekaman</span><button id="btnClosePreview">✕</button></div>
     <div class="modal-body">
       <video id="previewVideo" controls playsinline></video>
       <div class="modal-info" id="previewInfo"></div>
       <div class="modal-actions">
-        <button class="modal-btn primary" id="btnSaveGallery">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          Simpan ke Galeri
-        </button>
-        <button class="modal-btn secondary" id="btnDownload">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Unduh File
-        </button>
+        <button class="modal-btn primary" id="btnSaveGallery">Simpan ke Galeri</button>
+        <button class="modal-btn secondary" id="btnDownload">Unduh File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="inputModal">
+  <div class="modal-card">
+    <div class="modal-header"><span>⚙ Atur Perangkat Input</span><button id="btnCloseInputModal">✕</button></div>
+    <div class="modal-body">
+      <div class="input-list" id="inputList"></div>
+      <div class="modal-info" id="inputHint">Pilih perangkat untuk tiap slot input. Khusus WiFi/Hotspot, klik "Atur URL Stream".</div>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="btnDisconnectInput">⏏ Putuskan Semua</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="wifiModal">
+  <div class="modal-card">
+    <div class="modal-header"><span>📶 Sambung via Hotspot / WiFi</span><button id="btnCloseWifiModal">✕</button></div>
+    <div class="modal-body">
+      <div class="wifi-form">
+        <label>URL Kamera / Stream</label>
+        <input type="url" id="wifiUrlInput" placeholder="http://192.168.1.100:8080/video" autocomplete="off" inputmode="url" />
+        <label>Tipe Stream</label>
+        <select id="wifiTypeSelect">
+          <option value="auto">Deteksi Otomatis (disarankan)</option>
+          <option value="mjpeg">MJPEG (IP Webcam / DroidCam)</option>
+          <option value="hls">HLS (.m3u8)</option>
+          <option value="video">Video File URL (.mp4 / .webm)</option>
+        </select>
+      </div>
+      <div class="wifi-status" id="wifiStatus"></div>
+      <div class="wifi-examples">
+        <b>Contoh URL MJPEG:</b><br>
+        IP Webcam: <code>http://192.168.1.x:8080/video</code><br>
+        DroidCam: <code>http://192.168.1.x:4747/video</code><br>
+        Iriun/EpocCam: cek URL di aplikasi<br>
+        <b>HLS:</b> <code>http://192.168.1.x/live.m3u8</code><br>
+        <b>Video:</b> <code>http://server/file.mp4</code><br><br>
+        ⚠️ HP ini & HP kamera harus di WiFi/Hotspot yang sama.
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn primary" id="btnConnectWifi">📶 Hubungkan</button>
+        <button class="modal-btn secondary" id="btnTestWifi">🔍 Tes Koneksi</button>
+        <button class="modal-btn secondary" id="btnDisconnectWifi">⏏ Putuskan WiFi</button>
       </div>
     </div>
   </div>
@@ -1403,782 +301,83 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============================================================
-   KONFIGURASI
-   ============================================================ */
+/* ============ KONFIG ============ */
 const QUALITY_PRESETS = {
-  '480':  { w: 540,  bitrate: 2_000_000, label: 'SD'  },
-  '720':  { w: 720,  bitrate: 4_000_000, label: 'HD'  },
-  '1080': { w: 1080, bitrate: 8_000_000, label: 'FHD' }
+  '480':  { w: 540,  bitrate: 2000000, label: 'SD'  },
+  '720':  { w: 720,  bitrate: 4000000, label: 'HD'  },
+  '1080': { w: 1080, bitrate: 8000000, label: 'FHD' }
 };
-const QUALITY_ORDER = ['480', '720', '1080'];
+const QUALITY_ORDER = ['480','720','1080'];
 const SEEK_STEP = 5;
-const DEFAULT_SPLIT = 0.40;
-const MIN_SPLIT = 0.0;
-const MAX_SPLIT = 1.0;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 6;
-const AUTO_STOP_ON_UPLOAD_END = true;
-const LOOP_UPLOAD_PREVIEW = true;
 
-const BG_GRADIENTS = {
-  gradient1: ['#6366f1', '#8b5cf6'],
-  gradient2: ['#f97316', '#ec4899'],
-  gradient3: ['#10b981', '#06b6d4'],
-  gradient4: ['#1f2937', '#111827'],
-};
+const INPUT_KINDS = [
+  { id: 'hdmi1', label: 'HDMI 1 INPUT',          short: 'HDMI 1',   icon: '🔌' },
+  { id: 'hdmi2', label: 'HDMI 2 INPUT',          short: 'HDMI 2',   icon: '🔌' },
+  { id: 'av',    label: 'VIDEO IN + LINE IN R/L', short: 'VIDEO IN', icon: '📼', audio: true },
+  { id: 'rgb',   label: 'RGB INPUT',             short: 'RGB',      icon: '🖥' },
+  { id: 'usb',   label: 'USB INPUT',             short: 'USB',      icon: '💾' },
+  { id: 'wifi',  label: 'HOTSPOT / WIFI',        short: 'WIFI',     icon: '📶', special: 'url' },
+];
+const INPUT_LABELS = Object.fromEntries(INPUT_KINDS.map(k => [k.id, k.short]));
+const WIFI_LAST_URL_KEY = 'wifi_last_url';
 
-/* ============================================================
-   STATE
-   ============================================================ */
+/* ============ STATE ============ */
 const state = {
   stream: null, facingMode: 'user',
   micStream: null, micEnabled: false,
   uploadReady: false, isRecording: false,
+  isExternalSource: false, activeInput: null,
+  externalStream: null, externalAudioSource: null,
   audioCtx: null, micSource: null, uploadSource: null,
   mediaRecorder: null, recordedChunks: [], recDest: null,
   recStartTime: 0, timerInterval: null, drawRAF: null,
-  quality: '720',
-  aspectMode: '9:16',
-  splitRatio: DEFAULT_SPLIT,
-  swapped: false,
-  views: {
-    live:   { zoom: 1, panX: 0.5, panY: 0.5 },
-    upload: { zoom: 1, panX: 0.5, panY: 0.5 }
-  },
+  quality: '720', aspectMode: '9:16', splitRatio: 0.4, swapped: false,
   previewBlob: null, previewUrl: null, previewMime: '',
-  bg: {
-    mode: 'off',
-    image: null
-  },
-  ticker: {
-    text: '',
-    size: 24,
-    enabled: false,
-    speed: 100,
-    color: '#ffffff',
-    startTime: Date.now()
-  }
+  wifi: { mode: null, url: '', hls: null }
 };
 
-/* ============================================================
-   ELEMENTS
-   ============================================================ */
+/* ============ ELEMEN ============ */
 const $ = id => document.getElementById(id);
-const liveVideo         = $('liveVideo');
-const uploadVideo       = $('uploadVideo');
-const liveScreen        = $('liveScreen');
-const uploadScreen      = $('uploadScreen');
-const videoArea         = $('videoArea');
-const phoneFrame        = $('phoneFrame');
-const livePlaceholder   = $('livePlaceholder');
-const uploadPlaceholder = $('uploadPlaceholder');
-const btnStartCam       = $('btnStartCam');
-const btnSwitchCam      = $('btnSwitchCam');
-const btnMic            = $('btnMic');
-const btnBg             = $('btnBg');
-const btnUpload         = $('btnUpload');
-const btnQuality        = $('btnQuality');
-const btnRecord         = $('btnRecord');
-const fileInput         = $('fileInput');
-const recBadge          = $('recBadge');
-const recTimerEl        = $('recTimer');
-const loader            = $('loader');
-const loaderText        = $('loaderText');
-const toast             = $('toast');
-const previewModal      = $('previewModal');
-const previewVideo      = $('previewVideo');
-const previewInfo       = $('previewInfo');
-const btnClosePreview   = $('btnClosePreview');
-const btnSaveGallery    = $('btnSaveGallery');
-const btnDownload       = $('btnDownload');
-const qualityLabel      = $('qualityLabel');
-const recText           = btnRecord.querySelector('.rec-text');
-const splitPct          = $('splitPct');
-const divider           = $('divider');
-const bgModal           = $('bgModal');
-const btnCloseBgModal   = $('btnCloseBgModal');
-const bgImageInput      = $('bgImageInput');
-const bgInfoEl          = $('bgInfo');
+const liveVideo = $('liveVideo'), uploadVideo = $('uploadVideo'), wifiImg = $('wifiImg');
+const liveScreen = $('liveScreen'), uploadScreen = $('uploadScreen');
+const videoArea = $('videoArea'), phoneFrame = $('phoneFrame');
+const livePlaceholder = $('livePlaceholder'), uploadPlaceholder = $('uploadPlaceholder');
+const divider = $('divider');
+const btnPlayPause = $('btnPlayPause'), btnBack = $('btnBack'), btnNext = $('btnNext'), btnStop = $('btnStop');
+const videoProgress = $('videoProgress'), videoProgressFill = $('videoProgressFill');
+const btnStartCam = $('btnStartCam'), btnSwitchCam = $('btnSwitchCam'), btnMic = $('btnMic');
+const btnUpload = $('btnUpload'), btnQuality = $('btnQuality'), btnSwap = $('btnSwap'), btnRecord = $('btnRecord');
+const fileInput = $('fileInput');
+const recBadge = $('recBadge'), recTimerEl = $('recTimer');
+const loader = $('loader'), loaderText = $('loaderText'), toast = $('toast');
+const previewModal = $('previewModal'), previewVideo = $('previewVideo'), previewInfo = $('previewInfo');
+const btnClosePreview = $('btnClosePreview'), btnSaveGallery = $('btnSaveGallery'), btnDownload = $('btnDownload');
+const qualityLabel = $('qualityLabel');
+const recText = btnRecord.querySelector('.rec-text');
+const uploadBadge = $('uploadBadge');
+const inputModal = $('inputModal'), inputList = $('inputList');
+const btnCloseInputModal = $('btnCloseInputModal'), btnDisconnectInput = $('btnDisconnectInput');
+const placeholderUploadBtn = $('placeholderUploadBtn'), btnConfigureInputs = $('btnConfigureInputs');
+const wifiModal = $('wifiModal'), wifiUrlInput = $('wifiUrlInput'), wifiTypeSelect = $('wifiTypeSelect');
+const btnCloseWifiModal = $('btnCloseWifiModal'), btnConnectWifi = $('btnConnectWifi');
+const btnTestWifi = $('btnTestWifi'), btnDisconnectWifi = $('btnDisconnectWifi'), wifiStatus = $('wifiStatus');
 
-const btnPlayPause      = $('btnPlayPause');
-const btnBack           = $('btnBack');
-const btnNext           = $('btnNext');
-const btnStop           = $('btnStop');
-const videoProgress     = $('videoProgress');
-const videoProgressFill = $('videoProgressFill');
-
-const tickerOverlay     = $('tickerOverlay');
-const tickerTrack       = $('tickerTrack');
-const tickerInput       = $('tickerInput');
-const tickerSizeDown    = $('tickerSizeDown');
-const tickerSizeUp      = $('tickerSizeUp');
-const tickerToggle      = $('tickerToggle');
-const tickerSpeedRange  = $('tickerSpeedRange');
-const tickerSpeedValue  = $('tickerSpeedValue');
-
-const expandSplitBtn    = $('expandSplitBtn');
-const expandAspectBtn   = $('expandAspectBtn');
-const expandTickerBtn   = $('expandTickerBtn');
-const expandSplitLabel  = $('expandSplitLabel');
-const expandAspectLabel = $('expandAspectLabel');
-const expandTickerLabel = $('expandTickerLabel');
-
-const btnSwapScreens    = $('btnSwapScreens');
-const btnSwapFull       = $('btnSwapFull');
-const swapFullText      = $('swapFullText');
-
-const RECORD_LOCKED_BTNS = [btnStartCam, btnSwitchCam, btnMic, btnUpload, btnQuality, btnBg, btnSwapScreens, btnSwapFull];
-const RECORD_ACTIVE_BTNS = [btnPlayPause, btnBack, btnNext, btnStop];
-
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
 const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
-const ICON_TICKER_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-const ICON_TICKER_OFF = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
 
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const clamp01 = v => Math.min(1, Math.max(0, v));
-
-/* ============================================================
-   CANVAS OVERLAY
-   ============================================================ */
-const liveCanvas = $('liveCanvas');
-const liveCanvasCtx = liveCanvas.getContext('2d', { alpha: true, desynchronized: true });
-
-/* ============================================================
-   CONTROLLER TIAP LAYAR
-   ============================================================ */
-const VIEW_CTRL = [
-  {
-    key: 'live', screen: liveScreen, video: liveVideo,
-    tools: $('liveTools'), hint: $('liveHint'),
-    isReady: () => !!state.stream && liveVideo.videoWidth > 0
-  },
-  {
-    key: 'upload', screen: uploadScreen, video: uploadVideo,
-    tools: $('uploadTools'), hint: $('uploadHint'),
-    isReady: () => state.uploadReady && uploadVideo.videoWidth > 0
-  }
-];
-const ctrlByKey = Object.fromEntries(VIEW_CTRL.map(c => [c.key, c]));
-
-/* ============================================================
-   ORIENTASI & ASPECT
-   ============================================================ */
-function isLandscapeMode() {
-  if (state.aspectMode === '16:9') return true;
-  if (state.aspectMode === '9:16') return false;
-  return videoArea.clientWidth > videoArea.clientHeight;
+/* ============ TOAST / LOADER ============ */
+let toastTimeout;
+function showToast(msg, type='') {
+  clearTimeout(toastTimeout);
+  toast.textContent = msg;
+  toast.className = 'toast show ' + type;
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2800);
 }
+function showLoader(t='Memproses...') { loaderText.textContent = t; loader.classList.add('show'); }
+function hideLoader() { loader.classList.remove('show'); }
 
-function updateDividerOrientation() {
-  const landscape = isLandscapeMode();
-  divider.classList.toggle('vert', landscape);
-  videoArea.style.flexDirection = landscape ? 'row' : 'column';
-}
-
-function setAspectMode(mode) {
-  if (state.isRecording) {
-    showToast('Stop rekaman dulu untuk ganti rasio', 'error');
-    return;
-  }
-  state.aspectMode = mode;
-  phoneFrame.classList.remove('mode-9-16', 'mode-16-9', 'mode-asli');
-  phoneFrame.classList.add('mode-' + mode.replace(':', '-'));
-
-  document.querySelectorAll('[data-aspect]').forEach(b => {
-    b.classList.toggle('active', b.dataset.aspect === mode);
-  });
-
-  requestAnimationFrame(() => {
-    updateDividerOrientation();
-    applyQuality(state.quality);
-    applyAllViews();
-    updateTickerDOM();
-    if (mode === '16:9' && window.innerHeight > window.innerWidth) {
-      setTimeout(() => showToast('📱 Putar HP ke landscape untuk preview lebih lega'), 400);
-    } else {
-      const labels = { asli: 'ASLI', '16:9': '16:9 (Landscape)', '9:16': '9:16 (Portrait)' };
-      showToast('Rasio: ' + (labels[mode] || mode));
-    }
-  });
-  updateExpandLabels();
-}
-
-/* ============================================================
-   UPDATE LABEL TOMBOL EXPAND
-   ============================================================ */
-function updateExpandLabels() {
-  if (expandSplitLabel) {
-    const pct = Math.round(state.splitRatio * 100);
-    expandSplitLabel.textContent = state.swapped ? `↕${pct}%` : `${pct}%`;
-    expandSplitBtn.classList.toggle('has-value', state.swapped || pct !== 40);
-  }
-  if (expandAspectLabel) {
-    expandAspectLabel.textContent = state.aspectMode;
-    expandAspectBtn.classList.toggle('has-value', state.aspectMode !== '9:16');
-  }
-  if (expandTickerLabel) {
-    const active = state.ticker.enabled && state.ticker.text;
-    expandTickerLabel.textContent = active ? 'ON' : '';
-    expandTickerBtn.classList.toggle('has-value', !!active);
-  }
-  updateSwapBtns();
-}
-
-function updateSwapBtns() {
-  if (btnSwapScreens) {
-    btnSwapScreens.classList.toggle('active', state.swapped);
-    btnSwapScreens.title = state.swapped
-      ? 'Kembalikan: LIVE di atas, UPLOAD di bawah'
-      : 'Tukar: UPLOAD di atas, LIVE di bawah';
-  }
-  if (btnSwapFull) {
-    btnSwapFull.classList.toggle('active', state.swapped);
-  }
-  if (swapFullText) {
-    swapFullText.textContent = state.swapped
-      ? 'Kembalikan Posisi Semula'
-      : 'Tukar Posisi LIVE ↔ UPLOAD';
-  }
-}
-
-/* ============================================================
-   ACCORDION HANDLER
-   ============================================================ */
-function closeAllExpand() {
-  document.querySelectorAll('.expand-panel').forEach(p => p.classList.remove('open'));
-  document.querySelectorAll('.expand-btn').forEach(b => b.classList.remove('open'));
-}
-
-document.querySelectorAll('.expand-btn').forEach(btn => {
-  if (!btn.dataset.expand) return;
-  btn.addEventListener('click', () => {
-    const key = btn.dataset.expand;
-    const panel = document.querySelector(`.expand-panel[data-panel-for="${key}"]`);
-    if (!panel) return;
-    const wasOpen = panel.classList.contains('open');
-    closeAllExpand();
-    if (!wasOpen) {
-      panel.classList.add('open');
-      btn.classList.add('open');
-      if (key === 'ticker') {
-        setTimeout(() => tickerInput.focus(), 60);
-      }
-    }
-  });
-});
-
-document.querySelectorAll('.expand-panel[data-panel-for="split"] [data-split]').forEach(b => {
-  b.addEventListener('click', () => setTimeout(closeAllExpand, 120));
-});
-document.querySelectorAll('.expand-panel[data-panel-for="aspect"] [data-aspect]').forEach(b => {
-  b.addEventListener('click', () => setTimeout(closeAllExpand, 120));
-});
-
-/* ============================================================
-   SWAP LIVE ↔ UPLOAD
-   ============================================================ */
-function swapScreens() {
-  if (state.isRecording) {
-    showToast('Stop rekaman dulu untuk tukar posisi', 'error');
-    return;
-  }
-
-  state.swapped = !state.swapped;
-
-  // 1) Ubah urutan visual via CSS order
-  const firstScreen = state.swapped ? uploadScreen : liveScreen;
-  const secondScreen = state.swapped ? liveScreen : uploadScreen;
-  firstScreen.style.order = '1';
-  divider.style.order = '2';
-  secondScreen.style.order = '3';
-
-  // 2) Ubah rasio flex (splitRatio = porsi layar pertama)
-  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
-  firstScreen.style.flex = `${r} 1 0`;
-  secondScreen.style.flex = `${1 - r} 1 0`;
-
-  // 3) Refresh view + label
-  updateSplitPct();
-  updateSplitPresets();
-  updateExpandLabels();
-  requestAnimationFrame(applyAllViews);
-
-  // 4) Feedback
-  showToast(state.swapped
-    ? '🔄 Ditukar: UPLOAD di atas, LIVE di bawah'
-    : '🔄 Dikembalikan: LIVE di atas, UPLOAD di bawah',
-    'success'
-  );
-}
-
-if (btnSwapScreens) btnSwapScreens.addEventListener('click', swapScreens);
-if (btnSwapFull) btnSwapFull.addEventListener('click', swapScreens);
-
-/* ============================================================
-   GEOMETRI COVER
-   ============================================================ */
-function getFitInfo(videoEl, screenEl) {
-  const vw = videoEl.videoWidth || videoEl.width || 0;
-  const vh = videoEl.videoHeight || videoEl.height || 0;
-  const cw = screenEl.clientWidth;
-  const ch = screenEl.clientHeight;
-  if (!vw || !vh || !cw || !ch) return null;
-  const s0 = Math.max(cw / vw, ch / vh);
-  return { vw, vh, cw, ch, s0 };
-}
-
-function applyView(ctrl) {
-  const vs = state.views[ctrl.key];
-  const info = getFitInfo(ctrl.video, ctrl.screen);
-  if (!info) return;
-
-  const { vw, vh, cw, ch, s0 } = info;
-  const z = clamp(vs.zoom, MIN_ZOOM, MAX_ZOOM);
-  const W = vw * s0 * z;
-  const H = vh * s0 * z;
-  const left = -vs.panX * (W - cw);
-  const top  = -vs.panY * (H - ch);
-
-  ctrl.video.style.width  = W.toFixed(2) + 'px';
-  ctrl.video.style.height = H.toFixed(2) + 'px';
-  ctrl.video.style.left   = left.toFixed(2) + 'px';
-  ctrl.video.style.top    = top.toFixed(2) + 'px';
-
-  if (ctrl.key === 'live') {
-    liveCanvas.style.width  = W.toFixed(2) + 'px';
-    liveCanvas.style.height = H.toFixed(2) + 'px';
-    liveCanvas.style.left   = left.toFixed(2) + 'px';
-    liveCanvas.style.top    = top.toFixed(2) + 'px';
-  }
-
-  if (ctrl.zoomLabel) ctrl.zoomLabel.textContent = z.toFixed(1) + '×';
-}
-
-function applyAllViews() {
-  VIEW_CTRL.forEach(applyView);
-}
-
-function resetView(ctrl, silent = false) {
-  const vs = state.views[ctrl.key];
-  vs.zoom = 1;
-  vs.panX = 0.5;
-  vs.panY = 0.5;
-  applyView(ctrl);
-  updateGridActive(ctrl);
-  if (!silent) showToast('↺ Tampilan direset ke tengah');
-}
-
-/* ============================================================
-   TOOLS
-   ============================================================ */
-function updateGridActive(ctrl) {
-  if (!ctrl.tools) return;
-  const vs = state.views[ctrl.key];
-  ctrl.tools.querySelectorAll('[data-grid] button').forEach(b => {
-    const px = parseFloat(b.dataset.px);
-    const py = parseFloat(b.dataset.py);
-    b.classList.toggle('active',
-      Math.abs(px - vs.panX) < 0.02 && Math.abs(py - vs.panY) < 0.02
-    );
-  });
-}
-
-function initTools(ctrl) {
-  if (!ctrl.tools) return;
-
-  const panel  = ctrl.tools.querySelector('[data-panel]');
-  const grid   = ctrl.tools.querySelector('[data-grid]');
-  const toggle = ctrl.tools.querySelector('[data-toggle]');
-  ctrl.zoomLabel = ctrl.tools.querySelector('[data-zoom-label]');
-
-  [0, 0.5, 1].forEach(py => {
-    [0, 0.5, 1].forEach(px => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.px = px;
-      b.dataset.py = py;
-      b.title = `Posisi ${Math.round(px * 100)}% / ${Math.round(py * 100)}%`;
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const vs = state.views[ctrl.key];
-        vs.panX = px;
-        vs.panY = py;
-        applyView(ctrl);
-        updateGridActive(ctrl);
-      });
-      grid.appendChild(b);
-    });
-  });
-
-  toggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = panel.classList.toggle('open');
-    toggle.classList.toggle('open', open);
-  });
-
-  document.addEventListener('pointerdown', (e) => {
-    if (!panel.classList.contains('open')) return;
-    if (ctrl.tools.contains(e.target)) return;
-    panel.classList.remove('open');
-    toggle.classList.remove('open');
-  }, { passive: true });
-
-  ctrl.tools.querySelectorAll('[data-zoom]').forEach(b => {
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const vs = state.views[ctrl.key];
-      const f = b.dataset.zoom === '+' ? 1.25 : 0.8;
-      vs.zoom = clamp(vs.zoom * f, MIN_ZOOM, MAX_ZOOM);
-      applyView(ctrl);
-    });
-  });
-
-  ctrl.tools.querySelector('[data-reset]').addEventListener('click', (e) => {
-    e.stopPropagation();
-    resetView(ctrl);
-  });
-
-  updateGridActive(ctrl);
-}
-
-/* ============================================================
-   GESTURE
-   ============================================================ */
-function showHint(ctrl) {
-  if (!ctrl.hint) return;
-  ctrl.hint.classList.add('show');
-  clearTimeout(ctrl._hintTimer);
-  ctrl._hintTimer = setTimeout(() => ctrl.hint.classList.remove('show'), 3400);
-}
-function hideHint(ctrl) {
-  if (!ctrl.hint) return;
-  clearTimeout(ctrl._hintTimer);
-  ctrl.hint.classList.remove('show');
-}
-
-function setupGestures(ctrl) {
-  const el = ctrl.video;
-  const pts = new Map();
-  let gesture = null;
-  let lastTap = 0;
-
-  el.addEventListener('pointerdown', (e) => {
-    if (!ctrl.isReady()) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    try { el.setPointerCapture(e.pointerId); } catch (_) {}
-
-    if (pts.size === 1) {
-      const vs = state.views[ctrl.key];
-      gesture = {
-        type: 'pan',
-        startX: e.clientX, startY: e.clientY,
-        baseX: vs.panX, baseY: vs.panY,
-        time: Date.now(), moved: false
-      };
-    } else if (pts.size === 2) {
-      const arr = [...pts.values()];
-      const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
-      gesture = {
-        type: 'pinch',
-        startDist: Math.max(1, d),
-        baseZoom: state.views[ctrl.key].zoom
-      };
-    }
-
-    el.classList.add('grabbing');
-    hideHint(ctrl);
-    e.preventDefault();
-  });
-
-  el.addEventListener('pointermove', (e) => {
-    if (!pts.has(e.pointerId) || !gesture) return;
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    const vs = state.views[ctrl.key];
-
-    if (gesture.type === 'pan' && pts.size === 1) {
-      const dx = e.clientX - gesture.startX;
-      const dy = e.clientY - gesture.startY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) gesture.moved = true;
-
-      const info = getFitInfo(el, ctrl.screen);
-      if (!info) return;
-      const W = info.vw * info.s0 * vs.zoom;
-      const H = info.vh * info.s0 * vs.zoom;
-      const maxX = W - info.cw;
-      const maxY = H - info.ch;
-
-      if (maxX > 0.5) vs.panX = clamp01(gesture.baseX - dx / maxX);
-      if (maxY > 0.5) vs.panY = clamp01(gesture.baseY - dy / maxY);
-
-      applyView(ctrl);
-      updateGridActive(ctrl);
-
-    } else if (gesture.type === 'pinch' && pts.size === 2) {
-      const arr = [...pts.values()];
-      const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
-      vs.zoom = clamp(gesture.baseZoom * (d / gesture.startDist), MIN_ZOOM, MAX_ZOOM);
-      applyView(ctrl);
-    }
-
-    e.preventDefault();
-  });
-
-  const endPointer = (e) => {
-    if (!pts.has(e.pointerId)) return;
-    const wasPan = gesture && gesture.type === 'pan';
-    const moved  = gesture && gesture.moved;
-    const time   = gesture && gesture.time;
-
-    pts.delete(e.pointerId);
-    try { el.releasePointerCapture(e.pointerId); } catch (_) {}
-
-    if (pts.size === 0) {
-      gesture = null;
-      el.classList.remove('grabbing');
-    }
-
-    if (wasPan && !moved && Date.now() - time < 300) {
-      const now = Date.now();
-      if (now - lastTap < 320) {
-        resetView(ctrl);
-        lastTap = 0;
-      } else {
-        lastTap = now;
-      }
-    }
-  };
-
-  el.addEventListener('pointerup', endPointer);
-  el.addEventListener('pointercancel', endPointer);
-  el.addEventListener('lostpointercapture', endPointer);
-
-  el.addEventListener('wheel', (e) => {
-    if (!ctrl.isReady()) return;
-    e.preventDefault();
-    const vs = state.views[ctrl.key];
-    const factor = Math.exp(-e.deltaY * 0.0015);
-    vs.zoom = clamp(vs.zoom * factor, MIN_ZOOM, MAX_ZOOM);
-    applyView(ctrl);
-  }, { passive: false });
-}
-
-VIEW_CTRL.forEach(ctrl => {
-  initTools(ctrl);
-  setupGestures(ctrl);
-});
-
-liveVideo.addEventListener('loadedmetadata', () => {
-  if (liveVideo.videoWidth && liveVideo.videoHeight) {
-    liveCanvas.width = liveVideo.videoWidth;
-    liveCanvas.height = liveVideo.videoHeight;
-  }
-  applyView(ctrlByKey.live);
-});
-uploadVideo.addEventListener('loadedmetadata', () => applyView(ctrlByKey.upload));
-
-/* ============================================================
-   BACKGROUND REPLACEMENT
-   ============================================================ */
-let selfieSeg = null;
-let segLoopRunning = false;
-let segReady = false;
-
-async function loadSelfieSegmentation() {
-  if (selfieSeg) return true;
-  try {
-    if (typeof SelfieSegmentation === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/selfie_segmentation.js';
-        s.crossOrigin = 'anonymous';
-        s.onload = resolve;
-        s.onerror = () => reject(new Error('Gagal load SelfieSegmentation'));
-        document.head.appendChild(s);
-      });
-    }
-    if (typeof SelfieSegmentation === 'undefined') {
-      throw new Error('SelfieSegmentation tidak tersedia');
-    }
-    selfieSeg = new SelfieSegmentation({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/${file}`
-    });
-    selfieSeg.setOptions({ modelSelection: 1, selfieMode: false });
-    selfieSeg.onResults(onSegResults);
-    segReady = true;
-    return true;
-  } catch (e) {
-    console.error('Selfie segmentation error:', e);
-    return false;
-  }
-}
-
-function onSegResults(results) {
-  const w = liveCanvas.width;
-  const h = liveCanvas.height;
-  if (!w || !h) return;
-  const ctx = liveCanvasCtx;
-  ctx.save();
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(results.segmentationMask, 0, 0, w, h);
-  ctx.globalCompositeOperation = 'source-in';
-  ctx.drawImage(results.image, 0, 0, w, h);
-  ctx.globalCompositeOperation = 'destination-atop';
-  drawBgToCtx(ctx, w, h);
-  ctx.restore();
-}
-
-let _blurCanvas = null;
-function drawBgToCtx(ctx, w, h) {
-  const bg = state.bg;
-  if (bg.mode === 'off') {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, w, h);
-    return;
-  }
-  if (bg.mode === 'blur') {
-    if (!_blurCanvas) _blurCanvas = document.createElement('canvas');
-    if (_blurCanvas.width !== w || _blurCanvas.height !== h) {
-      _blurCanvas.width = w;
-      _blurCanvas.height = h;
-    }
-    const bx = _blurCanvas.getContext('2d');
-    bx.filter = 'blur(22px)';
-    try { bx.drawImage(liveVideo, -w * 0.05, -h * 0.05, w * 1.1, h * 1.1); } catch(_) {}
-    bx.filter = 'none';
-    ctx.drawImage(_blurCanvas, 0, 0, w, h);
-    return;
-  }
-  if (bg.mode === 'image' && bg.image) {
-    const iw = bg.image.width, ih = bg.image.height;
-    const s = Math.max(w / iw, h / ih);
-    const dw = iw * s, dh = ih * s;
-    ctx.drawImage(bg.image, (w - dw) / 2, (h - dh) / 2, dw, dh);
-    return;
-  }
-  if (BG_GRADIENTS[bg.mode]) {
-    const [c1, c2] = BG_GRADIENTS[bg.mode];
-    const g = ctx.createLinearGradient(0, 0, w, h);
-    g.addColorStop(0, c1);
-    g.addColorStop(1, c2);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    return;
-  }
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, w, h);
-}
-
-function startSegLoop() {
-  if (segLoopRunning) return;
-  segLoopRunning = true;
-  const tick = async () => {
-    if (!segLoopRunning) return;
-    if (selfieSeg && liveVideo.readyState >= 2 && state.bg.mode !== 'off') {
-      try { await selfieSeg.send({ image: liveVideo }); } catch (_) {}
-    }
-    if (segLoopRunning) requestAnimationFrame(tick);
-  };
-  tick();
-}
-
-function stopSegLoop() {
-  segLoopRunning = false;
-}
-
-async function setBgMode(mode) {
-  state.bg.mode = mode;
-  updateBgBtnState();
-
-  if (mode === 'off') {
-    stopSegLoop();
-    liveCanvas.style.display = 'none';
-    showToast('Background dinonaktifkan');
-    return;
-  }
-
-  if (!state.stream || !liveVideo.videoWidth) {
-    showToast('Aktifkan kamera dulu', 'error');
-    state.bg.mode = 'off';
-    updateBgBtnState();
-    return;
-  }
-
-  liveCanvas.style.display = 'block';
-  if (liveCanvas.width !== liveVideo.videoWidth) {
-    liveCanvas.width = liveVideo.videoWidth;
-    liveCanvas.height = liveVideo.videoHeight;
-  }
-  applyView(ctrlByKey.live);
-
-  if (!segReady) {
-    showLoader('Memuat model background...');
-    const ok = await loadSelfieSegmentation();
-    hideLoader();
-    if (!ok) {
-      showToast('Gagal memuat model background. Periksa koneksi internet.', 'error');
-      state.bg.mode = 'off';
-      liveCanvas.style.display = 'none';
-      updateBgBtnState();
-      return;
-    }
-  }
-
-  startSegLoop();
-  showToast('✨ Background aktif', 'success');
-}
-
-function updateBgBtnState() {
-  const active = state.bg.mode !== 'off';
-  btnBg.classList.toggle('bg-active', active);
-  document.querySelectorAll('.bg-option').forEach(b => {
-    b.classList.toggle('active', b.dataset.bg === state.bg.mode);
-  });
-  if (bgInfoEl) {
-    bgInfoEl.textContent = active
-      ? '✅ Background replacement aktif — orang terlihat, latar disamarkan'
-      : 'Ganti latar belakang video LIVE — orang tetap terlihat, background disamarkan.';
-  }
-}
-
-btnBg.addEventListener('click', () => {
-  if (state.isRecording) { showToast('Stop rekaman dulu untuk ganti background', 'error'); return; }
-  bgModal.classList.add('show');
-  updateBgBtnState();
-});
-btnCloseBgModal.addEventListener('click', () => bgModal.classList.remove('show'));
-bgModal.addEventListener('click', (e) => {
-  if (e.target === bgModal) bgModal.classList.remove('show');
-});
-
-document.querySelectorAll('.bg-option').forEach(b => {
-  b.addEventListener('click', () => {
-    const mode = b.dataset.bg;
-    if (mode === 'off') setBgMode('off');
-    else setBgMode(mode);
-  });
-});
-
-bgImageInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('File harus berupa gambar', 'error'); return; }
-  const img = new Image();
-  img.onload = () => {
-    state.bg.image = img;
-    setBgMode('image');
-  };
-  img.onerror = () => showToast('Gagal memuat gambar', 'error');
-  img.src = URL.createObjectURL(file);
-});
-
-/* ============================================================
-   CANVAS OUTPUT
-   ============================================================ */
+/* ============ CANVAS ============ */
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
@@ -2186,11 +385,9 @@ function applyQuality(q) {
   const p = QUALITY_PRESETS[q];
   state.quality = q;
   qualityLabel.textContent = p.label;
-
   const mode = state.aspectMode;
   const aw = videoArea.clientWidth || 1;
   const ah = videoArea.clientHeight || 1;
-
   if (mode === '9:16') {
     canvas.width = p.w;
     canvas.height = Math.round((p.w * 16 / 9) / 2) * 2;
@@ -2199,466 +396,618 @@ function applyQuality(q) {
     canvas.width = Math.round((p.w * 16 / 9) / 2) * 2;
   } else {
     const ratio = ah / aw;
-    if (ratio >= 1) {
-      canvas.width = p.w;
-      canvas.height = Math.max(2, Math.round((p.w * ratio) / 2) * 2);
-    } else {
-      canvas.height = p.w;
-      canvas.width = Math.max(2, Math.round((p.w / ratio) / 2) * 2);
-    }
+    if (ratio >= 1) { canvas.width = p.w; canvas.height = Math.max(2, Math.round((p.w * ratio) / 2) * 2); }
+    else { canvas.height = p.w; canvas.width = Math.max(2, Math.round((p.w / ratio) / 2) * 2); }
   }
 }
 
-/* ============================================================
-   SPLIT SCREEN
-   ============================================================ */
+/* ============ ASPECT / ORIENTASI ============ */
+function isLandscapeMode() {
+  if (state.aspectMode === '16:9') return true;
+  if (state.aspectMode === '9:16') return false;
+  return videoArea.clientWidth > videoArea.clientHeight;
+}
+function updateDividerOrientation() {
+  const l = isLandscapeMode();
+  divider.classList.toggle('vert', l);
+  videoArea.style.flexDirection = l ? 'row' : 'column';
+}
+function setAspectMode(mode) {
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  state.aspectMode = mode;
+  phoneFrame.classList.remove('mode-9-16','mode-16-9','mode-asli');
+  phoneFrame.classList.add('mode-' + mode.replace(':', '-'));
+  document.querySelectorAll('[data-aspect]').forEach(b => b.classList.toggle('active', b.dataset.aspect === mode));
+  requestAnimationFrame(() => { updateDividerOrientation(); applyQuality(state.quality); applySplitToLayout(); });
+}
+
+/* ============ SPLIT LAYOUT ============ */
 function applySplitToLayout() {
-  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
+  const r = clamp(state.splitRatio, 0, 1);
   state.splitRatio = r;
-
-  // Layar "pertama" (order 1, visual atas/kiri) mendapat porsi splitRatio
-  const firstScreen  = state.swapped ? uploadScreen : liveScreen;
-  const secondScreen = state.swapped ? liveScreen : uploadScreen;
-
-  firstScreen.style.order  = '1';
-  divider.style.order      = '2';
-  secondScreen.style.order = '3';
-
-  firstScreen.style.flex   = `${r} 1 0`;
-  secondScreen.style.flex  = `${1 - r} 1 0`;
-
-  updateSplitPct();
-  updateSplitPresets();
-  updateExpandLabels();
-  requestAnimationFrame(applyAllViews);
-}
-
-function updateSplitPct() {
-  const first = Math.round(state.splitRatio * 100);
-  const second = 100 - first;
-  splitPct.textContent = `${first}% / ${second}%`;
-}
-
-function updateSplitPresets() {
+  const first  = state.swapped ? uploadScreen : liveScreen;
+  const second = state.swapped ? liveScreen : uploadScreen;
+  first.style.order = '1'; divider.style.order = '2'; second.style.order = '3';
+  first.style.flex  = `${r} 1 0`;
+  second.style.flex = `${1 - r} 1 0`;
   document.querySelectorAll('.split-btn[data-split]').forEach(b => {
-    const v = parseFloat(b.dataset.split);
-    b.classList.toggle('active', Math.abs(v - state.splitRatio) < 0.012);
+    b.classList.toggle('active', Math.abs(parseFloat(b.dataset.split) - r) < 0.012);
   });
 }
 
 let splitDrag = null;
-
-function onDivDown(e) {
+divider.addEventListener('pointerdown', e => {
+  if (state.isRecording) return;
   if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-  const landscape = isLandscapeMode();
-  const total = landscape ? videoArea.clientWidth : videoArea.clientHeight;
+  const l = isLandscapeMode();
+  const total = l ? videoArea.clientWidth : videoArea.clientHeight;
   if (total <= 0) return;
-  splitDrag = {
-    pointerId: e.pointerId,
-    startX: e.clientX,
-    startY: e.clientY,
-    startSplit: state.splitRatio,
-    total,
-    landscape
-  };
-  try { divider.setPointerCapture(e.pointerId); } catch (_) {}
-  divider.classList.add('dragging');
-  updateSplitPct();
+  splitDrag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, startSplit: state.splitRatio, total, l };
+  try { divider.setPointerCapture(e.pointerId); } catch(_) {}
   e.preventDefault();
-}
-
-function onDivMove(e) {
-  if (!splitDrag || e.pointerId !== splitDrag.pointerId) return;
-  const delta = splitDrag.landscape
-    ? (e.clientX - splitDrag.startX)
-    : (e.clientY - splitDrag.startY);
-  const newSplit = splitDrag.startSplit + delta / splitDrag.total;
-  state.splitRatio = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, newSplit));
+});
+divider.addEventListener('pointermove', e => {
+  if (!splitDrag || e.pointerId !== splitDrag.id) return;
+  const delta = splitDrag.l ? (e.clientX - splitDrag.startX) : (e.clientY - splitDrag.startY);
+  state.splitRatio = clamp(splitDrag.startSplit + delta / splitDrag.total, 0, 1);
   applySplitToLayout();
   e.preventDefault();
-}
-
-function onDivUp(e) {
-  if (!splitDrag) return;
-  if (e && e.pointerId !== undefined && e.pointerId !== splitDrag.pointerId) return;
-  try { divider.releasePointerCapture(splitDrag.pointerId); } catch (_) {}
-  splitDrag = null;
-  divider.classList.remove('dragging');
-}
-
-divider.addEventListener('pointerdown', onDivDown);
-divider.addEventListener('pointermove', onDivMove);
-divider.addEventListener('pointerup', onDivUp);
-divider.addEventListener('pointercancel', onDivUp);
-divider.addEventListener('lostpointercapture', onDivUp);
-
-let divLastTap = 0;
-divider.addEventListener('pointerup', () => {
-  const now = Date.now();
-  if (now - divLastTap < 300) {
-    state.splitRatio = 0.5;
-    applySplitToLayout();
-    showToast('⚖️ Split direset 50% / 50%');
-    divLastTap = 0;
-  } else {
-    divLastTap = now;
-  }
 });
+const endDivDrag = () => { if (!splitDrag) return; try { divider.releasePointerCapture(splitDrag.id); } catch(_) {} splitDrag = null; };
+divider.addEventListener('pointerup', endDivDrag);
+divider.addEventListener('pointercancel', endDivDrag);
 
 document.querySelectorAll('[data-split]').forEach(b => {
   b.addEventListener('click', () => {
+    if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
     state.splitRatio = parseFloat(b.dataset.split);
     applySplitToLayout();
-    const live = Math.round(state.splitRatio * 100);
-    showToast(`📐 Split ${live}% / ${100 - live}%`);
   });
 });
-
 document.querySelectorAll('[data-aspect]').forEach(b => {
   b.addEventListener('click', () => setAspectMode(b.dataset.aspect));
 });
+btnSwap.addEventListener('click', () => {
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  state.swapped = !state.swapped;
+  btnSwap.classList.toggle('active', state.swapped);
+  applySplitToLayout();
+  showToast(state.swapped ? '🔄 Ditukar' : '🔄 Dikembalikan');
+});
 
 /* ============================================================
-   DRAW KE CANVAS REKAMAN
+   SOURCE UNIFIED
    ============================================================ */
-function drawVideoCover(source, viewState, dx, dy, dw, dh) {
-  if (dw <= 0 || dh <= 0) return;
-
-  const vw = source.videoWidth || source.width || 0;
-  const vh = source.videoHeight || source.height || 0;
-  if (!vw || !vh) {
-    ctx.fillStyle = '#0d0d0f';
-    ctx.fillRect(dx, dy, dw, dh);
-    return;
-  }
-
-  const s0 = Math.max(dw / vw, dh / vh);
-  const z  = clamp(viewState.zoom, MIN_ZOOM, MAX_ZOOM);
-  const sw = dw / (s0 * z);
-  const sh = dh / (s0 * z);
-  const sx = viewState.panX * (vw - sw);
-  const sy = viewState.panY * (vh - sh);
-
-  try { ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh); } catch (e) {}
+function getUploadSource() {
+  if (state.isExternalSource && state.wifi.mode === 'mjpeg' && wifiImg) return wifiImg;
+  return uploadVideo;
+}
+function getSourceDim(source) {
+  if (!source) return 0;
+  if (source.naturalWidth !== undefined) return source.naturalWidth || 0;
+  return source.videoWidth || source.width || 0;
+}
+function getSourceDimH(source) {
+  if (!source) return 0;
+  if (source.naturalHeight !== undefined) return source.naturalHeight || 0;
+  return source.videoHeight || source.height || 0;
 }
 
-function drawTickerOnCanvas(W, H) {
-  if (!state.ticker.enabled || !state.ticker.text) return;
+/* ============================================================
+   INPUT EKSTERNAL (HDMI / AV / RGB / USB / WIFI)
+   ============================================================ */
+function getSlotKey(kind) { return `slot_input_${kind}`; }
 
-  const refDim = Math.min(W, H);
-  const fontSize = Math.max(8, Math.round(state.ticker.size * (refDim / 720)));
-  const barPad = Math.round(fontSize * 0.4);
-  const barH = fontSize + barPad * 2;
-  const barY = H - barH;
+function buildInputCards() {
+  inputList.innerHTML = '';
+  for (const k of INPUT_KINDS) {
+    const card = document.createElement('div');
+    card.className = 'input-card';
+    card.dataset.kind = k.id;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  ctx.fillRect(0, barY, W, barH);
-
-  ctx.save();
-  ctx.font = `800 ${fontSize}px -apple-system, system-ui, sans-serif`;
-  ctx.fillStyle = state.ticker.color;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'left';
-
-  const textW = ctx.measureText(state.ticker.text).width;
-  if (textW <= 0) { ctx.restore(); return; }
-
-  const gap = fontSize * 2;
-  const tG = textW + gap;
-  const speed = state.ticker.speed * (refDim / 720);
-  const elapsed = (Date.now() - state.ticker.startTime) / 1000;
-  const x0 = -((elapsed * speed) % tG);
-
-  let x = x0;
-  while (x < W) {
-    if (x + textW > 0) {
-      ctx.fillText(state.ticker.text, x, barY + barH / 2);
+    if (k.special === 'url') {
+      card.innerHTML = `
+        <div class="input-card-head">
+          <span class="input-icon">${k.icon}</span>
+          <div class="input-info">
+            <div class="input-title">${k.label}</div>
+            <div class="input-device" data-device="${k.id}">Belum terhubung</div>
+          </div>
+          <span class="input-status" data-status="${k.id}">○</span>
+        </div>
+        <div class="input-controls">
+          <button class="input-btn" data-wifi-config style="flex:1">⚙ Atur URL Stream</button>
+        </div>
+      `;
+      inputList.appendChild(card);
+      card.querySelector('[data-wifi-config]').addEventListener('click', () => {
+        closeInputModal();
+        openWifiModal();
+      });
+      continue;
     }
-    x += tG;
+
+    card.innerHTML = `
+      <div class="input-card-head">
+        <span class="input-icon">${k.icon}</span>
+        <div class="input-info">
+          <div class="input-title">${k.label}</div>
+          <div class="input-device" data-device="${k.id}">Belum terhubung</div>
+        </div>
+        <span class="input-status" data-status="${k.id}">○</span>
+      </div>
+      <div class="input-controls">
+        <select class="input-select" data-select="${k.id}"></select>
+        <button class="input-btn" data-btn="${k.id}">Hubungkan</button>
+      </div>
+    `;
+    inputList.appendChild(card);
+    card.querySelector('[data-btn]').addEventListener('click', () => connectExternal(k.id));
   }
-  ctx.restore();
 }
 
-function startDrawLoop() {
-  if (state.drawRAF) return;
-  const tick = () => {
-    const W = canvas.width, H = canvas.height;
-    const landscape = isLandscapeMode();
+async function probePermissions() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: true });
+    s.getTracks().forEach(t => t.stop());
+  } catch(e) {}
+}
 
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
+async function refreshDeviceList() {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    document.getElementById('inputHint').textContent = 'Browser tidak mendukung enumerateDevices.';
+    return { video: [], audio: [] };
+  }
+  await probePermissions();
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  const videoDevs = devs.filter(d => d.kind === 'videoinput');
+  const audioDevs = devs.filter(d => d.kind === 'audioinput');
 
-    const liveSource = (state.bg.mode !== 'off' && liveCanvas.width > 0)
-      ? liveCanvas : liveVideo;
+  for (const k of INPUT_KINDS) {
+    if (k.special === 'url') continue;
+    const sel = inputList.querySelector(`[data-select="${k.id}"]`);
+    if (!sel) continue;
+    sel.innerHTML = '';
 
-    // ✅ Tentukan sumber mana yang jadi "pertama" (visual atas/kiri) & "kedua"
-    const firstSource = state.swapped ? uploadVideo  : liveSource;
-    const firstView   = state.swapped ? state.views.upload : state.views.live;
-    const secondSource= state.swapped ? liveSource   : uploadVideo;
-    const secondView  = state.swapped ? state.views.live   : state.views.upload;
+    if (videoDevs.length === 0) {
+      const o = document.createElement('option');
+      o.value = ''; o.textContent = '-- Tidak ada perangkat --';
+      sel.appendChild(o);
+      continue;
+    }
 
-    if (landscape) {
-      const splitX = Math.max(1, Math.min(W - 1, Math.round(W * state.splitRatio)));
-      drawVideoCover(firstSource,  firstView,  0,        0, splitX,     H);
-      drawVideoCover(secondSource, secondView, splitX,   0, W - splitX, H);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillRect(splitX - 1, 0, 2, H);
+    videoDevs.forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || `Perangkat ${i + 1}`;
+      sel.appendChild(o);
+    });
+
+    const saved = localStorage.getItem(getSlotKey(k.id));
+    if (saved && videoDevs.some(d => d.deviceId === saved)) {
+      sel.value = saved;
     } else {
-      const splitY = Math.max(1, Math.min(H - 1, Math.round(H * state.splitRatio)));
-      drawVideoCover(firstSource,  firstView,  0, 0,      W, splitY);
-      drawVideoCover(secondSource, secondView, 0, splitY, W, H - splitY);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillRect(0, splitY - 1, W, 2);
+      const idx = INPUT_KINDS.filter(x => !x.special).findIndex(x => x.id === k.id);
+      const def = videoDevs[idx] || videoDevs[0];
+      if (def) sel.value = def.deviceId;
     }
 
-    drawTickerOnCanvas(W, H);
-    state.drawRAF = requestAnimationFrame(tick);
-  };
-  tick();
-}
-
-function stopDrawLoop() {
-  if (state.drawRAF) cancelAnimationFrame(state.drawRAF);
-  state.drawRAF = null;
-}
-
-/* ============================================================
-   TICKER DOM
-   ============================================================ */
-let tickerRAFId = null;
-
-function updateTickerDOM() {
-  if (!state.ticker.enabled || !state.ticker.text) {
-    tickerOverlay.classList.remove('show');
-    document.documentElement.style.setProperty('--ticker-offset', '0px');
-    return;
-  }
-  tickerOverlay.classList.add('show');
-
-  const aw = videoArea.clientWidth || 1;
-  const ah = videoArea.clientHeight || 1;
-  const refDim = Math.min(aw, ah);
-  const fontSize = Math.max(8, Math.round(state.ticker.size * (refDim / 720)));
-  const barH = fontSize + Math.round(fontSize * 0.8);
-
-  tickerOverlay.style.height = barH + 'px';
-  tickerOverlay.style.fontSize = fontSize + 'px';
-  document.documentElement.style.setProperty('--ticker-offset', barH + 'px');
-
-  const items = tickerTrack.querySelectorAll('.ticker-item');
-  items.forEach(el => el.textContent = state.ticker.text);
-
-  if (!items.length) return;
-
-  const textW = items[0].offsetWidth;
-  if (textW <= 0) return;
-
-  const gap = fontSize * 2;
-  const tG = textW + gap;
-  const speed = state.ticker.speed * (refDim / 720);
-  const elapsed = (Date.now() - state.ticker.startTime) / 1000;
-  const x0 = -((elapsed * speed) % tG);
-
-  const needed = Math.ceil(aw / tG) + 2;
-  while (tickerTrack.children.length < needed) {
-    const el = document.createElement('span');
-    el.className = 'ticker-item';
-    el.textContent = state.ticker.text;
-    tickerTrack.appendChild(el);
-  }
-
-  const allItems = tickerTrack.querySelectorAll('.ticker-item');
-  for (let i = 0; i < allItems.length; i++) {
-    allItems[i].style.transform = `translate(${x0 + i * tG}px, -50%)`;
-  }
-}
-
-function startTickerDOMLoop() {
-  if (tickerRAFId) return;
-  const tick = () => {
-    updateTickerDOM();
-    tickerRAFId = requestAnimationFrame(tick);
-  };
-  tick();
-}
-
-function stopTickerDOMLoop() {
-  if (tickerRAFId) cancelAnimationFrame(tickerRAFId);
-  tickerRAFId = null;
-}
-
-function setTickerEnabled(on) {
-  state.ticker.enabled = on;
-  state.ticker.startTime = Date.now();
-  tickerToggle.classList.toggle('active', on);
-  tickerToggle.innerHTML = on ? ICON_TICKER_OFF : ICON_TICKER_ON;
-  updateTickerDOM();
-  if (on) {
-    startTickerDOMLoop();
-    showToast('📝 Ticker aktif', 'success');
-  } else {
-    stopTickerDOMLoop();
-    showToast('Ticker dimatikan');
-  }
-  updateExpandLabels();
-}
-
-tickerInput.addEventListener('input', (e) => {
-  state.ticker.text = e.target.value.trim();
-  state.ticker.startTime = Date.now();
-  if (state.ticker.text && !state.ticker.enabled) {
-    setTickerEnabled(true);
-  } else {
-    updateTickerDOM();
-    if (state.ticker.enabled) startTickerDOMLoop();
-    updateExpandLabels();
-  }
-});
-
-tickerSizeDown.addEventListener('click', () => {
-  state.ticker.size = Math.max(10, state.ticker.size - 2);
-  updateTickerDOM();
-  showToast(`Ukuran teks: ${state.ticker.size}`);
-});
-
-tickerSizeUp.addEventListener('click', () => {
-  state.ticker.size = Math.min(80, state.ticker.size + 2);
-  updateTickerDOM();
-  showToast(`Ukuran teks: ${state.ticker.size}`);
-});
-
-tickerToggle.addEventListener('click', () => {
-  if (!state.ticker.text) {
-    showToast('Masukkan teks berjalan dulu', 'error');
-    tickerInput.focus();
-    return;
-  }
-  setTickerEnabled(!state.ticker.enabled);
-});
-
-/* ============================================================
-   TICKER SPEED CONTROL
-   ============================================================ */
-tickerSpeedRange.addEventListener('input', (e) => {
-  const speed = parseInt(e.target.value, 10);
-  state.ticker.speed = speed;
-  tickerSpeedValue.textContent = speed;
-  state.ticker.startTime = Date.now();
-  updateTickerDOM();
-  if (state.ticker.enabled) startTickerDOMLoop();
-});
-
-tickerSpeedRange.value = state.ticker.speed;
-tickerSpeedValue.textContent = state.ticker.speed;
-
-/* ============================================================
-   TOAST & LOADER
-   ============================================================ */
-let toastTimeout;
-function showToast(msg, type = '') {
-  clearTimeout(toastTimeout);
-  toast.textContent = msg;
-  toast.className = 'toast show ' + type;
-  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2800);
-}
-function showLoader(text = 'Memproses...') {
-  loaderText.textContent = text;
-  loader.classList.add('show');
-}
-function hideLoader() { loader.classList.remove('show'); }
-
-/* ============================================================
-   PLAYBACK
-   ============================================================ */
-function updatePlayPauseIcon() {
-  btnPlayPause.innerHTML = uploadVideo.paused ? ICON_PLAY : ICON_PAUSE;
-}
-
-function updateProgressBar() {
-  const dur = uploadVideo.duration;
-  if (!dur || !isFinite(dur)) { videoProgressFill.style.width = '0%'; return; }
-  videoProgressFill.style.width = (uploadVideo.currentTime / dur * 100) + '%';
-}
-
-async function togglePlayPause() {
-  if (!state.uploadReady) { showToast('Upload video dulu', 'error'); return; }
-  ensureAudioCtx();
-  if (uploadVideo.paused) {
-    if (uploadVideo.ended) uploadVideo.currentTime = 0;
-    uploadVideo.muted = false;
-    try { await uploadVideo.play(); }
-    catch (err) { showToast('Gagal play: ' + err.message, 'error'); }
-  } else {
-    uploadVideo.pause();
-  }
-}
-
-function seekBack() {
-  if (!state.uploadReady) return;
-  uploadVideo.currentTime = Math.max(0, uploadVideo.currentTime - SEEK_STEP);
-  updateProgressBar();
-  showToast(`⏪ -${SEEK_STEP}s`);
-}
-
-function seekNext() {
-  if (!state.uploadReady) return;
-  const dur = uploadVideo.duration || 0;
-  uploadVideo.currentTime = Math.min(dur, uploadVideo.currentTime + SEEK_STEP);
-  updateProgressBar();
-  showToast(`⏩ +${SEEK_STEP}s`);
-}
-
-function stopVideo() {
-  if (!state.uploadReady) return;
-  uploadVideo.pause();
-  uploadVideo.currentTime = 0;
-  updatePlayPauseIcon();
-  updateProgressBar();
-  showToast('⏹ Video direset');
-}
-
-btnPlayPause.addEventListener('click', togglePlayPause);
-btnBack.addEventListener('click', seekBack);
-btnNext.addEventListener('click', seekNext);
-btnStop.addEventListener('click', stopVideo);
-uploadVideo.addEventListener('play',  updatePlayPauseIcon);
-uploadVideo.addEventListener('pause', updatePlayPauseIcon);
-uploadVideo.addEventListener('timeupdate', updateProgressBar);
-uploadVideo.addEventListener('loadedmetadata', updateProgressBar);
-
-uploadVideo.addEventListener('ended', () => {
-  updatePlayPauseIcon();
-  updateProgressBar();
-  if (AUTO_STOP_ON_UPLOAD_END && state.isRecording) {
-    stopRecording();
-    showToast('⏹ Video upload selesai — rekaman otomatis berhenti', 'success');
-    return;
-  }
-  if (LOOP_UPLOAD_PREVIEW) {
-    uploadVideo.currentTime = 0;
-    uploadVideo.play().catch(() => {
-      uploadVideo.muted = true;
-      uploadVideo.play().catch(() => {});
+    sel.addEventListener('change', () => {
+      localStorage.setItem(getSlotKey(k.id), sel.value);
+      updatePlaceholderDevNames(videoDevs);
     });
   }
-});
 
-videoProgress.addEventListener('click', (e) => {
-  if (!state.uploadReady) return;
-  const rect = videoProgress.getBoundingClientRect();
-  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  if (uploadVideo.duration && isFinite(uploadVideo.duration)) {
-    uploadVideo.currentTime = pct * uploadVideo.duration;
-    updateProgressBar();
+  updatePlaceholderDevNames(videoDevs);
+  return { video: videoDevs, audio: audioDevs };
+}
+
+function updatePlaceholderDevNames(videoDevs = []) {
+  for (const k of INPUT_KINDS) {
+    const el = document.querySelector(`[data-devname="${k.id}"]`);
+    if (!el) continue;
+    if (k.special === 'url') {
+      const saved = localStorage.getItem(WIFI_LAST_URL_KEY);
+      el.textContent = saved ? (saved.replace(/^https?:\/\//, '').slice(0, 22) + (saved.length > 25 ? '…' : '')) : 'Belum diatur';
+      el.title = saved || '';
+      continue;
+    }
+    let dev = null;
+    const saved = localStorage.getItem(getSlotKey(k.id));
+    if (saved) dev = videoDevs.find(d => d.deviceId === saved);
+    if (!dev) {
+      const idx = INPUT_KINDS.filter(x => !x.special).findIndex(x => x.id === k.id);
+      dev = videoDevs[idx] || videoDevs[0];
+    }
+    el.textContent = dev ? (dev.label || 'Perangkat') : '—';
+    el.title = dev ? dev.label : '';
   }
+}
+
+function updateInputStatus() {
+  inputList.querySelectorAll('.input-card').forEach(card => {
+    const kind = card.dataset.kind;
+    const connected = state.isExternalSource && state.activeInput === kind;
+    card.classList.toggle('connected', connected);
+    const st = card.querySelector(`[data-status="${kind}"]`);
+    if (st) st.textContent = connected ? '●' : '○';
+    const devEl = card.querySelector(`[data-device="${kind}"]`);
+    if (devEl) {
+      if (connected && kind === 'wifi') {
+        devEl.textContent = `${state.wifi.mode.toUpperCase()} · ${state.wifi.url}`;
+      } else if (connected && state.externalStream) {
+        const vTrack = state.externalStream.getVideoTracks()[0];
+        devEl.textContent = (vTrack && vTrack.label) || 'Terhubung';
+      } else {
+        devEl.textContent = 'Belum terhubung';
+      }
+    }
+  });
+
+  document.querySelectorAll('.source-btn').forEach(btn => {
+    const kind = btn.dataset.input;
+    btn.classList.toggle('connected', state.isExternalSource && state.activeInput === kind);
+  });
+}
+
+function updateUploadBadge() {
+  if (state.isExternalSource) {
+    uploadBadge.textContent = INPUT_LABELS[state.activeInput] || 'EXTERNAL';
+    uploadBadge.classList.add('connected');
+  } else if (state.uploadReady) {
+    uploadBadge.textContent = 'FILE';
+    uploadBadge.classList.remove('connected');
+  } else {
+    uploadBadge.textContent = 'UPLOAD';
+    uploadBadge.classList.remove('connected');
+  }
+}
+
+function disconnectExternal(silent = false) {
+  // WiFi MJPEG cleanup
+  wifiImg.classList.remove('active');
+  wifiImg.onload = null;
+  wifiImg.onerror = null;
+  wifiImg.src = '';
+  // WiFi HLS cleanup
+  if (state.wifi.hls) {
+    try { state.wifi.hls.destroy(); } catch(e){}
+    state.wifi.hls = null;
+  }
+  state.wifi.mode = null;
+  state.wifi.url = '';
+
+  // Hardware stream cleanup
+  if (state.externalStream) {
+    state.externalStream.getTracks().forEach(t => t.stop());
+    state.externalStream = null;
+  }
+  if (state.externalAudioSource) {
+    try { state.externalAudioSource.disconnect(); } catch(e){}
+    state.externalAudioSource = null;
+  }
+  state.isExternalSource = false;
+  state.activeInput = null;
+
+  try { uploadVideo.pause(); } catch(e){}
+  try { uploadVideo.srcObject = null; } catch(e){}
+  try { uploadVideo.removeAttribute('src'); uploadVideo.load(); } catch(e){}
+  uploadVideo.style.display = '';
+
+  state.uploadReady = false;
+  uploadPlaceholder.classList.remove('hidden');
+
+  updateUploadBadge();
+  updateInputStatus();
+  if (!silent) showToast('⏏ Koneksi input diputus');
+}
+
+async function connectExternal(kind) {
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  if (kind === 'wifi') { openWifiModal(); return; }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast('Browser tidak mendukung input eksternal', 'error');
+    return;
+  }
+
+  let deviceId = localStorage.getItem(getSlotKey(kind));
+  const sel = inputList.querySelector(`[data-select="${kind}"]`);
+  if (sel && sel.value) deviceId = sel.value;
+
+  if (!deviceId) {
+    const devs = await refreshDeviceList();
+    if (devs.video.length === 0) {
+      showToast('Tidak ada perangkat video terdeteksi', 'error');
+      return;
+    }
+    const idx = INPUT_KINDS.filter(x => !x.special).findIndex(x => x.id === kind);
+    deviceId = (devs.video[idx] || devs.video[0]).deviceId;
+  }
+
+  disconnectExternal(true);
+
+  const inputMeta = INPUT_KINDS.find(x => x.id === kind);
+  const constraints = {
+    video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+  };
+  if (inputMeta.audio) constraints.audio = true;
+
+  showLoader(`Menghubungkan ${inputMeta.short}...`);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (!inputMeta.audio) {
+      stream.getAudioTracks().forEach(t => { t.stop(); stream.removeTrack(t); });
+    }
+
+    state.externalStream = stream;
+    state.activeInput = kind;
+    state.isExternalSource = true;
+    state.uploadReady = true;
+
+    uploadVideo.srcObject = stream;
+    uploadVideo.muted = true;
+    uploadVideo.playsInline = true;
+    uploadVideo.style.display = '';
+    try { await uploadVideo.play(); } catch(e) {}
+
+    if (stream.getAudioTracks().length > 0) {
+      ensureAudioCtx();
+      const audioOnly = new MediaStream(stream.getAudioTracks());
+      state.externalAudioSource = state.audioCtx.createMediaStreamSource(audioOnly);
+    }
+
+    uploadPlaceholder.classList.add('hidden');
+    updateUploadBadge();
+    updateInputStatus();
+    closeInputModal();
+
+    const trackLabel = stream.getVideoTracks()[0]?.label || inputMeta.label;
+    showToast(`✅ ${inputMeta.short} terhubung — ${trackLabel}`, 'success');
+  } catch (err) {
+    hideLoader();
+    disconnectExternal(true);
+    showToast('Gagal konek: ' + err.message, 'error');
+    return;
+  }
+  hideLoader();
+}
+
+function openInputModal() {
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  inputModal.classList.add('show');
+  refreshDeviceList();
+  updateInputStatus();
+}
+function closeInputModal() { inputModal.classList.remove('show'); }
+
+/* ============ WIFI / HOTSPOT ============ */
+function setWifiStatus(msg, type='') {
+  if (!msg) { wifiStatus.className = 'wifi-status'; return; }
+  wifiStatus.textContent = msg;
+  wifiStatus.className = 'wifi-status show ' + type;
+}
+
+function detectStreamType(url) {
+  const u = url.toLowerCase();
+  if (u.endsWith('.m3u8') || u.includes('.m3u8?') || u.includes('.m3u8&')) return 'hls';
+  if (/\.(mp4|webm|ogg|mov|m4v)(\?|&|$)/.test(u)) return 'video';
+  if (/\/(video|videofeed)(\?|$)/.test(u)) return 'mjpeg';
+  if (u.includes('action=stream') || u.includes('mjpeg') || u.includes('/mjpeg')) return 'mjpeg';
+  return 'mjpeg';
+}
+
+function openWifiModal() {
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  const savedUrl = localStorage.getItem(WIFI_LAST_URL_KEY) || '';
+  wifiUrlInput.value = savedUrl;
+  if (savedUrl && wifiTypeSelect.value === 'auto') {
+    // leave as auto
+  }
+  setWifiStatus('');
+  wifiModal.classList.add('show');
+  setTimeout(() => wifiUrlInput.focus(), 100);
+}
+function closeWifiModal() { wifiModal.classList.remove('show'); }
+
+async function testWifi(url) {
+  if (!url) { setWifiStatus('URL kosong', 'err'); return false; }
+  setWifiStatus('Menguji koneksi...', 'loading');
+  return new Promise(resolve => {
+    const img = new Image();
+    const timer = setTimeout(() => {
+      img.src = '';
+      setWifiStatus('❌ Timeout — periksa URL, WiFi/Hotspot, dan HP lain', 'err');
+      resolve(false);
+    }, 7000);
+    img.onload = () => { clearTimeout(timer); img.src = ''; setWifiStatus('✅ Stream terdeteksi', 'ok'); resolve(true); };
+    img.onerror = () => { clearTimeout(timer); setWifiStatus('❌ Tidak dapat memuat stream', 'err'); resolve(false); };
+    img.src = url;
+  });
+}
+
+async function connectWifi(url, forceType = 'auto') {
+  if (!url) { showToast('URL wajib diisi', 'error'); return; }
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+
+  let type = forceType;
+  if (type === 'auto') type = detectStreamType(url);
+
+  disconnectExternal(true);
+  showLoader(`Menghubungkan ${type.toUpperCase()}...`);
+  setWifiStatus(`Menghubungkan via ${type.toUpperCase()}...`, 'loading');
+
+  try {
+    if (type === 'mjpeg') {
+      // MJPEG: load via img, draw to canvas during recording
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Timeout memuat MJPEG')), 10000);
+        wifiImg.onload = () => { clearTimeout(timer); resolve(); };
+        wifiImg.onerror = () => { clearTimeout(timer); reject(new Error('Gagal load MJPEG')); };
+        wifiImg.src = url;
+      });
+
+      wifiImg.classList.add('active');
+      uploadVideo.style.display = 'none';
+
+      state.wifi.mode = 'mjpeg';
+      state.wifi.url = url;
+      state.isExternalSource = true;
+      state.activeInput = 'wifi';
+      state.uploadReady = true;
+
+      wifiImg.onerror = () => {
+        if (state.wifi.mode === 'mjpeg') {
+          showToast('⚠️ Koneksi MJPEG terputus — coba reconnect', 'error');
+        }
+      };
+
+    } else if (type === 'hls') {
+      // HLS: try native first (Safari), else hls.js
+      const native = uploadVideo.canPlayType('application/vnd.apple.mpegurl');
+      if (native) {
+        uploadVideo.src = url;
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('Timeout HLS')), 12000);
+          uploadVideo.onloadedmetadata = () => { clearTimeout(timer); resolve(); };
+          uploadVideo.onerror = () => { clearTimeout(timer); reject(new Error('Gagal load HLS')); };
+          uploadVideo.load();
+        });
+      } else {
+        const ok = await loadHlsLib();
+        if (!ok) throw new Error('Gagal load hls.js (periksa internet)');
+        await new Promise((resolve, reject) => {
+          state.wifi.hls = new window.Hls();
+          state.wifi.hls.loadSource(url);
+          state.wifi.hls.attachMedia(uploadVideo);
+          state.wifi.hls.on(window.Hls.Events.MANIFEST_PARSED, () => resolve());
+          state.wifi.hls.on(window.Hls.Events.ERROR, (e, data) => {
+            if (data && data.fatal) reject(new Error('HLS fatal: ' + (data.details || 'error')));
+          });
+          setTimeout(() => reject(new Error('Timeout HLS manifest')), 12000);
+        });
+      }
+
+      state.wifi.mode = 'hls';
+      state.wifi.url = url;
+      state.isExternalSource = true;
+      state.activeInput = 'wifi';
+      state.uploadReady = true;
+
+      uploadVideo.style.display = '';
+      uploadVideo.muted = false;
+      ensureAudioCtx();
+      try {
+        if (!state.uploadSource) {
+          state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
+          state.uploadSource.connect(state.audioCtx.destination);
+        }
+      } catch(e) { console.warn('Audio routing HLS gagal:', e); }
+      try { await uploadVideo.play(); } catch(e) { uploadVideo.muted = true; try { await uploadVideo.play(); } catch(e2){} }
+
+    } else if (type === 'video') {
+      uploadVideo.src = url;
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Timeout video')), 12000);
+        uploadVideo.onloadedmetadata = () => { clearTimeout(timer); resolve(); };
+        uploadVideo.onerror = () => { clearTimeout(timer); reject(new Error('Gagal load video')); };
+        uploadVideo.load();
+      });
+
+      state.wifi.mode = 'video';
+      state.wifi.url = url;
+      state.isExternalSource = true;
+      state.activeInput = 'wifi';
+      state.uploadReady = true;
+
+      uploadVideo.style.display = '';
+      uploadVideo.muted = false;
+      ensureAudioCtx();
+      try {
+        if (!state.uploadSource) {
+          state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
+          state.uploadSource.connect(state.audioCtx.destination);
+        }
+      } catch(e) { console.warn('Audio routing video gagal:', e); }
+      try { await uploadVideo.play(); } catch(e) { uploadVideo.muted = true; try { await uploadVideo.play(); } catch(e2){} }
+    } else {
+      throw new Error('Tipe stream tidak dikenal');
+    }
+
+    localStorage.setItem(WIFI_LAST_URL_KEY, url);
+    uploadPlaceholder.classList.add('hidden');
+    updateUploadBadge();
+    updateInputStatus();
+    closeWifiModal();
+    setWifiStatus('✅ Terhubung', 'ok');
+    showToast(`✅ WiFi/${type.toUpperCase()} terhubung`, 'success');
+
+    if (state.wifi.mode !== 'mjpeg') {
+      updatePlayPauseIcon();
+      updateProgressBar();
+    }
+  } catch (err) {
+    console.error(err);
+    setWifiStatus('❌ ' + err.message, 'err');
+    showToast('Gagal WiFi: ' + err.message, 'error');
+    disconnectExternal(true);
+  } finally {
+    hideLoader();
+  }
+}
+
+function disconnectWifi() {
+  if (!state.isExternalSource || state.activeInput !== 'wifi') {
+    showToast('WiFi tidak sedang terhubung');
+    return;
+  }
+  disconnectExternal();
+  setWifiStatus('⏏ WiFi diputus', 'ok');
+}
+
+/* hls.js optional loader */
+let hlsLibPromise = null;
+function loadHlsLib() {
+  if (window.Hls) return Promise.resolve(true);
+  if (hlsLibPromise) return hlsLibPromise;
+  hlsLibPromise = new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+    s.crossOrigin = 'anonymous';
+    s.onload = () => resolve(true);
+    s.onerror = () => { hlsLibPromise = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return hlsLibPromise;
+}
+
+/* Wiring */
+buildInputCards();
+btnUpload.addEventListener('click', openInputModal);
+btnConfigureInputs.addEventListener('click', openInputModal);
+btnCloseInputModal.addEventListener('click', closeInputModal);
+inputModal.addEventListener('click', e => { if (e.target === inputModal) closeInputModal(); });
+btnDisconnectInput.addEventListener('click', () => { disconnectExternal(); closeInputModal(); });
+
+btnCloseWifiModal.addEventListener('click', closeWifiModal);
+wifiModal.addEventListener('click', e => { if (e.target === wifiModal) closeWifiModal(); });
+btnConnectWifi.addEventListener('click', () => connectWifi(wifiUrlInput.value.trim(), wifiTypeSelect.value));
+btnTestWifi.addEventListener('click', () => testWifi(wifiUrlInput.value.trim()));
+btnDisconnectWifi.addEventListener('click', () => { disconnectWifi(); });
+
+document.querySelectorAll('.source-btn').forEach(btn => {
+  btn.addEventListener('click', () => connectExternal(btn.dataset.input));
+});
+placeholderUploadBtn.addEventListener('click', () => {
+  if (state.isRecording) { showToast('Stop rekaman dulu', 'error'); return; }
+  fileInput.value = '';
+  fileInput.click();
 });
 
-/* ============================================================
-   KAMERA
-   ============================================================ */
-async function startCamera(silent = false) {
+/* ============ KAMERA ============ */
+async function startCamera(silent=false) {
   try {
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Browser tidak mendukung kamera.');
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Tidak didukung');
     if (state.stream) state.stream.getTracks().forEach(t => t.stop());
     state.stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: state.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -2668,24 +1017,6 @@ async function startCamera(silent = false) {
     livePlaceholder.classList.add('hidden');
     btnSwitchCam.classList.remove('hidden');
     btnStartCam.classList.add('active');
-
-    const c = ctrlByKey.live;
-    if (c.tools) c.tools.classList.remove('hidden');
-    resetView(c, true);
-    showHint(c);
-
-    liveVideo.addEventListener('loadedmetadata', () => {
-      if (liveVideo.videoWidth) {
-        liveCanvas.width = liveVideo.videoWidth;
-        liveCanvas.height = liveVideo.videoHeight;
-      }
-    }, { once: true });
-
-    if (state.bg.mode !== 'off' && segReady) {
-      liveCanvas.style.display = 'block';
-      startSegLoop();
-    }
-
     if (!silent) showToast('Kamera aktif', 'success');
     return true;
   } catch (err) {
@@ -2693,28 +1024,18 @@ async function startCamera(silent = false) {
     return false;
   }
 }
+btnStartCam.addEventListener('click', () => startCamera());
+btnSwitchCam.addEventListener('click', () => {
+  state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
+  startCamera();
+});
 
-function waitForVideoDim(video, timeoutMs = 1500) {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const check = () => {
-      if (video.videoWidth > 0) return resolve(true);
-      if (Date.now() - start > timeoutMs) return resolve(false);
-      setTimeout(check, 50);
-    };
-    check();
-  });
-}
-
-/* ============================================================
-   MIC
-   ============================================================ */
+/* ============ MIC ============ */
 async function toggleMic() {
   if (state.micEnabled) {
     if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
     if (state.micSource) { try { state.micSource.disconnect(); } catch(e){} state.micSource = null; }
-    state.micStream = null;
-    state.micEnabled = false;
+    state.micStream = null; state.micEnabled = false;
     btnMic.classList.remove('active');
     showToast('Mic dimatikan');
     return;
@@ -2726,68 +1047,49 @@ async function toggleMic() {
     state.micSource = state.audioCtx.createMediaStreamSource(ms);
     state.micEnabled = true;
     btnMic.classList.add('active');
-    showToast('Mic aktif — suara kamu akan direkam', 'success');
-  } catch (err) {
-    showToast('Mic gagal: ' + err.message, 'error');
-  }
+    showToast('Mic aktif', 'success');
+  } catch (err) { showToast('Mic gagal: ' + err.message, 'error'); }
 }
+btnMic.addEventListener('click', toggleMic);
 
-/* ============================================================
-   AUDIO CONTEXT
-   ============================================================ */
+/* ============ AUDIO ============ */
 function ensureAudioCtx() {
   if (!state.audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     state.audioCtx = new AC();
   }
-  if (state.audioCtx.state === 'suspended') {
-    state.audioCtx.resume().catch(() => {});
-  }
+  if (state.audioCtx.state === 'suspended') state.audioCtx.resume().catch(()=>{});
   return state.audioCtx;
 }
 
-['click', 'touchstart', 'keydown'].forEach(evt => {
-  document.addEventListener(evt, () => {
-    if (state.audioCtx && state.audioCtx.state === 'suspended') {
-      state.audioCtx.resume().catch(() => {});
-    }
-  }, { passive: true });
-});
-
-/* ============================================================
-   UPLOAD VIDEO
-   ============================================================ */
-btnUpload.addEventListener('click', () => {
-  fileInput.value = '';
-  fileInput.click();
-});
-
-fileInput.addEventListener('change', async (e) => {
+/* ============ UPLOAD FILE ============ */
+fileInput.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  if (!file.type.startsWith('video/')) { showToast('File harus berupa video', 'error'); return; }
+  if (!file.type.startsWith('video/')) { showToast('File harus video', 'error'); return; }
+  if (state.isExternalSource) disconnectExternal(true);
 
   showLoader('Memuat video...');
   try {
     const url = URL.createObjectURL(file);
+    uploadVideo.srcObject = null;
+    uploadVideo.muted = false;
     uploadVideo.src = url;
     uploadVideo.load();
 
     await new Promise((resolve, reject) => {
-      const done = () => { uploadVideo.onloadedmetadata = null; uploadVideo.onerror = null; resolve(); };
-      const fail = () => { uploadVideo.onloadedmetadata = null; uploadVideo.onerror = null; reject(new Error('Gagal memuat video')); };
+      const done = () => { uploadVideo.onloadedmetadata=null; uploadVideo.onerror=null; resolve(); };
+      const fail = () => { uploadVideo.onloadedmetadata=null; uploadVideo.onerror=null; reject(new Error('Gagal memuat')); };
       uploadVideo.onloadedmetadata = done;
       uploadVideo.onerror = fail;
-      setTimeout(() => { if (!state.uploadReady && uploadVideo.readyState < 1) fail(); }, 15000);
+      setTimeout(() => { if (uploadVideo.readyState < 1) fail(); }, 15000);
     });
 
     uploadPlaceholder.classList.add('hidden');
     state.uploadReady = true;
-
-    const c = ctrlByKey.upload;
-    resetView(c, true);
-    if (c.tools) c.tools.classList.remove('hidden');
+    state.isExternalSource = false;
+    state.activeInput = null;
 
     ensureAudioCtx();
     try {
@@ -2795,21 +1097,22 @@ fileInput.addEventListener('change', async (e) => {
         state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
         state.uploadSource.connect(state.audioCtx.destination);
       }
-    } catch (e) { console.warn('Audio routing gagal:', e); }
+    } catch(e) { console.warn('Audio routing gagal:', e); }
 
     try {
       uploadVideo.muted = false;
       await uploadVideo.play();
-      showToast('Video dimuat — geser / cubit untuk atur', 'success');
-    } catch (autoplayErr) {
+      showToast('📁 Video file dimuat', 'success');
+    } catch (err) {
       uploadVideo.muted = true;
-      try { await uploadVideo.play(); } catch(e) {}
-      showToast('Video dimuat — ketuk ▶ untuk audio', '');
+      try { await uploadVideo.play(); } catch(e){}
+      showToast('Video dimuat — ketuk ▶ untuk audio');
     }
 
-    showHint(c);
     updatePlayPauseIcon();
     updateProgressBar();
+    updateUploadBadge();
+    updateInputStatus();
   } catch (err) {
     showToast('Gagal: ' + err.message, 'error');
   } finally {
@@ -2817,48 +1120,145 @@ fileInput.addEventListener('change', async (e) => {
   }
 });
 
-/* ============================================================
-   REKAM
-   ============================================================ */
-async function startRecording() {
-  if (state.isRecording) return;
-
-  if (!state.stream) {
-    await startCamera(true);
-  }
-
-  if (!state.stream && !state.uploadReady) {
-    showToast('Aktifkan kamera atau upload video dulu', 'error');
+/* ============ PLAYBACK ============ */
+function updatePlayPauseIcon() { btnPlayPause.innerHTML = uploadVideo.paused ? ICON_PLAY : ICON_PAUSE; }
+function updateProgressBar() {
+  const dur = uploadVideo.duration;
+  if (!dur || !isFinite(dur)) { videoProgressFill.style.width = '0%'; return; }
+  videoProgressFill.style.width = (uploadVideo.currentTime / dur * 100) + '%';
+}
+async function togglePlayPause() {
+  if (!state.uploadReady) { showToast('Sambungkan sumber dulu', 'error'); return; }
+  if (state.wifi.mode === 'mjpeg') {
+    showToast('MJPEG stream berjalan otomatis');
     return;
   }
+  ensureAudioCtx();
+  if (uploadVideo.paused) {
+    if (uploadVideo.ended) uploadVideo.currentTime = 0;
+    uploadVideo.muted = false;
+    try { await uploadVideo.play(); } catch(e){ showToast('Gagal play', 'error'); }
+  } else uploadVideo.pause();
+}
+btnPlayPause.addEventListener('click', togglePlayPause);
+btnBack.addEventListener('click', () => {
+  if (!state.uploadReady || state.wifi.mode === 'mjpeg' || state.wifi.mode === 'hls') return;
+  uploadVideo.currentTime = Math.max(0, uploadVideo.currentTime - SEEK_STEP);
+  updateProgressBar();
+});
+btnNext.addEventListener('click', () => {
+  if (!state.uploadReady || state.wifi.mode === 'mjpeg' || state.wifi.mode === 'hls') return;
+  const d = uploadVideo.duration || 0;
+  uploadVideo.currentTime = Math.min(d, uploadVideo.currentTime + SEEK_STEP);
+  updateProgressBar();
+});
+btnStop.addEventListener('click', () => {
+  if (!state.uploadReady || state.wifi.mode === 'mjpeg' || state.wifi.mode === 'hls') return;
+  uploadVideo.pause();
+  uploadVideo.currentTime = 0;
+  updatePlayPauseIcon();
+  updateProgressBar();
+});
+uploadVideo.addEventListener('play', updatePlayPauseIcon);
+uploadVideo.addEventListener('pause', updatePlayPauseIcon);
+uploadVideo.addEventListener('timeupdate', updateProgressBar);
+uploadVideo.addEventListener('ended', () => {
+  updatePlayPauseIcon();
+  if (state.isRecording) { stopRecording(); showToast('Sumber selesai — rekaman berhenti', 'success'); return; }
+  if (state.isExternalSource) return;
+  uploadVideo.currentTime = 0;
+  uploadVideo.play().catch(()=>{});
+});
+videoProgress.addEventListener('click', e => {
+  if (!state.uploadReady || state.isExternalSource) return;
+  const rect = videoProgress.getBoundingClientRect();
+  const pct = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+  if (uploadVideo.duration && isFinite(uploadVideo.duration)) {
+    uploadVideo.currentTime = pct * uploadVideo.duration;
+    updateProgressBar();
+  }
+});
 
-  if (!('MediaRecorder' in window)) { showToast('Browser tidak mendukung perekaman', 'error'); return; }
-  if (typeof canvas.captureStream !== 'function') { showToast('Browser tidak mendukung captureStream', 'error'); return; }
+/* ============ KUALITAS ============ */
+btnQuality.addEventListener('click', () => {
+  const i = QUALITY_ORDER.indexOf(state.quality);
+  const next = QUALITY_ORDER[(i + 1) % QUALITY_ORDER.length];
+  applyQuality(next);
+  showToast('Kualitas: ' + QUALITY_PRESETS[next].label);
+});
 
+/* ============ DRAW KE CANVAS ============ */
+function drawVideoCover(source, dx, dy, dw, dh) {
+  if (dw <= 0 || dh <= 0) return;
+  const vw = getSourceDim(source), vh = getSourceDimH(source);
+  if (!vw || !vh) { ctx.fillStyle = '#0d0d0f'; ctx.fillRect(dx, dy, dw, dh); return; }
+  const s0 = Math.max(dw / vw, dh / vh);
+  const sw = dw / s0, sh = dh / s0;
+  const sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+  try { ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh); } catch(e) {}
+}
+function drawSplitLayout(W, H) {
+  const l = isLandscapeMode();
+  const uploadSrc = getUploadSource();
+  const first  = state.swapped ? uploadSrc : liveVideo;
+  const second = state.swapped ? liveVideo : uploadSrc;
+  if (l) {
+    const splitX = Math.max(1, Math.min(W - 1, Math.round(W * state.splitRatio)));
+    drawVideoCover(first, 0, 0, splitX, H);
+    drawVideoCover(second, splitX, 0, W - splitX, H);
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.fillRect(splitX - 1, 0, 2, H);
+  } else {
+    const splitY = Math.max(1, Math.min(H - 1, Math.round(H * state.splitRatio)));
+    drawVideoCover(first, 0, 0, W, splitY);
+    drawVideoCover(second, 0, splitY, W, H - splitY);
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.fillRect(0, splitY - 1, W, 2);
+  }
+}
+function startDrawLoop() {
+  if (state.drawRAF) return;
+  const tick = () => {
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    drawSplitLayout(W, H);
+    state.drawRAF = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function stopDrawLoop() {
+  if (state.drawRAF) cancelAnimationFrame(state.drawRAF);
+  state.drawRAF = null;
+}
+
+/* ============ REKAM ============ */
+function waitForVideoDim(video, timeoutMs=1500) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    const check = () => {
+      if (getSourceDim(video) > 0) return resolve(true);
+      if (Date.now() - start > timeoutMs) return resolve(false);
+      setTimeout(check, 50);
+    };
+    check();
+  });
+}
+async function startRecording() {
+  if (state.isRecording) return;
+  if (!state.stream) await startCamera(true);
+  if (!state.stream && !state.uploadReady) { showToast('Aktifkan kamera atau sambungkan sumber', 'error'); return; }
+  if (!('MediaRecorder' in window)) { showToast('Tidak didukung', 'error'); return; }
+  if (typeof canvas.captureStream !== 'function') { showToast('Tidak didukung', 'error'); return; }
   ensureAudioCtx();
 
-  if (state.uploadReady && uploadVideo.paused) {
+  if (state.uploadReady && !state.isExternalSource && uploadVideo.paused) {
     if (uploadVideo.ended) uploadVideo.currentTime = 0;
-    try {
-      uploadVideo.muted = false;
-      await uploadVideo.play();
-    } catch (e) {
-      uploadVideo.muted = true;
-      try { await uploadVideo.play(); } catch (e2) {}
-    }
+    try { uploadVideo.muted = false; await uploadVideo.play(); }
+    catch(e) { uploadVideo.muted = true; try { await uploadVideo.play(); } catch(e){} }
   }
-
   if (state.stream) await waitForVideoDim(liveVideo, 1500);
-  if (state.uploadReady) await waitForVideoDim(uploadVideo, 1500);
-
-  if (state.bg.mode !== 'off' && liveVideo.videoWidth) {
-    if (liveCanvas.width !== liveVideo.videoWidth) {
-      liveCanvas.width = liveVideo.videoWidth;
-      liveCanvas.height = liveVideo.videoHeight;
-    }
-    startSegLoop();
-  }
-
+  if (state.uploadReady) await waitForVideoDim(getUploadSource(), 1500);
   applyQuality(state.quality);
 
   const videoStream = canvas.captureStream(30);
@@ -2867,59 +1267,53 @@ async function startRecording() {
   if (state.audioCtx) {
     const recDest = state.audioCtx.createMediaStreamDestination();
     let hasAudio = false;
-    if (state.micSource)    { state.micSource.connect(recDest);    hasAudio = true; }
-    if (state.uploadSource) { state.uploadSource.connect(recDest); hasAudio = true; }
+    if (state.micSource) { state.micSource.connect(recDest); hasAudio = true; }
+    if (state.externalAudioSource) { state.externalAudioSource.connect(recDest); hasAudio = true; }
+
+    // Audio dari video element (file / HLS / video URL) — TIDAK untuk MJPEG & hardware external
+    const isMjpegOnly = state.isExternalSource && state.wifi.mode === 'mjpeg';
+    const isHardwareExt = state.isExternalSource && !state.wifi.mode;
+    if (state.uploadSource && state.uploadReady && !isMjpegOnly && !isHardwareExt) {
+      try { state.uploadSource.connect(recDest); hasAudio = true; } catch(e){}
+    }
     if (hasAudio) { tracks.push(...recDest.stream.getAudioTracks()); state.recDest = recDest; }
   }
 
   const combinedStream = new MediaStream(tracks);
-
   const candidates = [
-    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-    'video/mp4',
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm'
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4',
+    'video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'
   ];
   let mimeType = '';
   for (const m of candidates) if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
-  if (!mimeType) { showToast('Format rekaman tidak didukung', 'error'); return; }
+  if (!mimeType) { showToast('Format tidak didukung', 'error'); return; }
 
   const p = QUALITY_PRESETS[state.quality];
-
   try {
     state.recordedChunks = [];
     state.mediaRecorder = new MediaRecorder(combinedStream, {
-      mimeType,
-      videoBitsPerSecond: p.bitrate,
-      audioBitsPerSecond: 128_000
+      mimeType, videoBitsPerSecond: p.bitrate, audioBitsPerSecond: 128000
     });
     state.previewMime = mimeType;
-
-    state.mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) state.recordedChunks.push(e.data);
-    };
-
-    state.mediaRecorder.onstop = async () => {
+    state.mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) state.recordedChunks.push(e.data); };
+    state.mediaRecorder.onstop = () => {
       stopDrawLoop();
       if (state.recDest) {
         try {
-          if (state.micSource)    state.micSource.disconnect(state.recDest);
+          if (state.micSource) state.micSource.disconnect(state.recDest);
+          if (state.externalAudioSource) state.externalAudioSource.disconnect(state.recDest);
           if (state.uploadSource) state.uploadSource.disconnect(state.recDest);
-        } catch(e) {}
+        } catch(e){}
         state.recDest = null;
       }
       const baseType = mimeType.split(';')[0];
       const blob = new Blob(state.recordedChunks, { type: baseType });
       state.recordedChunks = [];
-      if (blob.size < 1000) { showToast('Rekaman kosong / terlalu pendek', 'error'); return; }
+      if (blob.size < 1000) { showToast('Rekaman kosong', 'error'); return; }
       showPreview(blob);
     };
-
-    state.ticker.startTime = Date.now();
     startDrawLoop();
     state.mediaRecorder.start(1000);
-
     state.isRecording = true;
     state.recStartTime = Date.now();
     recBadge.classList.add('show');
@@ -2927,42 +1321,30 @@ async function startRecording() {
     recText.textContent = 'Stop Rekam';
     state.timerInterval = setInterval(updateRecTimer, 500);
     updateRecTimer();
-
-    RECORD_LOCKED_BTNS.forEach(b => b.disabled = true);
-    RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
-
-    showToast('🔴 Merekam — background, posisi & ticker terjaga', 'success');
-  } catch (err) {
-    showToast('Rekam gagal: ' + err.message, 'error');
-  }
+    showToast('🔴 Merekam', 'success');
+  } catch (err) { showToast('Rekam gagal: ' + err.message, 'error'); }
 }
-
 function stopRecording() {
   if (!state.isRecording) return;
   state.isRecording = false;
   if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-    try { state.mediaRecorder.stop(); } catch(e) {}
+    try { state.mediaRecorder.stop(); } catch(e){}
   }
   if (state.timerInterval) clearInterval(state.timerInterval);
   state.timerInterval = null;
   recBadge.classList.remove('show');
   btnRecord.classList.remove('recording');
   recText.textContent = 'Mulai Rekam';
-
-  RECORD_LOCKED_BTNS.forEach(b => b.disabled = false);
-  RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
 }
-
 function updateRecTimer() {
   const sec = Math.floor((Date.now() - state.recStartTime) / 1000);
   const mm = String(Math.floor(sec / 60)).padStart(2, '0');
   const ss = String(sec % 60).padStart(2, '0');
   recTimerEl.textContent = `${mm}:${ss}`;
 }
+btnRecord.addEventListener('click', () => { state.isRecording ? stopRecording() : startRecording(); });
 
-/* ============================================================
-   PREVIEW / SIMPAN
-   ============================================================ */
+/* ============ PREVIEW / SIMPAN ============ */
 function showPreview(blob) {
   if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
   const url = URL.createObjectURL(blob);
@@ -2971,9 +1353,8 @@ function showPreview(blob) {
   previewVideo.src = url;
   previewInfo.textContent = `Ukuran: ${formatBytes(blob.size)} · Format: ${blob.type}`;
   previewModal.classList.add('show');
-  setTimeout(() => previewVideo.play().catch(() => {}), 100);
+  setTimeout(() => previewVideo.play().catch(()=>{}), 100);
 }
-
 function closePreview() {
   previewModal.classList.remove('show');
   previewVideo.pause();
@@ -2981,14 +1362,12 @@ function closePreview() {
   if (state.previewUrl) { URL.revokeObjectURL(state.previewUrl); state.previewUrl = null; }
   state.previewBlob = null;
 }
-
 async function saveToGallery() {
   if (!state.previewBlob) return;
   const baseType = state.previewMime.split(';')[0];
   const ext = baseType.includes('mp4') ? 'mp4' : 'webm';
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const file = new File([state.previewBlob], `split-${stamp}.${ext}`, { type: baseType });
-
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Split Screen Video' });
@@ -3000,12 +1379,11 @@ async function saveToGallery() {
   }
   downloadFile();
 }
-
 function downloadFile() {
   if (!state.previewBlob) return;
   const baseType = state.previewMime.split(';')[0];
   const ext = baseType.includes('mp4') ? 'mp4' : 'webm';
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const url = URL.createObjectURL(state.previewBlob);
   const a = document.createElement('a');
   a.href = url;
@@ -3014,93 +1392,60 @@ function downloadFile() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  showToast('File diunduh ke Downloads', 'success');
+  showToast('File diunduh', 'success');
 }
-
 function formatBytes(b) {
   if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(1) + ' MB';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
 }
-
-/* ============================================================
-   EVENT UTAMA
-   ============================================================ */
-btnStartCam.addEventListener('click', () => startCamera());
-btnSwitchCam.addEventListener('click', () => {
-  state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
-  startCamera();
-});
-btnMic.addEventListener('click', toggleMic);
-btnQuality.addEventListener('click', () => {
-  const i = QUALITY_ORDER.indexOf(state.quality);
-  const next = QUALITY_ORDER[(i + 1) % QUALITY_ORDER.length];
-  applyQuality(next);
-  showToast('Kualitas: ' + QUALITY_PRESETS[next].label);
-});
-btnRecord.addEventListener('click', () => {
-  if (state.isRecording) stopRecording();
-  else startRecording();
-});
 btnClosePreview.addEventListener('click', closePreview);
 btnSaveGallery.addEventListener('click', saveToGallery);
 btnDownload.addEventListener('click', downloadFile);
 
-/* ============================================================
-   RESIZE
-   ============================================================ */
+/* ============ RESIZE ============ */
 let resizeTimeout;
 function handleResize() {
-  if (state.isRecording) { applyAllViews(); return; }
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
     if (state.aspectMode === 'asli') updateDividerOrientation();
     applySplitToLayout();
     applyQuality(state.quality);
-    applyAllViews();
-    updateTickerDOM();
-    if (state.ticker.enabled) startTickerDOMLoop();
   }, 150);
 }
 window.addEventListener('resize', handleResize);
 window.addEventListener('orientationchange', handleResize);
 
-if (window.ResizeObserver) {
-  const ro = new ResizeObserver(() => applyAllViews());
-  ro.observe(liveScreen);
-  ro.observe(uploadScreen);
+/* ============ PERANGKAT BARU ============ */
+if (navigator.mediaDevices?.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', () => {
+    if (inputModal.classList.contains('show')) {
+      refreshDeviceList();
+      showToast('Perangkat berubah — daftar diperbarui');
+    }
+  });
 }
 
-/* ============================================================
-   CLEANUP
-   ============================================================ */
-function cleanup() {
+/* ============ CLEANUP ============ */
+window.addEventListener('pagehide', () => {
   if (state.stream) state.stream.getTracks().forEach(t => t.stop());
   if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
+  if (state.externalStream) state.externalStream.getTracks().forEach(t => t.stop());
+  if (state.wifi.hls) { try { state.wifi.hls.destroy(); } catch(e){} }
   if (state.isRecording) stopRecording();
-  stopSegLoop();
-  stopTickerDOMLoop();
-}
-window.addEventListener('pagehide', cleanup);
-window.addEventListener('beforeunload', cleanup);
+});
 
-/* ============================================================
-   INIT
-   ============================================================ */
+/* ============ INIT ============ */
 applyQuality('720');
 requestAnimationFrame(() => {
   updateDividerOrientation();
   applySplitToLayout();
   applyQuality(state.quality);
-  applyAllViews();
-  updateTickerDOM();
-  updateExpandLabels();
+  updateUploadBadge();
+  updateInputStatus();
+  updatePlaceholderDevNames([]);
 });
 updatePlayPauseIcon();
-updateBgBtnState();
-console.log('%c📱 Split Screen Recorder — swap posisi LIVE ↔ UPLOAD',
-  'color:#6366f1;font-weight:bold;font-size:14px');
 </script>
-
 </body>
 </html>
