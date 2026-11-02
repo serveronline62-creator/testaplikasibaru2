@@ -46,7 +46,6 @@ body {
     color: var(--text-main);
     line-height: 1.5;
     min-height: 100vh;
-    /* padding-bottom dihapus karena banner cookie sudah tidak ada */
 }
 
 .sr-only {
@@ -71,6 +70,7 @@ body {
     display: flex;
     align-items: center;
     padding-left: 20px;
+    gap: 18px;
 }
 
 .jt-logo {
@@ -84,7 +84,6 @@ body {
     align-items: center;
     font-style: italic;
     letter-spacing: -0.5px;
-    margin-right: 30px;
 }
 
 .jt-logo span {
@@ -92,6 +91,16 @@ body {
     font-style: normal;
     margin-left: 6px;
     font-weight: 500;
+}
+
+/* Judul di navbar (di atas background abu-abu) */
+.nav-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #333;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+    line-height: 1.1;
 }
 
 .nav-right {
@@ -121,42 +130,11 @@ body {
 .nav-right-links div { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
 /* =========================================
-   HERO SECTION (Teks di Pojok Kiri Atas & Lebih Kecil)
-   ========================================= */
-.jt-hero {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    max-width: 1500px; 
-    margin: 0 auto;
-    padding: 20px 20px 10px 20px;
-    background-color: transparent;
-}
-
-.hero-text {
-    text-align: left; 
-}
-
-.hero-text h1 {
-    font-size: 32px; 
-    color: #444;
-    font-weight: 900;
-    margin: 0;
-    line-height: 1.2;
-    text-align: left;
-    white-space: nowrap; 
-}
-
-.hero-image {
-    display: none; 
-}
-
-/* =========================================
    MAIN CONTENT & CARD
    ========================================= */
 .container {
     max-width: 1500px;
-    margin: 0 auto 40px auto;
+    margin: 20px auto 40px auto;
     padding: 0 20px;
     position: relative;
     z-index: 10;
@@ -363,8 +341,12 @@ tfoot td { padding: 15px 12px; border-top: 2px solid #ddd; }
 /* Mobile Adjustments */
 @media (max-width: 768px) {
     .nav-right::before { width: 200px; }
-    .jt-hero { padding: 15px 15px 5px 15px; }
-    .hero-text h1 { font-size: 24px; white-space: normal; } 
+    .nav-title {
+        font-size: 12px;
+        white-space: normal;
+        max-width: 130px;
+        line-height: 1.15;
+    }
     .container { padding: 0 10px; margin-top: 10px; }
     .tabs { padding: 10px 10px 0 10px; }
     .tab-button { padding: 10px 15px; font-size: 13px; width: 100%; justify-content: center; border-radius: 4px; }
@@ -379,20 +361,14 @@ tfoot td { padding: 15px 12px; border-top: 2px solid #ddd; }
     <header class="jt-navbar">
         <div class="nav-left">
             <div class="jt-logo">POLYTRON<span>KUPANG</span></div>
+            <div class="nav-title">Manajemen Data Sparepart Bekas</div>
         </div>
         <div class="nav-right">
             <div class="nav-right-links">
-                <div><i class="fa-regular fa-user"></i> Masuk/Daftar</div>
+                <div><i class="fa-regular fa-user"></i> Sistem LIVE ON</div>
             </div>
         </div>
     </header>
-
-    <!-- HERO SECTION -->
-    <section class="jt-hero">
-        <div class="hero-text">
-            <h1>Manajemen Data Sparepart Bekas</h1>
-        </div>
-    </section>
 
     <!-- MAIN CONTENT -->
     <div class="container">
@@ -525,9 +501,7 @@ tfoot td { padding: 15px 12px; border-top: 2px solid #ddd; }
     <!-- TOAST CONTAINER -->
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-    <!-- (Banner Cookie & Teksnya Telah Dihapus Sepenuhnya) -->
-
-    <!-- JAVASCRIPT ORIGINAL (TIDAK DIUBAH SAMA SEKALI) -->
+    <!-- LIBRARIES -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
