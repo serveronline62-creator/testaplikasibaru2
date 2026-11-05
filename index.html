@@ -1,954 +1,552 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Komponen (Manual Opname)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Layar Tampilan — Video Input + Teks Berjalan</title>
+<style>
+  :root{
+    --bg:#0a0b0e;
+    --panel:rgba(18,20,26,.75);
+    --border:rgba(255,255,255,.10);
+    --text:#e9edf5;
+    --muted:#8b93a7;
+    --accent:#4f8cff;
+    --danger:#ff4f6d;
+    --ok:#2fd07a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:#000;color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent;
+  }
 
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  /* ===== Panggung video ===== */
+  .stage{position:fixed;inset:0;background:#000;display:grid;place-items:center;z-index:0}
+  #video{
+    width:100%;height:100%;object-fit:contain;background:#000;
+    display:block;transition:opacity .35s ease;
+  }
+  #video.fit-cover{object-fit:cover}
+  #video.mirror{transform:scaleX(-1)}
 
-    <style>
-        :root {
-            --bg: #f4f6f9;
-            --card: #ffffff;
-            --border: #d1d5db;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --danger: #dc2626;
-            --danger-hover: #b91c1c;
-            --danger-bg: #fef2f2;
-            --success: #16a34a;
-            --success-bg: #f0fdf4;
-            --warn: #d97706;
-            --warn-bg: #fffbeb;
-            --header-bg: #1e293b;
-            --header-text: #f8fafc;
-            --row-alt: #f8fafc;
-            --input-focus: #3b82f6;
-            --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-            --shadow-lg: 0 4px 12px rgba(0,0,0,.1);
-            --empty-row-bg: #fffbeb;
-        }
+  /* ===== Placeholder ===== */
+  .placeholder{
+    position:absolute;inset:0;display:grid;place-content:center;justify-items:center;
+    gap:14px;text-align:center;padding:32px;
+    background:radial-gradient(ellipse at 50% 40%,#141924 0%,#07080b 75%);
+    transition:opacity .35s ease,visibility .35s;
+    z-index:2;
+  }
+  .placeholder.gone{opacity:0;visibility:hidden}
+  .ph-icon{
+    width:76px;height:76px;border-radius:50%;
+    display:grid;place-items:center;font-size:26px;color:#9fbaff;
+    background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.35);
+    box-shadow:0 0 40px rgba(79,140,255,.18);
+  }
+  .placeholder h1{font-size:clamp(18px,2.4vw,26px);margin:0;font-weight:650;letter-spacing:.2px}
+  .placeholder p{margin:0;max-width:460px;color:var(--muted);font-size:14.5px;line-height:1.65}
+  .placeholder b{color:#cfe0ff}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ===== Teks Berjalan (Ticker) ===== */
+  .ticker{
+    position:absolute;left:0;right:0;bottom:0;height:54px;
+    display:none;align-items:center;overflow:hidden;
+    background:linear-gradient(90deg,#0b0e14 0%,#171c28 50%,#0b0e14 100%);
+    border-top:1px solid rgba(79,140,255,.30);
+    box-shadow:0 -8px 26px rgba(0,0,0,.55);
+    z-index:4;
+  }
+  .ticker-track{
+    display:flex;width:max-content;white-space:nowrap;
+    will-change:transform;
+    font-size:21px;font-weight:650;letter-spacing:.4px;
+    color:#e4ecff;
+    text-shadow:0 1px 4px rgba(0,0,0,.55);
+  }
+  .ticker-track span{
+    flex:0 0 auto;padding:0 3rem;display:block;
+  }
 
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg); color: var(--text); line-height: 1.5;
-            padding: 24px; min-height: 100vh;
-        }
+  /* ===== UI overlay ===== */
+  .ui{
+    position:fixed;inset:0;pointer-events:none;z-index:10;
+    display:flex;flex-direction:column;justify-content:space-between;
+    transition:opacity .3s ease,padding .25s ease;
+  }
+  .ui.hide{opacity:0}
+  .ui.has-ticker{padding-bottom:54px}     /* geser kontrol ke atas ticker */
+  .ui > *{pointer-events:auto}
 
-        .container { max-width: 100%; margin: 0 auto; }
+  .bar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:14px 16px;
+    background:linear-gradient(to bottom,rgba(8,9,12,.9),rgba(8,9,12,0));
+  }
+  .bar.bottom{
+    flex-direction:column;align-items:stretch;
+    gap:12px;
+    padding:26px 16px 18px;
+    background:linear-gradient(to top,rgba(8,9,12,.92),rgba(8,9,12,0));
+  }
+  .ticker-ctrl,.main-ctrl{
+    display:flex;gap:10px;flex-wrap:wrap;
+    justify-content:center;align-items:center;
+  }
 
-        .page-header { text-align: center; margin-bottom: 24px; }
-        .page-header h2 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; color: var(--header-bg); }
-        .page-header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .group{display:flex;align-items:center;gap:8px}
 
-        .toolbar {
-            display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-            background: var(--card); padding: 16px 20px; border-radius: 10px;
-            border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 16px;
-        }
+  .dot{
+    width:9px;height:9px;border-radius:50%;background:#5a6072;flex:none;
+    transition:background .25s,box-shadow .25s;
+  }
+  .dot.on{background:var(--ok);box-shadow:0 0 10px var(--ok);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.45}}
 
-        .toolbar-group { display: flex; align-items: center; gap: 8px; }
-        .toolbar-group label {
-            font-size: 12px; font-weight: 600; color: var(--muted);
-            text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
-        }
+  .select{
+    appearance:none;background:var(--panel);color:var(--text);
+    border:1px solid var(--border);border-radius:10px;
+    padding:9px 34px 9px 13px;font-size:13.5px;max-width:min(56vw,320px);
+    cursor:pointer;backdrop-filter:blur(12px);outline:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b93a7'><path d='M2 4l4 4 4-4'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
+  .select:focus-visible{border-color:var(--accent)}
 
-        .file-label {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: var(--accent); color: #fff; padding: 8px 16px;
-            border-radius: 6px; font-size: 13px; font-weight: 600;
-            cursor: pointer; transition: background 0.15s; border: none;
-        }
-        .file-label:hover { background: var(--accent-hover); }
-        .file-label svg { width: 16px; height: 16px; }
-        #upload { display: none; }
+  .text-input{
+    flex:1 1 260px;min-width:180px;max-width:520px;
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:10px;color:var(--text);
+    padding:10px 14px;font-size:13.5px;font-family:inherit;
+    outline:none;backdrop-filter:blur(12px);
+    transition:border-color .2s;
+  }
+  .text-input::placeholder{color:#7f879b}
+  .text-input:focus{border-color:var(--accent)}
 
-        select {
-            padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px;
-            font-size: 13px; background: #fff; color: var(--text);
-            cursor: pointer; min-width: 160px; transition: border-color 0.15s;
-        }
-        select:focus { outline: none; border-color: var(--input-focus); }
+  .badge{
+    font-size:12.5px;color:var(--muted);padding:7px 12px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--border);backdrop-filter:blur(12px);
+    font-variant-numeric:tabular-nums;white-space:nowrap;max-width:52vw;
+    overflow:hidden;text-overflow:ellipsis;
+  }
 
-        .btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px;
-            font-size: 13px; font-weight: 600; cursor: pointer;
-            background: #fff; color: var(--text); transition: all 0.15s; white-space: nowrap;
-        }
-        .btn:hover { background: var(--bg); border-color: #9ca3af; }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
-        .btn svg { width: 15px; height: 15px; }
-        .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
-        .btn-accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-        .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
-        .btn-danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
+  .btn{
+    appearance:none;border:1px solid var(--border);border-radius:11px;
+    background:var(--panel);color:var(--text);
+    padding:11px 17px;font-size:13.5px;font-weight:560;cursor:pointer;
+    backdrop-filter:blur(14px);transition:transform .12s,background .2s,border-color .2s;
+    white-space:nowrap;
+  }
+  .btn:hover{background:rgba(38,43,56,.85);border-color:rgba(255,255,255,.2)}
+  .btn:active{transform:scale(.96)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn.primary{background:var(--accent);border-color:transparent;color:#fff;font-weight:640}
+  .btn.primary:hover{background:#3f7bf0}
+  .btn.primary.stop{background:var(--danger)}
+  .btn.primary.stop:hover{background:#e63e5c}
+  .btn.active{border-color:var(--accent);color:#a9c6ff;background:rgba(79,140,255,.16)}
 
-        .spacer { flex: 1; }
-
-        .search-wrap { position: relative; }
-        .search-wrap svg {
-            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-            width: 15px; height: 15px; color: var(--muted); pointer-events: none;
-        }
-        .search-wrap input {
-            padding: 7px 12px 7px 32px; border: 1px solid var(--border);
-            border-radius: 6px; font-size: 13px; width: 220px; transition: border-color 0.15s;
-        }
-        .search-wrap input:focus { outline: none; border-color: var(--input-focus); }
-
-        .summary {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px; margin-bottom: 16px;
-        }
-        .summary-card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; padding: 14px 18px; box-shadow: var(--shadow);
-        }
-        .summary-card .label {
-            font-size: 11px; font-weight: 600; text-transform: uppercase;
-            letter-spacing: 0.4px; color: var(--muted); margin-bottom: 4px;
-        }
-        .summary-card .value { font-size: 24px; font-weight: 700; color: var(--text); }
-        .summary-card.danger .value { color: var(--danger); }
-        .summary-card.success .value { color: var(--success); }
-        .summary-card.warn .value { color: var(--warn); }
-
-        .table-wrap {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; box-shadow: var(--shadow); overflow: hidden;
-        }
-        
-        .table-scroll { overflow-x: auto; max-height: 65vh; overflow-y: auto; }
-
-        table { width: 100%; border-collapse: collapse; }
-        thead { position: sticky; top: 0; z-index: 3; }
-
-        th {
-            background: var(--header-bg); color: var(--header-text);
-            padding: 6px 8px; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.3px;
-            text-align: center; border-bottom: 2px solid #0f172a;
-            vertical-align: middle;
-        }
-
-        th.no-wrap-head { white-space: nowrap; }
-
-        th select.sort-select {
-            display: block; width: 100%; margin-top: 4px;
-            padding: 3px 4px; font-size: 10px; border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.3); background: #334155;
-            color: #fff; cursor: pointer; min-width: 90px;
-        }
-        th select.sort-select:focus { outline: 1px solid var(--accent); }
-
-        td {
-            padding: 6px 12px; font-size: 13px; border-bottom: 1px solid #e5e7eb;
-            height: 38px; vertical-align: middle;
-        }
-        
-        .no-wrap { white-space: nowrap; }
-
-        tbody tr:nth-child(even) { background: var(--row-alt); }
-        tbody tr:hover { background: #eff6ff; }
-        td.num { text-align: right; font-variant-numeric: tabular-nums; }
-        td.center { text-align: center; }
-
-        tr.row-empty { background: var(--empty-row-bg) !important; }
-        tr.row-empty:hover { background: #fef3c7 !important; }
-
-        .fisik-input {
-            width: 70px; padding: 4px 8px; border: 1px solid var(--border);
-            border-radius: 4px; font-size: 13px; text-align: right;
-            font-variant-numeric: tabular-nums; background: #fff;
-            transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .fisik-input:focus { outline: none; border-color: var(--input-focus); box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
-
-        .minus-neg {
-            color: #fff; font-weight: 700; background: var(--danger);
-            border-radius: 4px; padding: 2px 6px; display: inline-block; min-width: 40px; text-align: center;
-        }
-        .minus-zero { color: var(--muted); }
-        .minus-pos {
-            color: #fff; font-weight: 600; background: var(--success);
-            border-radius: 4px; padding: 2px 6px; display: inline-block; min-width: 40px; text-align: center;
-        }
-
-        tr.row-minus { background: var(--danger-bg) !important; }
-        tr.row-minus:hover { background: #fee2e2 !important; }
-
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
-        .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
-        .empty-state p { font-size: 14px; }
-
-        .toast {
-            position: fixed; bottom: 24px; right: 24px; background: var(--header-bg);
-            color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px;
-            font-weight: 500; box-shadow: var(--shadow-lg); transform: translateY(80px);
-            opacity: 0; transition: all 0.3s ease; z-index: 999;
-        }
-        .toast.show { transform: translateY(0); opacity: 1; }
-
-        tfoot td {
-            background: #f1f5f9; font-weight: 700;
-            border-top: 2px solid var(--border); position: sticky; bottom: 0; z-index: 2;
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 12px; }
-            .toolbar { padding: 12px; }
-            .search-wrap input { width: 160px; }
-            select { min-width: 120px; }
-            .summary { grid-template-columns: repeat(2, 1fr); }
-        }
-    </style>
+  @media (max-width:620px){
+    .btn{padding:10px 13px;font-size:12.5px}
+    .bar{gap:8px;padding:12px}
+    .bar.bottom{gap:10px;padding:20px 12px 14px}
+    .ticker{height:46px}
+    .ticker-track{font-size:17px}
+    .ui.has-ticker{padding-bottom:46px}
+    .text-input{flex-basis:100%}
+  }
+</style>
 </head>
 <body>
 
-<div class="container">
+<!-- ====== PANGGUNG ====== -->
+<div class="stage" id="stage">
+  <video id="video" autoplay playsinline muted></video>
 
-    <div class="page-header">
-        <h2>DATA STOCK KOMPONEN (OPNAME)</h2>
-        <p>Upload file Excel, isi kolom Fisik, lalu export hasilnya</p>
-    </div>
+  <div class="placeholder" id="placeholder">
+    <div class="ph-icon">▶</div>
+    <h1>Layar Tampilan Video Input</h1>
+    <p id="phMsg">Pilih perangkat input, lalu tekan <b>Mulai</b> untuk menampilkan video kamera / capture card.</p>
+  </div>
 
-    <div class="toolbar">
-        <label class="file-label" for="upload">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Upload File
-        </label>
-        <input type="file" id="upload" accept=".xlsx, .xls, .csv">
-
-        <div class="toolbar-group">
-            <label>Lokasi</label>
-            <select id="filterLokasi">
-                <option value="ALL">Semua</option>
-            </select>
-        </div>
-
-        <div class="toolbar-group">
-            <label>Nama</label>
-            <select id="filterNama">
-                <option value="ALL">Semua</option>
-            </select>
-        </div>
-
-        <div class="search-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="searchInput" placeholder="Cari deskripsi part...">
-        </div>
-
-        <div class="spacer"></div>
-
-        <button class="btn btn-danger" id="btnDeleteAll" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            Hapus Semua
-        </button>
-
-        <button class="btn" id="btnClearFisik" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="19" y1="6" x2="5" y2="20"/></svg>
-            Reset Fisik
-        </button>
-        
-        <button class="btn btn-accent" id="btnExcel" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Excel
-        </button>
-        <button class="btn btn-accent" id="btnPDF" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            PDF
-        </button>
-    </div>
-
-    <div class="summary" id="summary" style="display:none;">
-        <div class="summary-card">
-            <div class="label">Total Item</div>
-            <div class="value" id="sumTotal">0</div>
-        </div>
-        <div class="summary-card success">
-            <div class="label">Sudah Diopname</div>
-            <div class="value" id="sumFilled">0</div>
-        </div>
-        <div class="summary-card warn">
-            <div class="label">Belum Diopname</div>
-            <div class="value" id="sumEmpty">0</div>
-        </div>
-        <div class="summary-card danger">
-            <div class="label">Ada Selisih (Minus)</div>
-            <div class="value" id="sumMinus">0</div>
-        </div>
-    </div>
-
-    <div class="table-wrap">
-        <div class="table-scroll" id="tableScroll">
-            <table id="table">
-                <thead>
-                    <tr>
-                        <th class="no-wrap-head" style="width:50px;">No</th>
-                        <th class="no-wrap-head" data-col="Tipe Lokasi">
-                            Tipe Lokasi
-                            <select class="sort-select" data-sort-col="Tipe Lokasi">
-                                <option value="default">Default</option>
-                                <option value="asc">A → Z</option>
-                                <option value="desc">Z → A</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" data-col="Nama">
-                            Nama
-                            <select class="sort-select" data-sort-col="Nama">
-                                <option value="default">Default</option>
-                                <option value="asc">A → Z</option>
-                                <option value="desc">Z → A</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" data-col="Part">
-                            Part
-                            <select class="sort-select" data-sort-col="Part">
-                                <option value="default">Default</option>
-                                <option value="asc">A → Z</option>
-                                <option value="desc">Z → A</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" data-col="Deskripsi Part">
-                            Deskripsi Part
-                            <select class="sort-select" data-sort-col="Deskripsi Part">
-                                <option value="default">Default</option>
-                                <option value="asc">A → Z</option>
-                                <option value="desc">Z → A</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" style="width:100px;" data-col="QTY">
-                            QTY
-                            <select class="sort-select" data-sort-col="QTY">
-                                <option value="default">Default</option>
-                                <option value="asc">Terkecil</option>
-                                <option value="desc">Terbesar</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" style="width:100px;" data-col="QTY Alloc">
-                            QTY Alloc
-                            <select class="sort-select" data-sort-col="QTY Alloc">
-                                <option value="default">Default</option>
-                                <option value="asc">Terkecil</option>
-                                <option value="desc">Terbesar</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" style="width:100px;" data-col="Available">
-                            Available
-                            <select class="sort-select" data-sort-col="Available">
-                                <option value="default">Default</option>
-                                <option value="asc">Terkecil</option>
-                                <option value="desc">Terbesar</option>
-                            </select>
-                        </th>
-                        <th class="no-wrap-head" style="width:85px;">Fisik</th>
-                        <th class="no-wrap-head" style="width:75px;">Selisih</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-                <tfoot id="tableFoot" style="display:none;">
-                    <tr>
-                        <td class="center no-wrap" colspan="5">TOTAL</td>
-                        <td class="num" id="footQty">0</td>
-                        <td class="num" id="footAlloc">0</td>
-                        <td class="num" id="footAvail">0</td>
-                        <td class="num" id="footFisik"></td>
-                        <td class="num" id="footMinus"></td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <div class="empty-state" id="emptyState">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <p>Upload file Excel (.xlsx / .xls / .csv) untuk memulai cek stock dan opname</p>
-            </div>
-        </div>
-    </div>
+  <!-- Teks berjalan -->
+  <div class="ticker" id="ticker" aria-live="off">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- ====== UI ====== -->
+<div class="ui" id="ui">
+  <header class="bar">
+    <div class="group">
+      <span class="dot" id="dot"></span>
+      <select class="select" id="deviceSelect" title="Pilih perangkat input video">
+        <option value="">Memuat perangkat…</option>
+      </select>
+    </div>
+    <div class="group" style="margin-left:auto">
+      <span class="badge" id="info">—</span>
+    </div>
+  </header>
+
+  <footer class="bar bottom">
+
+    <!-- Kontrol teks berjalan -->
+    <div class="ticker-ctrl">
+      <input
+        class="text-input"
+        id="tickerInput"
+        type="text"
+        value="Selamat datang 👋 — Silakan ubah teks berjalan di sini"
+        placeholder="Tulis teks berjalan…"
+        aria-label="Teks berjalan"
+      />
+      <select class="select" id="tickerSpeed" title="Kecepatan teks berjalan">
+        <option value="40">Lambat</option>
+        <option value="80" selected>Normal</option>
+        <option value="140">Cepat</option>
+        <option value="220">Sangat Cepat</option>
+      </select>
+      <button class="btn" id="btnTicker" title="Tampilkan / sembunyikan teks berjalan (T)">Ticker: On</button>
+    </div>
+
+    <!-- Kontrol utama -->
+    <div class="main-ctrl">
+      <button class="btn primary" id="btnStart">Mulai</button>
+      <button class="btn" id="btnMirror" title="Cermin (M)">Mirror</button>
+      <button class="btn" id="btnFit" title="Mode penyesuaian">Contain</button>
+      <button class="btn" id="btnShot" title="Simpan gambar (S)">Screenshot</button>
+      <button class="btn" id="btnFull" title="Layar penuh (F)">Fullscreen</button>
+    </div>
+  </footer>
+</div>
 
 <script>
-// Diubah dari "Minus" menjadi "Selisih"
-const HEADERS_PDF = ["No", "Part", "Deskripsi Part", "QTY", "Alloc", "Available", "Fisik", "Selisih"];
-const STORAGE_KEY = "stockOpnameData";
+(() => {
+  "use strict";
 
-let allData = []; 
-let currentSort = { col: null, dir: 'default' };
+  const $ = (s) => document.querySelector(s);
+  const video       = $("#video");
+  const stage       = $("#stage");
+  const ui          = $("#ui");
+  const placeholder = $("#placeholder");
+  const phMsg       = $("#phMsg");
+  const dot         = $("#dot");
+  const info        = $("#info");
+  const deviceSelect= $("#deviceSelect");
+  const btnStart    = $("#btnStart");
+  const btnMirror   = $("#btnMirror");
+  const btnFit      = $("#btnFit");
+  const btnShot     = $("#btnShot");
+  const btnFull     = $("#btnFull");
 
-document.getElementById('upload').addEventListener('change', handleFile);
-document.getElementById('filterLokasi').addEventListener('change', applyFilter);
-document.getElementById('filterNama').addEventListener('change', applyFilter);
-document.getElementById('searchInput').addEventListener('input', applyFilter);
-document.getElementById('btnDeleteAll').addEventListener('click', deleteAll);
-document.getElementById('btnClearFisik').addEventListener('click', clearAllFisik);
-document.getElementById('btnExcel').addEventListener('click', downloadExcel);
-document.getElementById('btnPDF').addEventListener('click', downloadPDF);
+  /* Ticker elements */
+  const ticker       = $("#ticker");
+  const tickerTrack  = $("#tickerTrack");
+  const tickerInput  = $("#tickerInput");
+  const tickerSpeed  = $("#tickerSpeed");
+  const btnTicker    = $("#btnTicker");
 
-document.querySelectorAll('.sort-select').forEach(sel => {
-    sel.addEventListener('change', function() {
-        currentSort.col = this.dataset.sortCol;
-        currentSort.dir = this.value;
-        applyFilter();
-    });
-});
+  let stream  = null;
+  let running = false;
 
-function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  /* ================= TICKER ================= */
+  let tickerEnabled = true;    // apakah ticker diaktifkan user
+  let tickerVisible = false;   // apakah ticker sedang tampil di layar
+  let tickerAnim    = null;    // objek Animation
 
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        let rawData = XLSX.utils.sheet_to_json(sheet);
+  function renderTicker() {
+    if (!tickerVisible) return;
 
-        allData = rawData.map((item, index) => {
-            if (item["No."] && !item["Nomor"]) item["Nomor"] = item["No."];
-            if (item["Nama Part"] && !item["Nama"]) item["Nama"] = item["Nama Part"];
-            item.Fisik = ""; 
-            item._idx = index;
-            return item;
-        });
+    // Hentikan animasi lama
+    if (tickerAnim) { tickerAnim.cancel(); tickerAnim = null; }
 
-        document.querySelectorAll('.sort-select').forEach(s => s.value = 'default');
-        currentSort = { col: null, dir: 'default' };
+    const text = (tickerInput.value || "").trim() || "Teks berjalan…";
 
-        populateFilters();
-        applyFilter();
-        enableButtons();
-
-        document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('summary').style.display = 'grid';
-        document.getElementById('tableFoot').style.display = '';
-
-        showToast('File berhasil dimuat: ' + file.name);
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function populateFilters() {
-    const lokasiSet = new Set();
-    const namaSet = new Set();
-
-    allData.forEach(item => {
-        if (item["Tipe Lokasi"]) lokasiSet.add(item["Tipe Lokasi"]);
-        if (item["Nama"]) namaSet.add(item["Nama"]);
-    });
-
-    const fLokasi = document.getElementById("filterLokasi");
-    const fNama = document.getElementById("filterNama");
-
-    fLokasi.innerHTML = '<option value="ALL">Semua</option>';
-    fNama.innerHTML = '<option value="ALL">Semua</option>';
-
-    [...lokasiSet].sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase())).forEach(v => {
-        fLokasi.innerHTML += `<option value="${v}">${v}</option>`;
-    });
-    [...namaSet].sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase())).forEach(v => {
-        fNama.innerHTML += `<option value="${v}">${v}</option>`;
-    });
-}
-
-function getFilteredData() {
-    const lokasi = document.getElementById("filterLokasi").value;
-    const nama = document.getElementById("filterNama").value;
-    const search = document.getElementById("searchInput").value.toLowerCase().trim();
-
-    let filtered = allData;
-
-    if (lokasi !== "ALL") filtered = filtered.filter(item => item["Tipe Lokasi"] === lokasi);
-    if (nama !== "ALL") filtered = filtered.filter(item => item["Nama"] === nama);
-    if (search) {
-        filtered = filtered.filter(item => 
-            (item["Deskripsi Part"] || "").toLowerCase().includes(search) ||
-            (item["Nama"] || "").toLowerCase().includes(search) ||
-            (item["Part"] || "").toLowerCase().includes(search)
-        );
+    // Buat 2 salinan identik agar loop mulus
+    tickerTrack.innerHTML = "";
+    for (let i = 0; i < 2; i++) {
+      const span = document.createElement("span");
+      span.textContent = text;
+      tickerTrack.appendChild(span);
     }
 
-    if (currentSort.col && currentSort.dir !== 'default') {
-        const col = currentSort.col;
-        const dir = currentSort.dir === 'asc' ? 1 : -1;
-        const isNumberCol = ['QTY', 'QTY Alloc', 'Available'].includes(col);
+    // Tunggu layout selesai sebelum mengukur
+    requestAnimationFrame(() => {
+      const halfWidth = tickerTrack.scrollWidth / 2;
+      if (!halfWidth) return;
 
-        filtered = [...filtered].sort((a, b) => {
-            let valA = a[col] || "";
-            let valB = b[col] || "";
+      const speed = Number(tickerSpeed.value) || 80;      // px per detik
+      const duration = (halfWidth / speed) * 1000;        // ms
 
-            if (isNumberCol) {
-                valA = parseFloat(valA) || 0;
-                valB = parseFloat(valB) || 0;
-                return (valA - valB) * dir;
-            } else {
-                valA = String(valA).toLowerCase();
-                valB = String(valB).toLowerCase();
-                return valA.localeCompare(valB) * dir;
-            }
-        });
-    }
-
-    return filtered;
-}
-
-function applyFilter() {
-    const filtered = getFilteredData();
-    renderTable(filtered);
-    updateSummary();
-    updateFooter();
-}
-
-function getAvail(item) {
-    return (parseFloat(item["QTY"]) || 0) - (parseFloat(item["QTY Alloc"]) || 0);
-}
-
-function renderTable(dataToRender) {
-    const tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
-
-    dataToRender.forEach((item, index) => {
-        const avail = getAvail(item);
-        const tr = document.createElement("tr");
-        
-        if(item.Fisik === "") tr.classList.add('row-empty');
-
-        tr.appendChild(makeTD(item["Nomor"] || "", "center no-wrap"));
-        tr.appendChild(makeTD(item["Tipe Lokasi"] || "", "no-wrap"));
-        tr.appendChild(makeTD(item["Nama"] || "", "no-wrap"));
-        tr.appendChild(makeTD(item["Part"] || "", "no-wrap"));
-        tr.appendChild(makeTD(item["Deskripsi Part"] || "", "no-wrap"));
-        tr.appendChild(makeTD(parseFloat(item["QTY"]) || 0, "num"));
-        tr.appendChild(makeTD(parseFloat(item["QTY Alloc"]) || 0, "num"));
-        tr.appendChild(makeTD(avail, "num"));
-
-        const tdFisik = document.createElement("td");
-        tdFisik.className = "center";
-        const input = document.createElement("input");
-        input.type = "number";
-        input.className = "fisik-input";
-        input.min = "0";
-        input.value = item.Fisik !== "" ? item.Fisik : ""; 
-        input.dataset.idx = item._idx; 
-        
-        input.addEventListener("input", onFisikInput);
-        input.addEventListener("keydown", onFisikKeydown);
-        input.addEventListener("paste", onFisikPaste);
-        
-        tdFisik.appendChild(input);
-        tr.appendChild(tdFisik);
-
-        const tdMinus = document.createElement("td");
-        tdMinus.className = "num center";
-        
-        const fisik = item.Fisik !== "" ? parseFloat(item.Fisik) : null;
-        const minus = fisik !== null ? fisik - avail : null;
-        
-        if (minus === null) {
-            tdMinus.innerHTML = '';
-        } else if (minus < 0) {
-            tdMinus.innerHTML = `<span class="minus-neg">${minus}</span>`;
-            tr.classList.add("row-minus"); 
-            tr.classList.remove("row-empty");
-        } else if (minus === 0) {
-            tdMinus.innerHTML = `<span class="minus-zero">0</span>`;
-        } else {
-            tdMinus.innerHTML = `<span class="minus-pos">+${minus}</span>`;
-        }
-        
-        tr.appendChild(tdMinus);
-        tbody.appendChild(tr);
+      tickerAnim = tickerTrack.animate(
+        [
+          { transform: "translateX(0)" },
+          { transform: "translateX(-50%)" }
+        ],
+        { duration, iterations: Infinity, easing: "linear" }
+      );
     });
-}
+  }
 
-function makeTD(value, cls) {
-    const td = document.createElement("td");
-    if (cls) td.className = cls;
-    td.textContent = value;
-    return td;
-}
+  function updateTickerVisibility() {
+    const show = tickerEnabled && running;
 
-function onFisikInput(e) {
-    const inputEl = e.target;
-    const idx = parseInt(inputEl.dataset.idx);
-    const fisikVal = inputEl.value.trim();
-    
-    allData[idx].Fisik = fisikVal;
-    saveToLocalStorage();
-    
-    calculateRowSelisih(inputEl);
-    updateSummary();
-    updateFooter();
-}
+    if (show === tickerVisible) {
+      if (show) renderTicker();
+      return;
+    }
+    tickerVisible = show;
 
-function calculateRowSelisih(inputEl) {
-    const fisikVal = inputEl.value.trim();
-    const fisik = fisikVal === '' ? '' : parseFloat(fisikVal);
-    const tr = inputEl.closest("tr");
-    const cells = tr.querySelectorAll("td");
-    
-    const qty = parseFloat(cells[5].innerText) || 0;
-    const alloc = parseFloat(cells[6].innerText) || 0;
-    const avail = qty - alloc;
-    const minus = fisik !== '' ? fisik - avail : null;
+    ticker.style.display = show ? "flex" : "none";
+    ui.classList.toggle("has-ticker", show);
+    btnTicker.classList.toggle("active", tickerEnabled);
+    btnTicker.textContent = tickerEnabled ? "Ticker: On" : "Ticker: Off";
 
-    tr.classList.remove("row-minus", "row-empty");
-    if(fisik === '') tr.classList.add('row-empty');
-
-    const tdMinus = cells[9]; 
-    if (minus === null) {
-        tdMinus.innerHTML = '';
-    } else if (minus < 0) {
-        tdMinus.innerHTML = `<span class="minus-neg">${minus}</span>`;
-        tr.classList.add("row-minus");
-    } else if (minus === 0) {
-        tdMinus.innerHTML = `<span class="minus-zero">0</span>`;
+    if (show) {
+      requestAnimationFrame(renderTicker);
     } else {
-        tdMinus.innerHTML = `<span class="minus-pos">+${minus}</span>`;
+      if (tickerAnim) { tickerAnim.cancel(); tickerAnim = null; }
     }
-}
+  }
 
-function onFisikKeydown(e) {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
-        e.preventDefault();
-        const arr = Array.from(document.querySelectorAll(".fisik-input"));
-        const ci = arr.indexOf(e.target);
-        const ni = e.key === "ArrowUp" ? ci - 1 : ci + 1;
-        
-        if (ni >= 0 && ni < arr.length) { 
-            arr[ni].focus(); 
-            arr[ni].select(); 
-            arr[ni].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
+  // Edit teks → update langsung
+  let inputDebounce = null;
+  tickerInput.addEventListener("input", () => {
+    clearTimeout(inputDebounce);
+    inputDebounce = setTimeout(renderTicker, 120);
+  });
+
+  // Ubah kecepatan → restart animasi
+  tickerSpeed.addEventListener("change", renderTicker);
+
+  // Tombol on/off ticker
+  btnTicker.addEventListener("click", () => {
+    tickerEnabled = !tickerEnabled;
+    updateTickerVisibility();
+    revealUI();
+  });
+
+  // Re-measure saat ukuran layar berubah
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (tickerVisible) renderTicker(); }, 200);
+  });
+
+  /* ================= CEK DUKUNGAN ================= */
+  if (!navigator.mediaDevices?.getUserMedia) {
+    phMsg.innerHTML = "Browser ini tidak mendukung akses kamera, atau halaman tidak dijalankan melalui <b>HTTPS / localhost</b>.";
+    btnStart.disabled = true;
+  }
+
+  /* ================= DAFTAR PERANGKAT ================= */
+  async function refreshDevices() {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const cams = all.filter(d => d.kind === "videoinput");
+      const prev = deviceSelect.value;
+
+      deviceSelect.innerHTML = "";
+      if (!cams.length) {
+        deviceSelect.innerHTML = '<option value="">Tidak ada input video</option>';
+        return;
+      }
+      cams.forEach((d, i) => {
+        const o = document.createElement("option");
+        o.value = d.deviceId;
+        o.textContent = d.label || `Kamera ${i + 1}`;
+        deviceSelect.appendChild(o);
+      });
+      if (prev && cams.some(d => d.deviceId === prev)) deviceSelect.value = prev;
+    } catch (e) {
+      console.warn("enumerateDevices gagal:", e);
     }
-}
+  }
 
-function onFisikPaste(e) {
-    const pastedData = e.clipboardData.getData('text');
-    if (pastedData.includes('\n') || pastedData.includes('\r')) {
-        e.preventDefault();
-        const arr = Array.from(document.querySelectorAll(".fisik-input"));
-        const startIdx = arr.indexOf(e.target);
-        const lines = pastedData.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-        
-        lines.forEach((line, i) => {
-            const targetIdx = startIdx + i;
-            if (targetIdx < arr.length && line.trim() !== '') {
-                arr[targetIdx].value = parseFloat(line.trim()) || 0;
-                const idx = parseInt(arr[targetIdx].dataset.idx);
-                allData[idx].Fisik = arr[targetIdx].value;
-                calculateRowSelisih(arr[targetIdx]);
-            }
-        });
-        saveToLocalStorage();
-        updateSummary();
-        updateFooter();
+  /* ================= MULAI ================= */
+  async function start(deviceId) {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+
+    stop(true);
+
+    const videoConstraints = deviceId
+      ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+
+      running = true;
+      placeholder.classList.add("gone");
+      dot.classList.add("on");
+      btnStart.textContent = "Stop";
+      btnStart.classList.add("stop");
+
+      await refreshDevices();
+
+      const settings = stream.getVideoTracks()[0].getSettings();
+      if (settings.deviceId && !deviceSelect.value) deviceSelect.value = settings.deviceId;
+
+      updateInfo();
+      updateTickerVisibility();   // tampilkan ticker saat video jalan
+      revealUI();
+    } catch (err) {
+      handleError(err);
     }
-}
+  }
 
-function updateSummary() {
-    const rows = document.querySelectorAll("#tableBody tr");
-    const total = rows.length;
-    let filled = 0, minusCount = 0;
+  /* ================= STOP ================= */
+  function stop(silent = false) {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    video.srcObject = null;
+    running = false;
+    dot.classList.remove("on");
+    btnStart.textContent = "Mulai";
+    btnStart.classList.remove("stop");
+    info.textContent = "—";
 
-    rows.forEach(tr => {
-        const fisikVal = tr.querySelector(".fisik-input").value.trim();
-        if (fisikVal !== '') {
-            filled++;
-            const qty = parseFloat(tr.querySelectorAll("td")[5].innerText) || 0;
-            const alloc = parseFloat(tr.querySelectorAll("td")[6].innerText) || 0;
-            if ((parseFloat(fisikVal) - (qty - alloc)) < 0) minusCount++;
-        }
-    });
+    updateTickerVisibility();   // sembunyikan ticker saat stop
 
-    document.getElementById("sumTotal").textContent = total;
-    document.getElementById("sumFilled").textContent = filled;
-    document.getElementById("sumEmpty").textContent = total - filled;
-    document.getElementById("sumMinus").textContent = minusCount;
-}
+    if (!silent) {
+      placeholder.classList.remove("gone");
+      phMsg.innerHTML = 'Pilih perangkat input, lalu tekan <b>Mulai</b> untuk menampilkan video kamera / capture card.';
+      revealUI();
+    }
+  }
 
-function updateFooter() {
-    const rows = document.querySelectorAll("#tableBody tr");
-    let tQty = 0, tAlloc = 0, tAvail = 0, tFisik = 0, tMinus = 0, hasFisik = false;
+  /* ================= INFO RESOLUSI ================= */
+  function updateInfo() {
+    if (!running) return;
+    const w = video.videoWidth || 0;
+    const h = video.videoHeight || 0;
+    const track = stream?.getVideoTracks()[0];
+    const label = track?.label || "";
+    info.textContent = w && h
+      ? `${w}×${h}${label ? " · " + label : ""}`
+      : (label || "—");
+    info.title = label;
+  }
+  video.addEventListener("loadedmetadata", updateInfo);
+  video.addEventListener("resize", updateInfo);
 
-    rows.forEach(tr => {
-        const cells = tr.querySelectorAll("td");
-        const rowQty = parseFloat(cells[5].innerText) || 0;
-        const rowAlloc = parseFloat(cells[6].innerText) || 0;
-        
-        tQty += rowQty;
-        tAlloc += rowAlloc;
-        
-        const fisikVal = tr.querySelector(".fisik-input").value.trim();
-        if (fisikVal !== '') {
-            const f = parseFloat(fisikVal);
-            const rowAvail = rowQty - rowAlloc;
-            tFisik += f;
-            tMinus += (f - rowAvail);
-            hasFisik = true;
-        }
-    });
+  /* ================= ERROR ================= */
+  function handleError(err) {
+    const name = err?.name || "";
+    let msg = "Gagal mengakses input video.";
 
-    tAvail = tQty - tAlloc;
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      msg = "Izin akses kamera ditolak. Aktifkan izin kamera pada ikon 🔒 di address bar, lalu muat ulang halaman.";
+    } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      msg = "Tidak ada perangkat input video yang terdeteksi. Pastikan kamera / capture card terhubung.";
+    } else if (name === "NotReadableError" || name === "TrackStartError") {
+      msg = "Perangkat sedang dipakai aplikasi lain. Tutup aplikasi tersebut (Zoom, OBS, dll.) lalu coba lagi.";
+    } else if (name === "OverconstrainedError") {
+      msg = "Resolusi atau perangkat yang diminta tidak didukung. Coba pilih perangkat lain.";
+    } else if (name === "AbortError") {
+      msg = "Proses dibatalkan oleh sistem. Coba tekan Mulai sekali lagi.";
+    }
+    console.error(err);
+    stop(true);
+    placeholder.classList.remove("gone");
+    phMsg.textContent = msg;
+    revealUI();
+  }
 
-    document.getElementById("footQty").textContent = tQty;
-    document.getElementById("footAlloc").textContent = tAlloc;
-    document.getElementById("footAvail").textContent = tAvail;
-    document.getElementById("footFisik").textContent = hasFisik ? tFisik : '';
-    
-    const footMinusEl = document.getElementById("footMinus");
-    if (hasFisik) {
-        footMinusEl.textContent = tMinus;
-        footMinusEl.style.color = tMinus < 0 ? 'var(--danger)' : 'var(--success)';
+  /* ================= SCREENSHOT ================= */
+  function screenshot() {
+    if (!running || !video.videoWidth) return;
+    const c = document.createElement("canvas");
+    c.width  = video.videoWidth;
+    c.height = video.videoHeight;
+
+    const ctx = c.getContext("2d");
+    if (video.classList.contains("mirror")) {
+      ctx.translate(c.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, c.width, c.height);
+
+    const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const a = document.createElement("a");
+    a.download = `video-input-${ts}.png`;
+    a.href = c.toDataURL("image/png");
+    a.click();
+  }
+
+  /* ================= FULLSCREEN ================= */
+  function toggleFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+      req?.call(stage).catch(() => {});
     } else {
-        footMinusEl.textContent = '';
-        footMinusEl.style.color = '';
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
     }
-}
+  }
 
-function clearAllFisik() {
-    allData.forEach(item => item.Fisik = "");
-    saveToLocalStorage();
-    applyFilter();
-    showToast("Semua input Fisik telah direset");
-}
+  /* ================= AUTO-HIDE UI ================= */
+  let hideTimer = null;
+  function revealUI() {
+    ui.classList.remove("hide");
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (running) ui.classList.add("hide");
+    }, 3200);
+  }
+  ["mousemove", "mousedown", "touchstart", "keydown"].forEach(ev =>
+    window.addEventListener(ev, revealUI, { passive: true })
+  );
 
-function deleteAll() {
-    allData = [];
-    localStorage.removeItem(STORAGE_KEY);
-    document.getElementById("tableBody").innerHTML = "";
-    document.getElementById("emptyState").style.display = '';
-    document.getElementById("summary").style.display = 'none';
-    document.getElementById("tableFoot").style.display = 'none';
-    document.getElementById("filterLokasi").innerHTML = '<option value="ALL">Semua</option>';
-    document.getElementById("filterNama").innerHTML = '<option value="ALL">Semua</option>';
-    document.getElementById("searchInput").value = '';
-    document.querySelectorAll('.sort-select').forEach(s => s.value = 'default');
-    document.getElementById('upload').value = '';
-    document.getElementById("btnDeleteAll").disabled = true;
-    document.getElementById("btnClearFisik").disabled = true;
-    document.getElementById("btnExcel").disabled = true;
-    document.getElementById("btnPDF").disabled = true;
-    showToast("Semua data berhasil dihapus");
-}
+  /* ================= EVENT ================= */
+  btnStart.addEventListener("click", () => running ? stop() : start(deviceSelect.value || undefined));
 
-function enableButtons() {
-    document.getElementById("btnDeleteAll").disabled = false;
-    document.getElementById("btnClearFisik").disabled = false;
-    document.getElementById("btnExcel").disabled = false;
-    document.getElementById("btnPDF").disabled = false;
-}
+  deviceSelect.addEventListener("change", () => {
+    if (running) start(deviceSelect.value);
+  });
 
-function getDataFromDOM() {
-    const rows = document.querySelectorAll("#tableBody tr");
-    const result = [];
-    rows.forEach(tr => {
-        const cells = tr.querySelectorAll("td");
-        const fisikVal = tr.querySelector(".fisik-input").value.trim();
-        const isFilled = fisikVal !== '';
-        const qty = parseFloat(cells[5].innerText) || 0;
-        const alloc = parseFloat(cells[6].innerText) || 0;
-        const avail = qty - alloc;
-        
-        result.push({
-            nomor: cells[0].innerText,
-            tipeLokasi: cells[1].innerText,
-            nama: cells[2].innerText,
-            part: cells[3].innerText,
-            deskripsi: cells[4].innerText,
-            qty: qty,
-            alloc: alloc,
-            avail: avail,
-            fisik: isFilled ? parseFloat(fisikVal) : "",
-            minus: isFilled ? (parseFloat(fisikVal) - avail) : ""
-        });
-    });
-    return result;
-}
+  btnMirror.addEventListener("click", () => {
+    video.classList.toggle("mirror");
+    btnMirror.classList.toggle("active", video.classList.contains("mirror"));
+    revealUI();
+  });
 
-// ===== Helper: membentuk nama file berdasarkan filter Nama =====
-function getNamaSuffix() {
-    const namaFilter = document.getElementById("filterNama").value;
-    let nama = (namaFilter && namaFilter !== "ALL") ? namaFilter : "Semua";
-    // Sanitasi karakter yang tidak valid untuk nama file
-    nama = nama.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
-    return nama;
-}
+  btnFit.addEventListener("click", () => {
+    const cover = video.classList.toggle("fit-cover");
+    btnFit.textContent = cover ? "Cover" : "Contain";
+    btnFit.classList.toggle("active", cover);
+    revealUI();
+  });
 
-function buildFileName(ext) {
-    return "Stock_opname " + getNamaSuffix() + "." + ext;
-}
+  btnShot.addEventListener("click", () => { screenshot(); revealUI(); });
+  btnFull.addEventListener("click", () => { toggleFullscreen(); revealUI(); });
 
-function downloadExcel() {
-    const data = getDataFromDOM();
-    
-    // Diubah "Minus" menjadi "Selisih"
-    const rows = data.map((d, i) => ({
-        "No": i + 1,
-        "Part": d.part,
-        "Deskripsi Part": d.deskripsi,
-        "QTY": d.qty,
-        "QTY Alloc": d.alloc,
-        "Available": d.avail,
-        "Fisik": d.fisik,
-        "Selisih": d.minus
-    }));
+  /* ================= SHORTCUT ================= */
+  window.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    const k = e.key.toLowerCase();
+    if (k === "f") { e.preventDefault(); toggleFullscreen(); }
+    else if (k === "m") { e.preventDefault(); btnMirror.click(); }
+    else if (k === "s") { e.preventDefault(); screenshot(); }
+    else if (k === "t") { e.preventDefault(); btnTicker.click(); }
+    else if (k === " ") { e.preventDefault(); btnStart.click(); }
+  });
 
-    let tQty = 0, tAlloc = 0, tAvail = 0, tFisik = 0, tMinus = 0, hasFisik = false;
-    data.forEach(d => {
-        tQty += d.qty; tAlloc += d.alloc; tAvail += d.avail;
-        if (d.fisik !== "") { tFisik += d.fisik; tMinus += d.minus; hasFisik = true; }
-    });
-    
-    rows.push({
-        "No": "",
-        "Part": "",
-        "Deskripsi Part": "TOTAL",
-        "QTY": tQty,
-        "QTY Alloc": tAlloc,
-        "Available": tAvail,
-        "Fisik": hasFisik ? tFisik : "",
-        "Selisih": hasFisik ? tMinus : ""
-    });
+  /* ================= DETEKSI PERANGKAT BARU ================= */
+  navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Stock Opname");
-    
-    ws["!cols"] = [
-        {wch:5},  // No
-        {wch:14}, // Part
-        {wch:40}, // Deskripsi
-        {wch:8},  // QTY
-        {wch:10}, // Alloc
-        {wch:12}, // Available
-        {wch:10}, // Fisik
-        {wch:10}  // Selisih
-    ];
-    
-    const excelName = buildFileName("xlsx");
-    XLSX.writeFile(wb, excelName);
-    showToast("Excel berhasil diunduh: " + excelName);
-}
-
-function downloadPDF() {
-    const { jsPDF } = window.jspdf;
-    
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const tanggalCetak = "Dicetak: " + now.toLocaleDateString('id-ID', options) + " " + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    
-    const data = getDataFromDOM();
-    const rows = data.map((d, i) => [
-        i + 1, d.part, d.deskripsi, d.qty, d.alloc, d.avail, d.fisik, d.minus
-    ]);
-
-    let tQty = 0, tAlloc = 0, tAvail = 0, tFisik = 0, tMinus = 0, hasFisik = false;
-    data.forEach(d => {
-        tQty += d.qty; tAlloc += d.alloc; tAvail += d.avail;
-        if (d.fisik !== "") { tFisik += d.fisik; tMinus += d.minus; hasFisik = true; }
-    });
-    rows.push(["","","TOTAL", tQty, tAlloc, tAvail, hasFisik ? tFisik : "", hasFisik ? tMinus : ""]);
-
-    const docTemp = new jsPDF({ orientation: 'portrait', format: 'a4', unit: 'mm' });
-    docTemp.autoTable({
-        head: [HEADERS_PDF], body: rows, startY: 23, margin: { left: 14, right: 14 }, tableWidth: 'exact',
-        styles: { fontSize: 7, cellPadding: 1.5, overflow: 'ellipsize', lineColor: [0, 0, 0], lineWidth: 0.1, minCellHeight: 5 },
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 7.5, minCellHeight: 6 },
-        columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' }, 2: { halign: 'left' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' } }
-    });
-    const totalPages = docTemp.internal.getNumberOfPages();
-
-    const doc = new jsPDF({ orientation: 'portrait', format: 'a4', unit: 'mm' });
-
-    doc.setFontSize(14); 
-    doc.setTextColor(0);
-    doc.text("DATA STOCK KOMPONEN (OPNAME)", 14, 15);
-    
-    doc.setFontSize(8); 
-    doc.setTextColor(100); 
-    doc.text(tanggalCetak, doc.internal.pageSize.getWidth() - 14, 15, { align: "right" });
-    
-    const lokasi = document.getElementById("filterLokasi").value;
-    const nama = document.getElementById("filterNama").value;
-    if (lokasi !== "ALL" || nama !== "ALL") {
-        let ft = "Filter: ";
-        if (lokasi !== "ALL") ft += "Lokasi=" + lokasi + " "; if (nama !== "ALL") ft += "Nama=" + nama;
-        doc.text(ft, 14, 20);
-    }
-
-    doc.autoTable({
-        head: [HEADERS_PDF], body: rows, startY: 23, margin: { left: 14, right: 14 }, tableWidth: 'exact',
-        styles: { fontSize: 7, cellPadding: 1.5, overflow: 'ellipsize', lineColor: [0, 0, 0], lineWidth: 0.1, minCellHeight: 5 },
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 7.5, minCellHeight: 6 },
-        columnStyles: { 
-            0: { halign: 'center', cellWidth: 'wrap' }, 
-            1: { halign: 'left', cellWidth: 'wrap' }, 
-            2: { halign: 'left', cellWidth: 'wrap' }, 
-            3: { halign: 'right', cellWidth: 'wrap' }, 
-            4: { halign: 'right', cellWidth: 'wrap' }, 
-            5: { halign: 'right', cellWidth: 'wrap' }, 
-            6: { halign: 'right', cellWidth: 'wrap' }, 
-            7: { halign: 'right', cellWidth: 'wrap' } 
-        },
-        didParseCell: function(data) {
-            if (data.row.index === rows.length - 1) { data.cell.styles.fillColor = [241, 245, 249]; data.cell.styles.fontStyle = 'bold'; }
-            if (data.section === 'body' && data.column.index === 7) { 
-                const val = data.cell.raw; 
-                if (typeof val === 'number' && val < 0) { data.cell.styles.textColor = [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; } 
-            }
-        },
-        didDrawPage: function(data) {
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
-            
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(
-                currentPage + " dari " + totalPages, 
-                pageWidth - 14, 
-                pageHeight - 10, 
-                { align: "right" }
-            );
-        }
-    });
-    
-    const pdfName = buildFileName("pdf");
-    doc.save(pdfName); 
-    showToast("PDF berhasil diunduh: " + pdfName);
-}
-
-function saveToLocalStorage() {
-    const saveData = allData.map(item => ({ _idx: item._idx, Fisik: item.Fisik }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-}
-
-function loadFromLocalStorage() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if(saved) {
-        try {
-            return JSON.parse(saved);
-        } catch(e) {
-            return null;
-        }
-    }
-    return null;
-}
-
-function showToast(msg) {
-    const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
-    clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove("show"), 2500);
-}
+  /* ================= INIT ================= */
+  refreshDevices();
+  revealUI();
+})();
 </script>
-
 </body>
 </html>
