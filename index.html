@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Layar Tampilan — Video Input</title>
+<title>Layar Tampilan — Video Input (HDMI / Capture)</title>
 <style>
   :root {
     --accent-1: #6366f1;
@@ -140,6 +140,7 @@
     box-shadow: 0 0 12px var(--success), 0 0 0 4px rgba(52, 211, 153, 0.15);
     animation: pulseDot 2s infinite;
   }
+  .dot.warn { background: #fbbf24; box-shadow: 0 0 12px #fbbf24, 0 0 0 4px rgba(251, 191, 36, 0.15); }
   @keyframes pulseDot {
     50% { box-shadow: 0 0 16px var(--success), 0 0 0 6px rgba(52, 211, 153, 0.08); }
   }
@@ -153,6 +154,7 @@
   }
   .select:hover { background-color: rgba(255, 255, 255, 0.06); border-color: var(--border); }
   .select:focus-visible { border-color: rgba(139, 92, 246, 0.5); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+  .select.panel-select { width: 100%; max-width: none; }
   .badge {
     font-size: 12px; color: var(--muted); padding: 6px 12px; border-radius: 10px;
     background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
@@ -212,8 +214,12 @@
   .btn.primary.stop:hover { box-shadow: 0 8px 28px rgba(248, 113, 113, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
   .btn.active { background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.45); color: #c4b5fd; }
   .btn.small { padding: 9px 12px; font-size: 12.5px; }
+  .btn.icon-only { padding: 9px; }
+  .btn.icon-only svg { width: 16px; height: 16px; }
+  .btn.spinning svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ================= LOGO PANEL ================= */
+  /* ================= PANELS ================= */
   .logo-panel {
     position: absolute; bottom: calc(100% + 12px); right: 0;
     width: 300px; max-width: calc(100vw - 40px); max-height: calc(100vh - 220px);
@@ -243,9 +249,12 @@
 
   .panel-section { display: flex; flex-direction: column; gap: 8px; }
   .panel-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-  .panel-label-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .panel-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .panel-value { font-size: 12px; color: #c4b5fd; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .panel-value.trunc { max-width: 165px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .panel-row { display: flex; gap: 8px; }
+  .panel-hint { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--muted); }
+  .panel-hint b { color: #c4b5fd; }
 
   /* Position Grid */
   .position-grid {
@@ -349,6 +358,7 @@
     body.ticker-on .logo-overlay.pos-bl,
     body.ticker-on .logo-overlay.pos-bc,
     body.ticker-on .logo-overlay.pos-br { bottom: 220px; }
+    .select { max-width: 42vw; }
   }
 
   @media (max-width: 400px) {
@@ -370,7 +380,7 @@
       </div>
     </div>
     <h1>Layar Tampilan Video Input</h1>
-    <p id="phMsg">Pilih perangkat input, lalu tekan <b>Mulai</b> untuk menampilkan video kamera / capture card.</p>
+    <p id="phMsg">Pilih perangkat input (kamera / capture card HDMI), lalu tekan <b>Mulai</b>.</p>
   </div>
 
   <div class="ticker" id="ticker" aria-live="off">
@@ -389,9 +399,14 @@
   <header class="top-bar">
     <div class="status-group">
       <span class="dot" id="dot"></span>
-      <select class="select" id="deviceSelect" title="Pilih perangkat input video">
+      <select class="select" id="deviceSelect" title="Pilih perangkat input video (HDMI capture / kamera)">
         <option value="">Memuat perangkat…</option>
       </select>
+      <button class="btn icon-only" id="btnScan" title="Scan ulang perangkat input (R)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>
+        </svg>
+      </button>
     </div>
     <span class="badge" id="info">—</span>
   </header>
@@ -421,6 +436,13 @@
           <path d="m21 15-5-5L5 21"/>
         </svg>
         <span class="label">Logo</span>
+      </button>
+      <button class="btn" id="btnSource" title="Pengaturan sumber HDMI">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="2"/>
+          <path d="M6 10v4M10 10v4M14 10v4M18 10v4"/>
+        </svg>
+        <span class="label">Sumber</span>
       </button>
     </div>
 
@@ -458,7 +480,90 @@
       </button>
     </div>
 
-    <!-- LOGO PANEL -->
+    <!-- ============ PANEL: SUMBER INPUT ============ -->
+    <div class="logo-panel" id="sourcePanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <path d="M6 10v4M10 10v4M14 10v4M18 10v4"/>
+          </svg>
+          <span>Sumber Input</span>
+        </div>
+        <button class="panel-close" id="sourcePanelClose" aria-label="Tutup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label-row">
+          <label class="panel-label">Perangkat Aktif</label>
+          <span class="panel-value trunc" id="activeDeviceName">—</span>
+        </div>
+        <button class="btn small" id="btnScanPanel" style="width:100%">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>
+          </svg>
+          <span>Scan Ulang Perangkat</span>
+        </button>
+      </div>
+
+      <div class="panel-section">
+        <label class="panel-label" for="resolutionSelect">Resolusi (HDMI)</label>
+        <select class="select panel-select" id="resolutionSelect">
+          <option value="auto" selected>Auto — native perangkat</option>
+          <option value="3840x2160">3840 × 2160 · 4K UHD</option>
+          <option value="2560x1440">2560 × 1440 · QHD</option>
+          <option value="1920x1080">1920 × 1080 · Full HD</option>
+          <option value="1600x900">1600 × 900</option>
+          <option value="1280x720">1280 × 720 · HD</option>
+          <option value="1024x768">1024 × 768</option>
+          <option value="720x576">720 × 576 · PAL</option>
+          <option value="720x480">720 × 480 · NTSC</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <label class="panel-label" for="fpsSelect">Frame Rate</label>
+        <select class="select panel-select" id="fpsSelect">
+          <option value="auto" selected>Auto</option>
+          <option value="60">60 fps</option>
+          <option value="50">50 fps</option>
+          <option value="30">30 fps</option>
+          <option value="25">25 fps</option>
+          <option value="24">24 fps</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <button class="btn toggle-btn" id="audioEnableBtn">
+          <span class="toggle-switch"></span>
+          <span id="audioEnableLabel">Audio HDMI</span>
+        </button>
+        <div class="panel-label-row">
+          <label class="panel-label" for="volumeRange">Volume</label>
+          <span class="panel-value" id="volumeValue">100%</span>
+        </div>
+        <input type="range" min="0" max="100" step="1" value="100" id="volumeRange">
+      </div>
+
+      <div class="panel-section">
+        <button class="btn toggle-btn active" id="autoReconnectBtn">
+          <span class="toggle-switch"></span>
+          <span>Auto-reconnect</span>
+        </button>
+      </div>
+
+      <p class="panel-hint">
+        Colok <b>capture card HDMI / USB</b> ke perangkat, lalu tekan <b>Scan Ulang</b>.
+        Beberapa capture card baru muncul setelah dicolok ulang. Ubah resolusi di atas
+        jika gambar tidak muncul (mis. pilih <b>1920×1080</b>).
+      </p>
+    </div>
+
+    <!-- ============ PANEL: LOGO ============ -->
     <div class="logo-panel" id="logoPanel">
       <div class="panel-header">
         <div class="panel-title">
@@ -559,6 +664,7 @@
   const fitLabel    = $("#fitLabel");
   const btnShot     = $("#btnShot");
   const btnFull     = $("#btnFull");
+  const btnScan     = $("#btnScan");
 
   const ticker       = $("#ticker");
   const tickerTrack  = $("#tickerTrack");
@@ -582,11 +688,27 @@
   const logoEnableBtn= $("#logoEnableBtn");
   const logoEnableLabel = $("#logoEnableLabel");
 
+  /* ---- SOURCE PANEL ---- */
+  const btnSource          = $("#btnSource");
+  const sourcePanel        = $("#sourcePanel");
+  const sourcePanelClose   = $("#sourcePanelClose");
+  const btnScanPanel       = $("#btnScanPanel");
+  const resolutionSelect   = $("#resolutionSelect");
+  const fpsSelect          = $("#fpsSelect");
+  const audioEnableBtn     = $("#audioEnableBtn");
+  const audioEnableLabel   = $("#audioEnableLabel");
+  const volumeRange        = $("#volumeRange");
+  const volumeValue        = $("#volumeValue");
+  const autoReconnectBtn   = $("#autoReconnectBtn");
+  const activeDeviceName   = $("#activeDeviceName");
+
   let stream  = null;
   let running = false;
 
   const ICON_PLAY = '<path d="M8 5v14l11-7z"/>';
   const ICON_STOP = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   /* ================= LOGO STATE ================= */
   const DEFAULT_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><circle cx="50" cy="50" r="44" fill="url(#g)"/><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/><path d="M42 35 L68 50 L42 65 Z" fill="white"/></svg>`;
@@ -601,15 +723,12 @@
   let currentBlobUrl = null;
 
   function applyLogoState() {
-    // Position
     logoOverlay.className = 'logo-overlay pos-' + logoState.position;
     if (!logoState.enabled) logoOverlay.classList.add('hidden');
 
-    // Size & opacity via CSS vars
     logoOverlay.style.setProperty('--logo-size', logoState.size + 'px');
     logoOverlay.style.setProperty('--logo-opacity', logoState.opacity);
 
-    // Sync UI controls
     logoSizeRange.value = logoState.size;
     logoSizeValue.textContent = logoState.size + ' px';
     logoOpacityRange.value = Math.round(logoState.opacity * 100);
@@ -623,36 +742,39 @@
     logoEnableLabel.textContent = logoState.enabled ? 'Tampilkan Logo' : 'Sembunyikan Logo';
   }
 
-  // Init logo image
   logoImg.src = DEFAULT_LOGO;
   applyLogoState();
 
-  /* ================= LOGO PANEL ================= */
-  function openLogoPanel() {
-    logoPanel.classList.add('open');
-    btnLogo.classList.add('active');
+  /* ================= PANEL HELPERS ================= */
+  function closeAllPanels(except) {
+    if (except !== logoPanel)   { logoPanel.classList.remove('open');   btnLogo.classList.remove('active'); }
+    if (except !== sourcePanel) { sourcePanel.classList.remove('open'); btnSource.classList.remove('active'); }
   }
-  function closeLogoPanel() {
-    logoPanel.classList.remove('open');
-    btnLogo.classList.remove('active');
-  }
+  function openLogoPanel()   { closeAllPanels(logoPanel);   logoPanel.classList.add('open');   btnLogo.classList.add('active'); }
+  function closeLogoPanel()  { logoPanel.classList.remove('open');   btnLogo.classList.remove('active'); }
+  function openSourcePanel() { closeAllPanels(sourcePanel); sourcePanel.classList.add('open'); btnSource.classList.add('active'); }
+  function closeSourcePanel(){ sourcePanel.classList.remove('open'); btnSource.classList.remove('active'); }
+
   btnLogo.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (logoPanel.classList.contains('open')) closeLogoPanel();
-    else openLogoPanel();
+    logoPanel.classList.contains('open') ? closeLogoPanel() : openLogoPanel();
     revealUI();
   });
   logoPanelClose.addEventListener('click', closeLogoPanel);
 
-  // Click outside to close
+  btnSource.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sourcePanel.classList.contains('open') ? closeSourcePanel() : openSourcePanel();
+    revealUI();
+  });
+  sourcePanelClose.addEventListener('click', closeSourcePanel);
+
   document.addEventListener('click', (e) => {
-    if (!logoPanel.classList.contains('open')) return;
-    if (logoPanel.contains(e.target)) return;
-    if (btnLogo.contains(e.target)) return;
-    closeLogoPanel();
+    if (logoPanel.classList.contains('open') && !logoPanel.contains(e.target) && !btnLogo.contains(e.target)) closeLogoPanel();
+    if (sourcePanel.classList.contains('open') && !sourcePanel.contains(e.target) && !btnSource.contains(e.target)) closeSourcePanel();
   });
 
-  // Upload
+  /* ================= LOGO CONTROLS ================= */
   logoUploadBtn.addEventListener('click', () => logoFile.click());
   logoFile.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
@@ -663,7 +785,6 @@
     e.target.value = '';
   });
 
-  // Reset
   logoResetBtn.addEventListener('click', () => {
     if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
     logoImg.src = DEFAULT_LOGO;
@@ -673,7 +794,6 @@
     applyLogoState();
   });
 
-  // Position grid
   positionGrid.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -681,19 +801,16 @@
     applyLogoState();
   });
 
-  // Size slider
   logoSizeRange.addEventListener('input', () => {
     logoState.size = Number(logoSizeRange.value);
     applyLogoState();
   });
 
-  // Opacity slider
   logoOpacityRange.addEventListener('input', () => {
     logoState.opacity = Number(logoOpacityRange.value) / 100;
     applyLogoState();
   });
 
-  // Enable toggle
   logoEnableBtn.addEventListener('click', () => {
     logoState.enabled = !logoState.enabled;
     applyLogoState();
@@ -766,116 +883,331 @@
     btnStart.disabled = true;
   }
 
-  /* ================= DEVICES ================= */
+  /* ================= DEVICE DETECTION ================= */
+  // Kata kunci umum untuk capture card / HDMI grabber
+  const CAPTURE_HINTS = /capture|hdmi|usb\s*video|usb3|elgato|cam\s*link|avermedia|magewell|blackmagic|intensity|decklink|game\s*capture|grabber|ezcap|ugreen|dazzle|hauppauge|video\s*input|av\s*to\s*usb/i;
+
+  function isCaptureDevice(label) {
+    return CAPTURE_HINTS.test(label || "");
+  }
+
+  let scanBusy = false;
+
   async function refreshDevices() {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
     try {
-      const all = await navigator.mediaDevices.enumerateDevices();
+      const all  = await navigator.mediaDevices.enumerateDevices();
       const cams = all.filter(d => d.kind === "videoinput");
       const prev = deviceSelect.value;
+
       deviceSelect.innerHTML = "";
+
       if (!cams.length) {
-        deviceSelect.innerHTML = '<option value="">Tidak ada input video</option>';
+        const o = document.createElement("option");
+        o.value = "";
+        o.textContent = "Tidak ada input video";
+        deviceSelect.appendChild(o);
         return;
       }
+
       cams.forEach((d, i) => {
         const o = document.createElement("option");
         o.value = d.deviceId;
-        o.textContent = d.label || `Kamera ${i + 1}`;
+        const name = d.label || `Input video ${i + 1}`;
+        o.textContent = isCaptureDevice(name) ? `📺 ${name}` : `🎥 ${name}`;
         deviceSelect.appendChild(o);
       });
-      if (prev && cams.some(d => d.deviceId === prev)) deviceSelect.value = prev;
+
+      // Pertahankan pilihan sebelumnya, atau pilih perangkat yang sedang aktif
+      const target = currentDeviceId || prev;
+      if (target && cams.some(d => d.deviceId === target)) {
+        deviceSelect.value = target;
+      }
     } catch (e) {
       console.warn("enumerateDevices gagal:", e);
     }
   }
 
-  /* ================= START ================= */
-  async function start(deviceId) {
-    if (!navigator.mediaDevices?.getUserMedia) return;
-    stop(true);
+  function deviceExists(id) {
+    return !!id && [...deviceSelect.options].some(o => o.value === id);
+  }
 
-    const videoConstraints = deviceId
-      ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-      : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  async function scanDevices() {
+    if (!navigator.mediaDevices || scanBusy) return;
+    scanBusy = true;
+    btnScan.classList.add("spinning");
+    btnScanPanel.classList.add("spinning");
+
+    // Minta izin sekali (saat belum streaming) agar label perangkat muncul
+    if (!running) {
+      try {
+        const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        tmp.getTracks().forEach(t => t.stop());
+      } catch (e) {
+        console.warn("Izin perangkat belum diberikan:", e);
+      }
+    }
+    await refreshDevices();
+
+    scanBusy = false;
+    btnScan.classList.remove("spinning");
+    btnScanPanel.classList.remove("spinning");
+    revealUI();
+  }
+
+  /* ================= SOURCE SETTINGS ================= */
+  let audioEnabled  = false;
+  let autoReconnect = true;
+  let currentDeviceId = "";
+  let reconnecting  = false;
+  let intentionalStop = false;
+
+  function buildVideoConstraints(deviceId) {
+    const c = {};
+    if (deviceId) c.deviceId = { exact: deviceId };
+
+    const res = resolutionSelect.value;
+    if (res && res !== "auto") {
+      const [w, h] = res.split("x").map(Number);
+      // gunakan `ideal` agar tidak memicu OverconstrainedError pada capture card
+      c.width  = { ideal: w };
+      c.height = { ideal: h };
+    }
+
+    const fps = fpsSelect.value;
+    if (fps && fps !== "auto") {
+      c.frameRate = { ideal: Number(fps) };
+    }
+    return c;
+  }
+
+  // Cari audio input yang satu grup dengan video (audio HDMI capture card)
+  async function resolveAudioConstraints(videoDeviceId) {
+    const base = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const v = all.find(d => d.kind === "videoinput" && d.deviceId === videoDeviceId);
+      if (v && v.groupId) {
+        const a = all.find(d => d.kind === "audioinput" && d.groupId === v.groupId);
+        if (a && a.deviceId) base.deviceId = { exact: a.deviceId };
+      }
+    } catch (_) { /* abaikan */ }
+    return base;
+  }
+
+  async function getStream(deviceId) {
+    const attempts = [];
+    const vc = buildVideoConstraints(deviceId);
+
+    if (audioEnabled) {
+      const ac = await resolveAudioConstraints(deviceId);
+      attempts.push({ audio: ac, video: vc });
+    }
+    attempts.push({ audio: false, video: vc });   // tanpa audio (cadangan)
+    attempts.push({ audio: false, video: true }); // paling longgar
+
+    let lastErr = null;
+    for (const constraints of attempts) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        lastErr = err;
+        // Tidak ada gunanya mencoba lagi kalau izin ditolak
+        if (err.name === "NotAllowedError" || err.name === "SecurityError") throw err;
+      }
+    }
+    throw lastErr || new Error("Gagal membuka stream");
+  }
+
+  function releaseStream() {
+    intentionalStop = true;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.srcObject = null;
+    setTimeout(() => { intentionalStop = false; }, 0);
+  }
+
+  /* ================= START ================= */
+  async function start(deviceId, silentFail = false) {
+    if (!navigator.mediaDevices?.getUserMedia) return false;
+
+    releaseStream();
+    dot.classList.remove("warn");
+
+    let newStream;
+    try {
+      newStream = await getStream(deviceId);
+    } catch (err) {
+      if (!silentFail) handleError(err);
+      return false;
+    }
+
+    stream = newStream;
+    video.srcObject = stream;
+
+    // Audio (HDMI)
+    const hasAudio = stream.getAudioTracks().length > 0;
+    video.muted = !(audioEnabled && hasAudio);
+    video.volume = Number(volumeRange.value) / 100;
 
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
-      video.srcObject = stream;
-      await video.play().catch(() => {});
-
-      running = true;
-      placeholder.classList.add("gone");
-      document.body.classList.add("has-video");
-      dot.classList.add("on");
-      startIcon.innerHTML = ICON_STOP;
-      startLabel.textContent = "Stop";
-      btnStart.classList.add("stop");
-
-      await refreshDevices();
-      const settings = stream.getVideoTracks()[0].getSettings();
-      if (settings.deviceId && !deviceSelect.value) deviceSelect.value = settings.deviceId;
-
-      updateInfo();
-      updateTickerVisibility();
-      revealUI();
-    } catch (err) {
-      handleError(err);
+      await video.play();
+    } catch (_) {
+      // Autoplay dengan audio bisa diblokir → coba lagi dalam mode mute
+      video.muted = true;
+      try { await video.play(); } catch (_) {}
     }
+
+    // Simpan perangkat aktif
+    const track = stream.getVideoTracks()[0];
+    currentDeviceId = track?.getSettings?.().deviceId || deviceId || "";
+
+    attachTrackListeners(track);
+
+    running = true;
+    placeholder.classList.add("gone");
+    document.body.classList.add("has-video");
+    dot.classList.add("on");
+    startIcon.innerHTML = ICON_STOP;
+    startLabel.textContent = "Stop";
+    btnStart.classList.add("stop");
+
+    await refreshDevices();
+    if (currentDeviceId && deviceExists(currentDeviceId)) deviceSelect.value = currentDeviceId;
+
+    updateInfo();
+    updateTickerVisibility();
+    revealUI();
+    return true;
   }
 
   /* ================= STOP ================= */
   function stop(silent = false) {
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null;
-    }
-    video.srcObject = null;
+    reconnecting = false;
+    releaseStream();
     running = false;
-    dot.classList.remove("on");
+    dot.classList.remove("on", "warn");
     document.body.classList.remove("has-video");
     startIcon.innerHTML = ICON_PLAY;
     startLabel.textContent = "Mulai";
     btnStart.classList.remove("stop");
     info.textContent = "—";
+    activeDeviceName.textContent = "—";
     updateTickerVisibility();
 
     if (!silent) {
       placeholder.classList.remove("gone");
-      phMsg.innerHTML = 'Pilih perangkat input, lalu tekan <b>Mulai</b> untuk menampilkan video kamera / capture card.';
+      phMsg.innerHTML = 'Pilih perangkat input (kamera / capture card HDMI), lalu tekan <b>Mulai</b>.';
       revealUI();
     }
   }
 
   /* ================= INFO ================= */
   function updateInfo() {
-    if (!running) return;
+    if (!running || !stream) return;
     const w = video.videoWidth || 0;
     const h = video.videoHeight || 0;
-    const track = stream?.getVideoTracks()[0];
+    const track = stream.getVideoTracks()[0];
+    const settings = track?.getSettings?.() || {};
     const label = track?.label || "";
-    info.textContent = w && h
-      ? `${w}×${h}${label ? " · " + label : ""}`
-      : (label || "—");
+    const hasAudio = stream.getAudioTracks().length > 0;
+
+    const parts = [];
+    if (w && h) parts.push(`${w}×${h}`);
+    if (settings.frameRate) parts.push(`${Math.round(settings.frameRate)}fps`);
+    if (hasAudio) parts.push("🔊");
+    if (isCaptureDevice(label)) parts.push("HDMI");
+    if (label) parts.push(label.length > 26 ? label.slice(0, 26) + "…" : label);
+
+    info.textContent = parts.join(" · ") || "—";
     info.title = label;
+    activeDeviceName.textContent = label || "—";
+    activeDeviceName.title = label || "";
   }
   video.addEventListener("loadedmetadata", updateInfo);
   video.addEventListener("resize", updateInfo);
+
+  /* ================= TRACK EVENTS / RECONNECT ================= */
+  function attachTrackListeners(track) {
+    if (!track) return;
+    track.addEventListener("ended", onSourceLost);
+    track.addEventListener("mute", () => {
+      if (!running) return;
+      dot.classList.remove("on");
+      dot.classList.add("warn");
+    });
+    track.addEventListener("unmute", () => {
+      if (!running) return;
+      dot.classList.add("on");
+      dot.classList.remove("warn");
+    });
+  }
+
+  function onSourceLost() {
+    if (!running || reconnecting || intentionalStop) return;
+    if (!autoReconnect) {
+      stop();
+      placeholder.classList.remove("gone");
+      phMsg.textContent = "Sumber video terputus. Sambungkan kembali kabel HDMI, lalu tekan Mulai.";
+      return;
+    }
+    attemptReconnect();
+  }
+
+  async function attemptReconnect() {
+    if (reconnecting) return;
+    reconnecting = true;
+
+    dot.classList.remove("on");
+    dot.classList.add("warn");
+    placeholder.classList.remove("gone");
+    phMsg.innerHTML = "Sumber video terputus — <b>menghubungkan ulang…</b>";
+
+    const targetId = currentDeviceId;
+
+    for (let i = 0; i < 10; i++) {
+      await sleep(900);
+      if (!reconnecting || !autoReconnect) break;
+
+      await refreshDevices();
+
+      let id = targetId;
+      if (!deviceExists(id)) {
+        // Perangkat hilang → coba input video pertama yang tersedia
+        const first = [...deviceSelect.options].find(o => o.value);
+        id = first ? first.value : undefined;
+      }
+
+      const ok = await start(id, true);
+      if (ok) {
+        reconnecting = false;
+        return;
+      }
+    }
+
+    reconnecting = false;
+    stop();
+    placeholder.classList.remove("gone");
+    phMsg.textContent = "Sumber video terputus. Sambungkan kembali kabel HDMI / capture card, lalu tekan Mulai.";
+  }
 
   /* ================= ERROR ================= */
   function handleError(err) {
     const name = err?.name || "";
     let msg = "Gagal mengakses input video.";
+
     if (name === "NotAllowedError" || name === "SecurityError") {
       msg = "Izin akses kamera ditolak. Aktifkan izin kamera pada ikon 🔒 di address bar, lalu muat ulang halaman.";
     } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-      msg = "Tidak ada perangkat input video yang terdeteksi. Pastikan kamera / capture card terhubung.";
+      msg = "Tidak ada perangkat input video yang terdeteksi. Pastikan capture card HDMI / kamera sudah terhubung, lalu tekan Scan Ulang.";
     } else if (name === "NotReadableError" || name === "TrackStartError") {
-      msg = "Perangkat sedang dipakai aplikasi lain. Tutup aplikasi tersebut (Zoom, OBS, dll.) lalu coba lagi.";
+      msg = "Perangkat sedang dipakai aplikasi lain (OBS, Zoom, dll). Tutup aplikasi tersebut lalu coba lagi.";
     } else if (name === "OverconstrainedError") {
-      msg = "Resolusi atau perangkat yang diminta tidak didukung. Coba pilih perangkat lain.";
+      msg = "Resolusi / frame rate yang diminta tidak didukung capture card. Buka panel Sumber dan pilih Resolusi Auto.";
     } else if (name === "AbortError") {
       msg = "Proses dibatalkan oleh sistem. Coba tekan Mulai sekali lagi.";
     }
+
     console.error(err);
     stop(true);
     placeholder.classList.remove("gone");
@@ -894,7 +1226,6 @@
 
     const mirrored = video.classList.contains("mirror");
 
-    // Draw video (mirrored if needed)
     if (mirrored) {
       ctx.save();
       ctx.translate(c.width, 0);
@@ -905,7 +1236,6 @@
       ctx.drawImage(video, 0, 0, c.width, c.height);
     }
 
-    // Draw logo if enabled
     if (logoState.enabled && logoImg.complete && logoImg.naturalWidth && logoImg.naturalHeight) {
       const stageH = stage.clientHeight || 1;
       const scale = c.height / stageH;
@@ -953,7 +1283,7 @@
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
       if (!running) return;
-      if (logoPanel.classList.contains("open")) return;
+      if (logoPanel.classList.contains("open") || sourcePanel.classList.contains("open")) return;
       const ae = document.activeElement;
       if (ae && ["INPUT", "SELECT", "TEXTAREA"].includes(ae.tagName)) return;
       ui.classList.add("hide");
@@ -963,9 +1293,42 @@
     window.addEventListener(ev, revealUI, { passive: true })
   );
 
+  /* ================= SOURCE CONTROLS ================= */
+  btnScan.addEventListener("click", scanDevices);
+  btnScanPanel.addEventListener("click", scanDevices);
+
+  resolutionSelect.addEventListener("change", () => { if (running) start(currentDeviceId || deviceSelect.value || undefined); });
+  fpsSelect.addEventListener("change", () => { if (running) start(currentDeviceId || deviceSelect.value || undefined); });
+
+  audioEnableBtn.addEventListener("click", () => {
+    audioEnabled = !audioEnabled;
+    audioEnableBtn.classList.toggle("active", audioEnabled);
+    audioEnableLabel.textContent = audioEnabled ? "Audio HDMI (aktif)" : "Audio HDMI";
+    if (running) start(currentDeviceId || deviceSelect.value || undefined);
+  });
+
+  volumeRange.addEventListener("input", () => {
+    const v = Number(volumeRange.value);
+    volumeValue.textContent = v + "%";
+    video.volume = v / 100;
+    if (v > 0 && video.muted && stream?.getAudioTracks().length) video.muted = false;
+  });
+
+  autoReconnectBtn.addEventListener("click", () => {
+    autoReconnect = !autoReconnect;
+    autoReconnectBtn.classList.toggle("active", autoReconnect);
+  });
+
   /* ================= EVENTS ================= */
-  btnStart.addEventListener("click", () => running ? stop() : start(deviceSelect.value || undefined));
-  deviceSelect.addEventListener("change", () => { if (running) start(deviceSelect.value); });
+  btnStart.addEventListener("click", () => {
+    if (running) stop();
+    else start(deviceSelect.value || undefined);
+  });
+
+  deviceSelect.addEventListener("change", () => {
+    if (running) start(deviceSelect.value);
+    else revealUI();
+  });
 
   btnMirror.addEventListener("click", () => {
     video.classList.toggle("mirror");
@@ -983,6 +1346,15 @@
   btnShot.addEventListener("click", () => { screenshot(); revealUI(); });
   btnFull.addEventListener("click", () => { toggleFullscreen(); revealUI(); });
 
+  /* ================= HOTPLUG / DEVICE CHANGE ================= */
+  navigator.mediaDevices?.addEventListener?.("devicechange", async () => {
+    await refreshDevices();
+    if (running && stream) {
+      const t = stream.getVideoTracks()[0];
+      if (!t || t.readyState === "ended") onSourceLost();
+    }
+  });
+
   /* ================= SHORTCUTS ================= */
   window.addEventListener("keydown", (e) => {
     const tag = e.target.tagName;
@@ -993,11 +1365,12 @@
     else if (k === "s") { e.preventDefault(); screenshot(); }
     else if (k === "t") { e.preventDefault(); btnTicker.click(); }
     else if (k === "l") { e.preventDefault(); logoEnableBtn.click(); }
+    else if (k === "i") { e.preventDefault(); btnSource.click(); }
+    else if (k === "r") { e.preventDefault(); scanDevices(); }
     else if (k === " ") { e.preventDefault(); btnStart.click(); }
   });
 
   /* ================= INIT ================= */
-  navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
   refreshDevices();
   revealUI();
 })();
