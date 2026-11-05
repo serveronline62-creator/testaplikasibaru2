@@ -3,226 +3,539 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Layar Tampilan — Video Input + Teks Berjalan</title>
+<title>Layar Tampilan — Video Input</title>
 <style>
-  :root{
-    --bg:#0a0b0e;
-    --panel:rgba(18,20,26,.75);
-    --border:rgba(255,255,255,.10);
-    --text:#e9edf5;
-    --muted:#8b93a7;
-    --accent:#4f8cff;
-    --danger:#ff4f6d;
-    --ok:#2fd07a;
+  :root {
+    --accent-1: #6366f1;
+    --accent-2: #8b5cf6;
+    --success: #34d399;
+    --danger: #f87171;
+    --text: #f4f4f6;
+    --muted: #9ca3af;
+    --glass: rgba(15, 15, 25, 0.7);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.18);
   }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;background:#000;color:var(--text);
-    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent;
-  }
-
-  /* ===== Panggung video ===== */
-  .stage{position:fixed;inset:0;background:#000;display:grid;place-items:center;z-index:0}
-  #video{
-    width:100%;height:100%;object-fit:contain;background:#000;
-    display:block;transition:opacity .35s ease;
-  }
-  #video.fit-cover{object-fit:cover}
-  #video.mirror{transform:scaleX(-1)}
-
-  /* ===== Placeholder ===== */
-  .placeholder{
-    position:absolute;inset:0;display:grid;place-content:center;justify-items:center;
-    gap:14px;text-align:center;padding:32px;
-    background:radial-gradient(ellipse at 50% 40%,#141924 0%,#07080b 75%);
-    transition:opacity .35s ease,visibility .35s;
-    z-index:2;
-  }
-  .placeholder.gone{opacity:0;visibility:hidden}
-  .ph-icon{
-    width:76px;height:76px;border-radius:50%;
-    display:grid;place-items:center;font-size:26px;color:#9fbaff;
-    background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.35);
-    box-shadow:0 0 40px rgba(79,140,255,.18);
-  }
-  .placeholder h1{font-size:clamp(18px,2.4vw,26px);margin:0;font-weight:650;letter-spacing:.2px}
-  .placeholder p{margin:0;max-width:460px;color:var(--muted);font-size:14.5px;line-height:1.65}
-  .placeholder b{color:#cfe0ff}
-
-  /* ===== Teks Berjalan (Ticker) ===== */
-  .ticker{
-    position:absolute;left:0;right:0;bottom:0;height:54px;
-    display:none;align-items:center;overflow:hidden;
-    background:linear-gradient(90deg,#0b0e14 0%,#171c28 50%,#0b0e14 100%);
-    border-top:1px solid rgba(79,140,255,.30);
-    box-shadow:0 -8px 26px rgba(0,0,0,.55);
-    z-index:4;
-  }
-  .ticker-track{
-    display:flex;width:max-content;white-space:nowrap;
-    will-change:transform;
-    font-size:21px;font-weight:650;letter-spacing:.4px;
-    color:#e4ecff;
-    text-shadow:0 1px 4px rgba(0,0,0,.55);
-  }
-  .ticker-track span{
-    flex:0 0 auto;padding:0 3rem;display:block;
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: #050507; color: var(--text);
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ===== UI overlay ===== */
-  .ui{
-    position:fixed;inset:0;pointer-events:none;z-index:10;
-    display:flex;flex-direction:column;justify-content:space-between;
-    transition:opacity .3s ease,padding .25s ease;
+  /* ================= STAGE ================= */
+  .stage { position: fixed; inset: 0; background: #000; display: grid; place-items: center; z-index: 0; }
+  #video { width: 100%; height: 100%; object-fit: contain; background: #000; display: block; transition: opacity .35s ease; }
+  #video.fit-cover { object-fit: cover; }
+  #video.mirror { transform: scaleX(-1); }
+  .stage::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%);
+    z-index: 1; opacity: 0; transition: opacity .5s;
   }
-  .ui.hide{opacity:0}
-  .ui.has-ticker{padding-bottom:54px}     /* geser kontrol ke atas ticker */
-  .ui > *{pointer-events:auto}
+  body.has-video .stage::after { opacity: 1; }
 
-  .bar{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    padding:14px 16px;
-    background:linear-gradient(to bottom,rgba(8,9,12,.9),rgba(8,9,12,0));
+  /* ================= PLACEHOLDER ================= */
+  .placeholder {
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 24px; text-align: center; padding: 40px;
+    background: radial-gradient(ellipse at 50% 40%, #0d0d16 0%, #050507 70%);
+    transition: opacity .4s ease, visibility .4s; z-index: 2;
   }
-  .bar.bottom{
-    flex-direction:column;align-items:stretch;
-    gap:12px;
-    padding:26px 16px 18px;
-    background:linear-gradient(to top,rgba(8,9,12,.92),rgba(8,9,12,0));
+  .placeholder.gone { opacity: 0; visibility: hidden; }
+  .ph-icon-wrap { position: relative; width: 100px; height: 100px; display: grid; place-items: center; margin-bottom: 8px; }
+  .ph-icon-wrap::before {
+    content: ''; position: absolute; inset: -30px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.45) 0%, transparent 65%);
+    filter: blur(20px); animation: pulseGlow 3.5s ease-in-out infinite;
   }
-  .ticker-ctrl,.main-ctrl{
-    display:flex;gap:10px;flex-wrap:wrap;
-    justify-content:center;align-items:center;
+  .ph-icon {
+    position: relative; width: 88px; height: 88px; border-radius: 50%;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.25));
+    border: 1px solid rgba(139, 92, 246, 0.4); display: grid; place-items: center;
+    backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 8px 32px rgba(99, 102, 241, 0.3);
+    color: #c4b5fd;
+  }
+  .ph-icon svg { width: 34px; height: 34px; margin-left: 4px; }
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+  .placeholder h1 {
+    font-size: clamp(22px, 2.6vw, 30px); margin: 0; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 0%, #c4b5fd 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .placeholder p { margin: 0; max-width: 480px; color: var(--muted); font-size: 14.5px; line-height: 1.7; }
+  .placeholder b { color: #c4b5fd; font-weight: 600; }
+
+  /* ================= LOGO OVERLAY ================= */
+  .logo-overlay {
+    position: absolute; z-index: 5; pointer-events: none;
+    transition: top .25s ease, left .25s ease, right .25s ease, bottom .25s ease;
+  }
+  .logo-overlay img {
+    width: var(--logo-size, 80px); height: auto; display: block;
+    opacity: var(--logo-opacity, 0.9);
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6));
+    transition: opacity .2s, width .2s;
+  }
+  .logo-overlay.hidden { display: none; }
+
+  /* Posisi */
+  .logo-overlay.pos-tl { top: 24px; left: 24px; }
+  .logo-overlay.pos-tc { top: 24px; left: 50%; transform: translateX(-50%); }
+  .logo-overlay.pos-tr { top: 24px; right: 24px; }
+  .logo-overlay.pos-ml { top: 50%; left: 24px; transform: translateY(-50%); }
+  .logo-overlay.pos-mc { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  .logo-overlay.pos-mr { top: 50%; right: 24px; transform: translateY(-50%); }
+  .logo-overlay.pos-bl { bottom: 24px; left: 24px; }
+  .logo-overlay.pos-bc { bottom: 24px; left: 50%; transform: translateX(-50%); }
+  .logo-overlay.pos-br { bottom: 24px; right: 24px; }
+
+  /* Bottom positions shift up when ticker is on */
+  body.ticker-on .logo-overlay.pos-bl,
+  body.ticker-on .logo-overlay.pos-bc,
+  body.ticker-on .logo-overlay.pos-br { bottom: 84px; }
+
+  /* ================= TICKER ================= */
+  .ticker {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 60px;
+    display: none; align-items: center; overflow: hidden;
+    background: linear-gradient(90deg, rgba(10, 10, 18, 0.92) 0%, rgba(28, 20, 48, 0.92) 50%, rgba(10, 10, 18, 0.92) 100%);
+    border-top: 1px solid rgba(139, 92, 246, 0.35);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(139, 92, 246, 0.15);
+    backdrop-filter: blur(20px); z-index: 4;
+  }
+  .ticker::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.8), transparent);
+  }
+  .ticker-track {
+    display: flex; width: max-content; white-space: nowrap; will-change: transform;
+    font-size: 22px; font-weight: 700; letter-spacing: 0.02em; color: #ede9fe;
+    text-shadow: 0 2px 12px rgba(139, 92, 246, 0.4);
+  }
+  .ticker-track span { flex: 0 0 auto; padding: 0 3rem; display: block; }
+
+  /* ================= TOP BAR ================= */
+  .top-bar {
+    position: fixed; top: 20px; left: 20px; right: 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 20px;
+    background: var(--glass); border: 1px solid var(--border);
+    backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); z-index: 10;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .status-group { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #4b5563; flex: none;
+    transition: all .3s; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4);
+  }
+  .dot.on {
+    background: var(--success);
+    box-shadow: 0 0 12px var(--success), 0 0 0 4px rgba(52, 211, 153, 0.15);
+    animation: pulseDot 2s infinite;
+  }
+  @keyframes pulseDot {
+    50% { box-shadow: 0 0 16px var(--success), 0 0 0 6px rgba(52, 211, 153, 0.08); }
+  }
+  .select {
+    appearance: none; background: rgba(255, 255, 255, 0.03); color: var(--text);
+    border: 1px solid transparent; border-radius: 12px;
+    padding: 9px 36px 9px 14px; font-size: 13.5px; font-weight: 500; font-family: inherit;
+    max-width: min(56vw, 340px); cursor: pointer; outline: none; transition: all .2s;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path d='M2 4l4 4 4-4' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  .select:hover { background-color: rgba(255, 255, 255, 0.06); border-color: var(--border); }
+  .select:focus-visible { border-color: rgba(139, 92, 246, 0.5); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+  .badge {
+    font-size: 12px; color: var(--muted); padding: 6px 12px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+    max-width: 40vw; overflow: hidden; text-overflow: ellipsis; font-weight: 500;
   }
 
-  .group{display:flex;align-items:center;gap:8px}
-
-  .dot{
-    width:9px;height:9px;border-radius:50%;background:#5a6072;flex:none;
-    transition:background .25s,box-shadow .25s;
+  /* ================= BOTTOM DOCK ================= */
+  .bottom-dock {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    max-width: calc(100vw - 40px); display: flex; flex-direction: column; gap: 10px;
+    padding: 12px; border-radius: 24px;
+    background: var(--glass); border: 1px solid var(--border);
+    backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    z-index: 10; transition: bottom .4s cubic-bezier(0.4, 0, 0.2, 1), opacity .35s ease, transform .35s ease;
   }
-  .dot.on{background:var(--ok);box-shadow:0 0 10px var(--ok);animation:pulse 2s infinite}
-  @keyframes pulse{50%{opacity:.45}}
+  body.ticker-on .bottom-dock { bottom: 88px; }
+  .dock-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .dock-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 2px 8px; }
 
-  .select{
-    appearance:none;background:var(--panel);color:var(--text);
-    border:1px solid var(--border);border-radius:10px;
-    padding:9px 34px 9px 13px;font-size:13.5px;max-width:min(56vw,320px);
-    cursor:pointer;backdrop-filter:blur(12px);outline:none;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b93a7'><path d='M2 4l4 4 4-4'/></svg>");
-    background-repeat:no-repeat;background-position:right 12px center;
+  .text-input {
+    flex: 1 1 200px; min-width: 140px; max-width: 380px;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px;
+    color: var(--text); padding: 10px 14px; font-size: 13.5px; font-weight: 500; font-family: inherit;
+    outline: none; transition: all .2s;
   }
-  .select:focus-visible{border-color:var(--accent)}
-
-  .text-input{
-    flex:1 1 260px;min-width:180px;max-width:520px;
-    background:var(--panel);border:1px solid var(--border);
-    border-radius:10px;color:var(--text);
-    padding:10px 14px;font-size:13.5px;font-family:inherit;
-    outline:none;backdrop-filter:blur(12px);
-    transition:border-color .2s;
-  }
-  .text-input::placeholder{color:#7f879b}
-  .text-input:focus{border-color:var(--accent)}
-
-  .badge{
-    font-size:12.5px;color:var(--muted);padding:7px 12px;border-radius:999px;
-    background:var(--panel);border:1px solid var(--border);backdrop-filter:blur(12px);
-    font-variant-numeric:tabular-nums;white-space:nowrap;max-width:52vw;
-    overflow:hidden;text-overflow:ellipsis;
+  .text-input::placeholder { color: #6b7280; }
+  .text-input:hover { background: rgba(255, 255, 255, 0.06); }
+  .text-input:focus {
+    border-color: rgba(139, 92, 246, 0.5); background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
   }
 
-  .btn{
-    appearance:none;border:1px solid var(--border);border-radius:11px;
-    background:var(--panel);color:var(--text);
-    padding:11px 17px;font-size:13.5px;font-weight:560;cursor:pointer;
-    backdrop-filter:blur(14px);transition:transform .12s,background .2s,border-color .2s;
-    white-space:nowrap;
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03); color: var(--text);
+    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; outline: none;
   }
-  .btn:hover{background:rgba(38,43,56,.85);border-color:rgba(255,255,255,.2)}
-  .btn:active{transform:scale(.96)}
-  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .btn.primary{background:var(--accent);border-color:transparent;color:#fff;font-weight:640}
-  .btn.primary:hover{background:#3f7bf0}
-  .btn.primary.stop{background:var(--danger)}
-  .btn.primary.stop:hover{background:#e63e5c}
-  .btn.active{border-color:var(--accent);color:#a9c6ff;background:rgba(79,140,255,.16)}
+  .btn svg { width: 16px; height: 16px; flex: none; }
+  .btn:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--border-hover); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(0.97); }
+  .btn:focus-visible { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3); }
+  .btn.primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-color: transparent;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+  .btn.primary:hover { box-shadow: 0 8px 28px rgba(99, 102, 241, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
+  .btn.primary.stop {
+    background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+    box-shadow: 0 4px 20px rgba(248, 113, 113, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .btn.primary.stop:hover { box-shadow: 0 8px 28px rgba(248, 113, 113, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+  .btn.active { background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.45); color: #c4b5fd; }
+  .btn.small { padding: 9px 12px; font-size: 12.5px; }
 
-  @media (max-width:620px){
-    .btn{padding:10px 13px;font-size:12.5px}
-    .bar{gap:8px;padding:12px}
-    .bar.bottom{gap:10px;padding:20px 12px 14px}
-    .ticker{height:46px}
-    .ticker-track{font-size:17px}
-    .ui.has-ticker{padding-bottom:46px}
-    .text-input{flex-basis:100%}
+  /* ================= LOGO PANEL ================= */
+  .logo-panel {
+    position: absolute; bottom: calc(100% + 12px); right: 0;
+    width: 300px; max-width: calc(100vw - 40px); max-height: calc(100vh - 220px);
+    padding: 16px; border-radius: 20px;
+    background: rgba(15, 15, 25, 0.95);
+    backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    display: none; flex-direction: column; gap: 14px;
+    z-index: 20; overflow-y: auto; scrollbar-width: thin;
+  }
+  .logo-panel.open { display: flex; animation: panelSlide .25s cubic-bezier(0.4, 0, 0.2, 1); }
+  @keyframes panelSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .panel-title svg { width: 18px; height: 18px; color: #c4b5fd; }
+  .panel-close {
+    width: 28px; height: 28px; display: grid; place-items: center;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .panel-close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .panel-close svg { width: 14px; height: 14px; }
+
+  .panel-section { display: flex; flex-direction: column; gap: 8px; }
+  .panel-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .panel-label-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .panel-value { font-size: 12px; color: #c4b5fd; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .panel-row { display: flex; gap: 8px; }
+
+  /* Position Grid */
+  .position-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+    gap: 4px; padding: 6px; border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3); height: 120px;
+  }
+  .position-grid button {
+    position: relative; border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.04); border-radius: 8px;
+    cursor: pointer; transition: all .15s; outline: none; padding: 0;
+  }
+  .position-grid button::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    transition: all .2s;
+  }
+  .position-grid button:hover { background: rgba(255, 255, 255, 0.1); }
+  .position-grid button:hover::after { background: rgba(255, 255, 255, 0.4); width: 14px; height: 14px; }
+  .position-grid button:focus-visible { box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.5); }
+  .position-grid button.active {
+    background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.5);
+  }
+  .position-grid button.active::after {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    width: 16px; height: 16px;
+    box-shadow: 0 0 14px rgba(139, 92, 246, 0.8);
+  }
+
+  /* Range slider */
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+    border-radius: 999px; background: rgba(255, 255, 255, 0.1);
+    outline: none; cursor: pointer; margin: 4px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: 2px solid #14141c;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), 0 2px 8px rgba(99, 102, 241, 0.5);
+    cursor: pointer; transition: transform .15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: 2px solid #14141c;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), 0 2px 8px rgba(99, 102, 241, 0.5);
+    cursor: pointer;
+  }
+
+  /* Toggle switch */
+  .toggle-btn {
+    width: 100%; justify-content: flex-start; padding: 10px 14px;
+  }
+  .toggle-switch {
+    position: relative; width: 34px; height: 18px;
+    background: rgba(255, 255, 255, 0.12); border-radius: 999px;
+    transition: background .2s; flex: none;
+  }
+  .toggle-switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%; background: #fff;
+    transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+  .toggle-btn.active .toggle-switch { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+  .toggle-btn.active .toggle-switch::after { transform: translateX(16px); }
+
+  /* ================= UI WRAPPER ================= */
+  .ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; transition: opacity .35s ease; }
+  .ui > * { pointer-events: auto; }
+  .ui.hide { opacity: 0; }
+  .ui.hide > * { pointer-events: none; }
+
+  /* ================= MOBILE ================= */
+  @media (max-width: 640px) {
+    .top-bar { top: 12px; left: 12px; right: 12px; padding: 8px 10px; border-radius: 16px; }
+    .bottom-dock { left: 12px; right: 12px; transform: none; max-width: none; bottom: 12px; padding: 10px; border-radius: 20px; }
+    body.ticker-on .bottom-dock { bottom: 74px; }
+    .ticker { height: 50px; }
+    .ticker-track { font-size: 17px; }
+    .ticker-track span { padding: 0 2rem; }
+    .btn { padding: 9px 12px; font-size: 12px; gap: 6px; }
+    .btn svg { width: 14px; height: 14px; }
+    .text-input { flex-basis: 100%; }
+    .badge { display: none; }
+    .placeholder h1 { font-size: 20px; }
+    .placeholder p { font-size: 13.5px; }
+    .ph-icon-wrap { width: 80px; height: 80px; }
+    .ph-icon { width: 72px; height: 72px; }
+    .ph-icon svg { width: 28px; height: 28px; }
+    .logo-panel { right: -10px; width: 280px; }
+    .logo-overlay.pos-tl { top: 88px; left: 16px; }
+    .logo-overlay.pos-tr { top: 88px; right: 16px; }
+    .logo-overlay.pos-bl { bottom: 160px; left: 16px; }
+    .logo-overlay.pos-br { bottom: 160px; right: 16px; }
+    body.ticker-on .logo-overlay.pos-bl,
+    body.ticker-on .logo-overlay.pos-bc,
+    body.ticker-on .logo-overlay.pos-br { bottom: 220px; }
+  }
+
+  @media (max-width: 400px) {
+    .btn .label { display: none; }
+    .btn { padding: 10px; }
   }
 </style>
 </head>
 <body>
 
-<!-- ====== PANGGUNG ====== -->
+<!-- ================= STAGE ================= -->
 <div class="stage" id="stage">
   <video id="video" autoplay playsinline muted></video>
 
   <div class="placeholder" id="placeholder">
-    <div class="ph-icon">▶</div>
+    <div class="ph-icon-wrap">
+      <div class="ph-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+    </div>
     <h1>Layar Tampilan Video Input</h1>
     <p id="phMsg">Pilih perangkat input, lalu tekan <b>Mulai</b> untuk menampilkan video kamera / capture card.</p>
   </div>
 
-  <!-- Teks berjalan -->
   <div class="ticker" id="ticker" aria-live="off">
     <div class="ticker-track" id="tickerTrack"></div>
   </div>
+
+  <!-- LOGO OVERLAY -->
+  <div class="logo-overlay pos-tr" id="logoOverlay">
+    <img id="logoImg" alt="Logo">
+  </div>
 </div>
 
-<!-- ====== UI ====== -->
+<!-- ================= UI ================= -->
 <div class="ui" id="ui">
-  <header class="bar">
-    <div class="group">
+
+  <header class="top-bar">
+    <div class="status-group">
       <span class="dot" id="dot"></span>
       <select class="select" id="deviceSelect" title="Pilih perangkat input video">
         <option value="">Memuat perangkat…</option>
       </select>
     </div>
-    <div class="group" style="margin-left:auto">
-      <span class="badge" id="info">—</span>
-    </div>
+    <span class="badge" id="info">—</span>
   </header>
 
-  <footer class="bar bottom">
+  <footer class="bottom-dock">
 
-    <!-- Kontrol teks berjalan -->
-    <div class="ticker-ctrl">
-      <input
-        class="text-input"
-        id="tickerInput"
-        type="text"
-        value="Selamat datang 👋 — Silakan ubah teks berjalan di sini"
-        placeholder="Tulis teks berjalan…"
-        aria-label="Teks berjalan"
-      />
+    <div class="dock-row">
+      <input class="text-input" id="tickerInput" type="text"
+             value="Selamat datang 👋 — Silakan ubah teks berjalan di sini"
+             placeholder="Tulis teks berjalan…" aria-label="Teks berjalan" />
       <select class="select" id="tickerSpeed" title="Kecepatan teks berjalan">
         <option value="40">Lambat</option>
         <option value="80" selected>Normal</option>
         <option value="140">Cepat</option>
         <option value="220">Sangat Cepat</option>
       </select>
-      <button class="btn" id="btnTicker" title="Tampilkan / sembunyikan teks berjalan (T)">Ticker: On</button>
+      <button class="btn" id="btnTicker" title="Tampilkan / sembunyikan teks berjalan (T)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h16M4 12h10M4 17h16"/>
+        </svg>
+        <span class="label">Ticker</span>
+      </button>
+      <button class="btn" id="btnLogo" title="Atur logo / icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="9" cy="9" r="2"/>
+          <path d="m21 15-5-5L5 21"/>
+        </svg>
+        <span class="label">Logo</span>
+      </button>
     </div>
 
-    <!-- Kontrol utama -->
-    <div class="main-ctrl">
-      <button class="btn primary" id="btnStart">Mulai</button>
-      <button class="btn" id="btnMirror" title="Cermin (M)">Mirror</button>
-      <button class="btn" id="btnFit" title="Mode penyesuaian">Contain</button>
-      <button class="btn" id="btnShot" title="Simpan gambar (S)">Screenshot</button>
-      <button class="btn" id="btnFull" title="Layar penuh (F)">Fullscreen</button>
+    <div class="dock-divider"></div>
+
+    <div class="dock-row">
+      <button class="btn primary" id="btnStart">
+        <svg viewBox="0 0 24 24" fill="currentColor" id="startIcon"><path d="M8 5v14l11-7z"/></svg>
+        <span class="label" id="startLabel">Mulai</span>
+      </button>
+      <button class="btn" id="btnMirror" title="Cermin (M)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20"/><path d="M6 8L2 12l4 4"/><path d="M18 8l4 4-4 4"/>
+        </svg>
+        <span class="label">Mirror</span>
+      </button>
+      <button class="btn" id="btnFit" title="Mode penyesuaian">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+        <span class="label" id="fitLabel">Contain</span>
+      </button>
+      <button class="btn" id="btnShot" title="Simpan gambar (S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span class="label">Screenshot</span>
+      </button>
+      <button class="btn" id="btnFull" title="Layar penuh (F)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+        <span class="label">Fullscreen</span>
+      </button>
     </div>
+
+    <!-- LOGO PANEL -->
+    <div class="logo-panel" id="logoPanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <circle cx="9" cy="9" r="2"/>
+            <path d="m21 15-5-5L5 21"/>
+          </svg>
+          <span>Logo / Icon</span>
+        </div>
+        <button class="panel-close" id="logoPanelClose" aria-label="Tutup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="panel-section">
+        <label class="panel-label">Gambar</label>
+        <div class="panel-row">
+          <button class="btn small" id="logoUploadBtn" style="flex:1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            <span>Upload</span>
+          </button>
+          <button class="btn small" id="logoResetBtn" style="flex:1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+            </svg>
+            <span>Reset</span>
+          </button>
+          <input type="file" id="logoFile" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <label class="panel-label">Posisi</label>
+        <div class="position-grid" id="positionGrid">
+          <button data-pos="tl" aria-label="Kiri atas"></button>
+          <button data-pos="tc" aria-label="Tengah atas"></button>
+          <button data-pos="tr" aria-label="Kanan atas" class="active"></button>
+          <button data-pos="ml" aria-label="Kiri tengah"></button>
+          <button data-pos="mc" aria-label="Tengah"></button>
+          <button data-pos="mr" aria-label="Kanan tengah"></button>
+          <button data-pos="bl" aria-label="Kiri bawah"></button>
+          <button data-pos="bc" aria-label="Tengah bawah"></button>
+          <button data-pos="br" aria-label="Kanan bawah"></button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label-row">
+          <label class="panel-label">Ukuran</label>
+          <span class="panel-value" id="logoSizeValue">80 px</span>
+        </div>
+        <input type="range" min="30" max="300" step="5" value="80" id="logoSizeRange">
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label-row">
+          <label class="panel-label">Opacity</label>
+          <span class="panel-value" id="logoOpacityValue">90%</span>
+        </div>
+        <input type="range" min="10" max="100" step="5" value="90" id="logoOpacityRange">
+      </div>
+
+      <div class="panel-section">
+        <button class="btn toggle-btn active" id="logoEnableBtn">
+          <span class="toggle-switch"></span>
+          <span id="logoEnableLabel">Tampilkan Logo</span>
+        </button>
+      </div>
+    </div>
+
   </footer>
+
 </div>
 
 <script>
@@ -239,35 +552,163 @@
   const info        = $("#info");
   const deviceSelect= $("#deviceSelect");
   const btnStart    = $("#btnStart");
+  const startIcon   = $("#startIcon");
+  const startLabel  = $("#startLabel");
   const btnMirror   = $("#btnMirror");
   const btnFit      = $("#btnFit");
+  const fitLabel    = $("#fitLabel");
   const btnShot     = $("#btnShot");
   const btnFull     = $("#btnFull");
 
-  /* Ticker elements */
   const ticker       = $("#ticker");
   const tickerTrack  = $("#tickerTrack");
   const tickerInput  = $("#tickerInput");
   const tickerSpeed  = $("#tickerSpeed");
   const btnTicker    = $("#btnTicker");
 
+  const logoOverlay  = $("#logoOverlay");
+  const logoImg      = $("#logoImg");
+  const btnLogo      = $("#btnLogo");
+  const logoPanel    = $("#logoPanel");
+  const logoPanelClose = $("#logoPanelClose");
+  const logoUploadBtn= $("#logoUploadBtn");
+  const logoResetBtn = $("#logoResetBtn");
+  const logoFile     = $("#logoFile");
+  const positionGrid = $("#positionGrid");
+  const logoSizeRange= $("#logoSizeRange");
+  const logoOpacityRange = $("#logoOpacityRange");
+  const logoSizeValue= $("#logoSizeValue");
+  const logoOpacityValue = $("#logoOpacityValue");
+  const logoEnableBtn= $("#logoEnableBtn");
+  const logoEnableLabel = $("#logoEnableLabel");
+
   let stream  = null;
   let running = false;
 
+  const ICON_PLAY = '<path d="M8 5v14l11-7z"/>';
+  const ICON_STOP = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+
+  /* ================= LOGO STATE ================= */
+  const DEFAULT_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><circle cx="50" cy="50" r="44" fill="url(#g)"/><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/><path d="M42 35 L68 50 L42 65 Z" fill="white"/></svg>`;
+  const DEFAULT_LOGO = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(DEFAULT_LOGO_SVG);
+
+  const logoState = {
+    enabled: true,
+    position: 'tr',
+    size: 80,
+    opacity: 0.9
+  };
+  let currentBlobUrl = null;
+
+  function applyLogoState() {
+    // Position
+    logoOverlay.className = 'logo-overlay pos-' + logoState.position;
+    if (!logoState.enabled) logoOverlay.classList.add('hidden');
+
+    // Size & opacity via CSS vars
+    logoOverlay.style.setProperty('--logo-size', logoState.size + 'px');
+    logoOverlay.style.setProperty('--logo-opacity', logoState.opacity);
+
+    // Sync UI controls
+    logoSizeRange.value = logoState.size;
+    logoSizeValue.textContent = logoState.size + ' px';
+    logoOpacityRange.value = Math.round(logoState.opacity * 100);
+    logoOpacityValue.textContent = Math.round(logoState.opacity * 100) + '%';
+
+    positionGrid.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.pos === logoState.position);
+    });
+
+    logoEnableBtn.classList.toggle('active', logoState.enabled);
+    logoEnableLabel.textContent = logoState.enabled ? 'Tampilkan Logo' : 'Sembunyikan Logo';
+  }
+
+  // Init logo image
+  logoImg.src = DEFAULT_LOGO;
+  applyLogoState();
+
+  /* ================= LOGO PANEL ================= */
+  function openLogoPanel() {
+    logoPanel.classList.add('open');
+    btnLogo.classList.add('active');
+  }
+  function closeLogoPanel() {
+    logoPanel.classList.remove('open');
+    btnLogo.classList.remove('active');
+  }
+  btnLogo.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (logoPanel.classList.contains('open')) closeLogoPanel();
+    else openLogoPanel();
+    revealUI();
+  });
+  logoPanelClose.addEventListener('click', closeLogoPanel);
+
+  // Click outside to close
+  document.addEventListener('click', (e) => {
+    if (!logoPanel.classList.contains('open')) return;
+    if (logoPanel.contains(e.target)) return;
+    if (btnLogo.contains(e.target)) return;
+    closeLogoPanel();
+  });
+
+  // Upload
+  logoUploadBtn.addEventListener('click', () => logoFile.click());
+  logoFile.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = URL.createObjectURL(file);
+    logoImg.src = currentBlobUrl;
+    e.target.value = '';
+  });
+
+  // Reset
+  logoResetBtn.addEventListener('click', () => {
+    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+    logoImg.src = DEFAULT_LOGO;
+    logoState.position = 'tr';
+    logoState.size = 80;
+    logoState.opacity = 0.9;
+    applyLogoState();
+  });
+
+  // Position grid
+  positionGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    logoState.position = btn.dataset.pos;
+    applyLogoState();
+  });
+
+  // Size slider
+  logoSizeRange.addEventListener('input', () => {
+    logoState.size = Number(logoSizeRange.value);
+    applyLogoState();
+  });
+
+  // Opacity slider
+  logoOpacityRange.addEventListener('input', () => {
+    logoState.opacity = Number(logoOpacityRange.value) / 100;
+    applyLogoState();
+  });
+
+  // Enable toggle
+  logoEnableBtn.addEventListener('click', () => {
+    logoState.enabled = !logoState.enabled;
+    applyLogoState();
+  });
+
   /* ================= TICKER ================= */
-  let tickerEnabled = true;    // apakah ticker diaktifkan user
-  let tickerVisible = false;   // apakah ticker sedang tampil di layar
-  let tickerAnim    = null;    // objek Animation
+  let tickerEnabled = true;
+  let tickerVisible = false;
+  let tickerAnim    = null;
 
   function renderTicker() {
     if (!tickerVisible) return;
-
-    // Hentikan animasi lama
     if (tickerAnim) { tickerAnim.cancel(); tickerAnim = null; }
 
     const text = (tickerInput.value || "").trim() || "Teks berjalan…";
-
-    // Buat 2 salinan identik agar loop mulus
     tickerTrack.innerHTML = "";
     for (let i = 0; i < 2; i++) {
       const span = document.createElement("span");
@@ -275,19 +716,13 @@
       tickerTrack.appendChild(span);
     }
 
-    // Tunggu layout selesai sebelum mengukur
     requestAnimationFrame(() => {
       const halfWidth = tickerTrack.scrollWidth / 2;
       if (!halfWidth) return;
-
-      const speed = Number(tickerSpeed.value) || 80;      // px per detik
-      const duration = (halfWidth / speed) * 1000;        // ms
-
+      const speed = Number(tickerSpeed.value) || 80;
+      const duration = (halfWidth / speed) * 1000;
       tickerAnim = tickerTrack.animate(
-        [
-          { transform: "translateX(0)" },
-          { transform: "translateX(-50%)" }
-        ],
+        [{ transform: "translateX(0)" }, { transform: "translateX(-50%)" }],
         { duration, iterations: Infinity, easing: "linear" }
       );
     });
@@ -295,62 +730,48 @@
 
   function updateTickerVisibility() {
     const show = tickerEnabled && running;
-
     if (show === tickerVisible) {
       if (show) renderTicker();
       return;
     }
     tickerVisible = show;
-
     ticker.style.display = show ? "flex" : "none";
-    ui.classList.toggle("has-ticker", show);
+    document.body.classList.toggle("ticker-on", show);
     btnTicker.classList.toggle("active", tickerEnabled);
-    btnTicker.textContent = tickerEnabled ? "Ticker: On" : "Ticker: Off";
-
-    if (show) {
-      requestAnimationFrame(renderTicker);
-    } else {
-      if (tickerAnim) { tickerAnim.cancel(); tickerAnim = null; }
-    }
+    if (show) requestAnimationFrame(renderTicker);
+    else if (tickerAnim) { tickerAnim.cancel(); tickerAnim = null; }
   }
 
-  // Edit teks → update langsung
   let inputDebounce = null;
   tickerInput.addEventListener("input", () => {
     clearTimeout(inputDebounce);
     inputDebounce = setTimeout(renderTicker, 120);
   });
-
-  // Ubah kecepatan → restart animasi
   tickerSpeed.addEventListener("change", renderTicker);
-
-  // Tombol on/off ticker
   btnTicker.addEventListener("click", () => {
     tickerEnabled = !tickerEnabled;
     updateTickerVisibility();
     revealUI();
   });
 
-  // Re-measure saat ukuran layar berubah
   let resizeTimer = null;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { if (tickerVisible) renderTicker(); }, 200);
   });
 
-  /* ================= CEK DUKUNGAN ================= */
+  /* ================= SUPPORT ================= */
   if (!navigator.mediaDevices?.getUserMedia) {
     phMsg.innerHTML = "Browser ini tidak mendukung akses kamera, atau halaman tidak dijalankan melalui <b>HTTPS / localhost</b>.";
     btnStart.disabled = true;
   }
 
-  /* ================= DAFTAR PERANGKAT ================= */
+  /* ================= DEVICES ================= */
   async function refreshDevices() {
     try {
       const all = await navigator.mediaDevices.enumerateDevices();
       const cams = all.filter(d => d.kind === "videoinput");
       const prev = deviceSelect.value;
-
       deviceSelect.innerHTML = "";
       if (!cams.length) {
         deviceSelect.innerHTML = '<option value="">Tidak ada input video</option>';
@@ -368,10 +789,9 @@
     }
   }
 
-  /* ================= MULAI ================= */
+  /* ================= START ================= */
   async function start(deviceId) {
     if (!navigator.mediaDevices?.getUserMedia) return;
-
     stop(true);
 
     const videoConstraints = deviceId
@@ -385,17 +805,18 @@
 
       running = true;
       placeholder.classList.add("gone");
+      document.body.classList.add("has-video");
       dot.classList.add("on");
-      btnStart.textContent = "Stop";
+      startIcon.innerHTML = ICON_STOP;
+      startLabel.textContent = "Stop";
       btnStart.classList.add("stop");
 
       await refreshDevices();
-
       const settings = stream.getVideoTracks()[0].getSettings();
       if (settings.deviceId && !deviceSelect.value) deviceSelect.value = settings.deviceId;
 
       updateInfo();
-      updateTickerVisibility();   // tampilkan ticker saat video jalan
+      updateTickerVisibility();
       revealUI();
     } catch (err) {
       handleError(err);
@@ -411,11 +832,12 @@
     video.srcObject = null;
     running = false;
     dot.classList.remove("on");
-    btnStart.textContent = "Mulai";
+    document.body.classList.remove("has-video");
+    startIcon.innerHTML = ICON_PLAY;
+    startLabel.textContent = "Mulai";
     btnStart.classList.remove("stop");
     info.textContent = "—";
-
-    updateTickerVisibility();   // sembunyikan ticker saat stop
+    updateTickerVisibility();
 
     if (!silent) {
       placeholder.classList.remove("gone");
@@ -424,7 +846,7 @@
     }
   }
 
-  /* ================= INFO RESOLUSI ================= */
+  /* ================= INFO ================= */
   function updateInfo() {
     if (!running) return;
     const w = video.videoWidth || 0;
@@ -443,7 +865,6 @@
   function handleError(err) {
     const name = err?.name || "";
     let msg = "Gagal mengakses input video.";
-
     if (name === "NotAllowedError" || name === "SecurityError") {
       msg = "Izin akses kamera ditolak. Aktifkan izin kamera pada ikon 🔒 di address bar, lalu muat ulang halaman.";
     } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
@@ -462,19 +883,51 @@
     revealUI();
   }
 
-  /* ================= SCREENSHOT ================= */
+  /* ================= SCREENSHOT (dengan logo) ================= */
   function screenshot() {
     if (!running || !video.videoWidth) return;
+
     const c = document.createElement("canvas");
     c.width  = video.videoWidth;
     c.height = video.videoHeight;
-
     const ctx = c.getContext("2d");
-    if (video.classList.contains("mirror")) {
+
+    const mirrored = video.classList.contains("mirror");
+
+    // Draw video (mirrored if needed)
+    if (mirrored) {
+      ctx.save();
       ctx.translate(c.width, 0);
       ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, c.width, c.height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, c.width, c.height);
     }
-    ctx.drawImage(video, 0, 0, c.width, c.height);
+
+    // Draw logo if enabled
+    if (logoState.enabled && logoImg.complete && logoImg.naturalWidth && logoImg.naturalHeight) {
+      const stageH = stage.clientHeight || 1;
+      const scale = c.height / stageH;
+      const lw = logoState.size * scale;
+      const lh = lw * (logoImg.naturalHeight / logoImg.naturalWidth);
+      const margin = 24 * scale;
+
+      const pos = logoState.position;
+      let lx, ly;
+      if (pos[1] === 'l') lx = margin;
+      else if (pos[1] === 'r') lx = c.width - lw - margin;
+      else lx = (c.width - lw) / 2;
+
+      if (pos[0] === 't') ly = margin;
+      else if (pos[0] === 'b') ly = c.height - lh - margin;
+      else ly = (c.height - lh) / 2;
+
+      ctx.save();
+      ctx.globalAlpha = logoState.opacity;
+      ctx.drawImage(logoImg, lx, ly, lw, lh);
+      ctx.restore();
+    }
 
     const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const a = document.createElement("a");
@@ -493,25 +946,26 @@
     }
   }
 
-  /* ================= AUTO-HIDE UI ================= */
+  /* ================= AUTO-HIDE ================= */
   let hideTimer = null;
   function revealUI() {
     ui.classList.remove("hide");
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-      if (running) ui.classList.add("hide");
-    }, 3200);
+      if (!running) return;
+      if (logoPanel.classList.contains("open")) return;
+      const ae = document.activeElement;
+      if (ae && ["INPUT", "SELECT", "TEXTAREA"].includes(ae.tagName)) return;
+      ui.classList.add("hide");
+    }, 3500);
   }
   ["mousemove", "mousedown", "touchstart", "keydown"].forEach(ev =>
     window.addEventListener(ev, revealUI, { passive: true })
   );
 
-  /* ================= EVENT ================= */
+  /* ================= EVENTS ================= */
   btnStart.addEventListener("click", () => running ? stop() : start(deviceSelect.value || undefined));
-
-  deviceSelect.addEventListener("change", () => {
-    if (running) start(deviceSelect.value);
-  });
+  deviceSelect.addEventListener("change", () => { if (running) start(deviceSelect.value); });
 
   btnMirror.addEventListener("click", () => {
     video.classList.toggle("mirror");
@@ -521,7 +975,7 @@
 
   btnFit.addEventListener("click", () => {
     const cover = video.classList.toggle("fit-cover");
-    btnFit.textContent = cover ? "Cover" : "Contain";
+    fitLabel.textContent = cover ? "Cover" : "Contain";
     btnFit.classList.toggle("active", cover);
     revealUI();
   });
@@ -529,21 +983,21 @@
   btnShot.addEventListener("click", () => { screenshot(); revealUI(); });
   btnFull.addEventListener("click", () => { toggleFullscreen(); revealUI(); });
 
-  /* ================= SHORTCUT ================= */
+  /* ================= SHORTCUTS ================= */
   window.addEventListener("keydown", (e) => {
-    if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    const tag = e.target.tagName;
+    if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
     const k = e.key.toLowerCase();
     if (k === "f") { e.preventDefault(); toggleFullscreen(); }
     else if (k === "m") { e.preventDefault(); btnMirror.click(); }
     else if (k === "s") { e.preventDefault(); screenshot(); }
     else if (k === "t") { e.preventDefault(); btnTicker.click(); }
+    else if (k === "l") { e.preventDefault(); logoEnableBtn.click(); }
     else if (k === " ") { e.preventDefault(); btnStart.click(); }
   });
 
-  /* ================= DETEKSI PERANGKAT BARU ================= */
-  navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
-
   /* ================= INIT ================= */
+  navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
   refreshDevices();
   revealUI();
 })();
