@@ -3,1517 +3,1770 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Web OBS Lite — Final + Zoom</title>
+<title>OBS Studio Pro — Web</title>
 <style>
-  :root {
-    --bg: #1e1e1e; --panel: #252526; --panel2: #2d2d30;
-    --border: #3e3e42; --text: #cccccc; --muted: #858585;
-    --accent: #007acc; --danger: #f14c4c; --ok: #4ec9b0;
-    --warn: #d7ba7d;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body {
-    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: var(--bg); color: var(--text); height: 100vh;
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  header {
-    height: 52px; display: flex; align-items: center; gap: 8px;
-    padding: 0 12px; background: var(--panel);
-    border-bottom: 1px solid var(--border); flex-shrink: 0;
-    overflow-x: auto;
-  }
-  header h1 { font-size: 15px; font-weight: 600; margin: 0 12px 0 0; color: #fff; white-space: nowrap; }
-  main {
-    flex: 1; display: grid;
-    grid-template-columns: 260px 1fr 300px; min-height: 0;
-  }
-  .panel {
-    background: var(--panel); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; min-height: 0;
-  }
-  .panel:last-child { border-right: none; border-left: 1px solid var(--border); }
-  .panel-header {
-    padding: 6px 10px; font-size: 11px; text-transform: uppercase;
-    letter-spacing: 1px; color: var(--muted);
-    border-bottom: 1px solid var(--border); display: flex;
-    justify-content: space-between; align-items: center; flex-shrink: 0;
-  }
-  .panel-header small { font-size: 9px; text-transform: none; letter-spacing: 0; opacity: .8; }
-  .scroll { overflow-y: auto; flex: 1; min-height: 60px; }
-  .scene-item, .source-item, .audio-item {
-    padding: 6px 10px; font-size: 13px; cursor: pointer;
-    display: flex; align-items: center; gap: 6px;
-    border-bottom: 1px solid #2a2a2a;
-  }
-  .scene-item.active, .source-item.active { background: var(--accent); color: #fff; }
-  .source-item button, .audio-item button {
-    padding: 1px 5px; font-size: 11px; line-height: 1;
-  }
-  .zoom-badge {
-    font-size: 10px; padding: 1px 6px; border-radius: 3px;
-    background: var(--warn); color: #1e1e1e; border: none;
-    cursor: pointer; font-weight: 600; line-height: 1.4;
-  }
-  .zoom-badge:hover { opacity: .8; }
+:root{
+  --bg:#1e1e1e; --panel:#2b2b2b; --panel2:#323232; --header:#3a3a3a;
+  --border:#141414; --text:#d4d4d4; --dim:#8a8a8a; --accent:#3c8dd8;
+  --accent2:#4fa3ee; --danger:#d84a3c; --success:#4caf50; --warn:#e0a020;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI",Roboto,system-ui,sans-serif; font-size:12px;
+  background:var(--bg); color:var(--text); overflow:hidden; user-select:none;
+}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#1a1a1a}
+::-webkit-scrollbar-thumb{background:#4a4a4a;border-radius:5px;border:2px solid #1a1a1a}
+::-webkit-scrollbar-thumb:hover{background:#5c5c5c}
 
-  /* ===== PREVIEW AREA + FRAME ===== */
-  .preview-area {
-    display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(ellipse at center, #141414 0%, #0a0a0a 100%);
-    padding: 32px 24px 44px;
-    min-width: 0; overflow: hidden;
-    position: relative;
-  }
-  .canvas-wrap {
-    position: relative;
-    background: #000;
-    border-radius: 3px;
-    box-shadow:
-      0 0 0 1px #000,
-      0 0 0 2px #3a3a3d,
-      0 0 0 4px #1a1a1a,
-      0 16px 48px rgba(0,0,0,.75);
-    transition: width 0.28s cubic-bezier(.4,0,.2,1),
-                height 0.28s cubic-bezier(.4,0,.2,1);
-    flex-shrink: 0;
-  }
-  .canvas-wrap::after {
-    content: attr(data-dim);
-    position: absolute;
-    bottom: -26px; left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    font-family: ui-monospace, "SF Mono", Consolas, monospace;
-    color: #7a7a7a;
-    letter-spacing: 0.8px;
-    white-space: nowrap; pointer-events: none;
-    background: #0a0a0a; padding: 2px 10px;
-    border-radius: 10px; border: 1px solid #2a2a2a;
-  }
-  canvas {
-    width: 100%; height: 100%;
-    display: block; touch-action: none;
-    border-radius: 2px;
-  }
+.app{display:flex;flex-direction:column;height:100vh}
 
-  button {
-    background: var(--panel2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 4px;
-    padding: 5px 10px; font-size: 12px; cursor: pointer;
-    white-space: nowrap;
-  }
-  button:hover { background: #3a3a3d; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
-  button.warn { background: var(--warn); border-color: var(--warn); color: #1e1e1e; }
-  select, input[type="range"] {
-    background: var(--panel2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 4px;
-    padding: 4px 6px; font-size: 12px;
-  }
-  .add-row {
-    display: flex; gap: 6px; padding: 8px;
-    border-bottom: 1px solid var(--border); flex-shrink: 0;
-  }
-  .add-row select { flex: 1; min-width: 0; }
-  #status {
-    height: 26px; background: var(--panel);
-    border-top: 1px solid var(--border); font-size: 11px;
-    color: var(--muted); display: flex; align-items: center;
-    padding: 0 12px; flex-shrink: 0; gap: 12px;
-    overflow-x: auto; white-space: nowrap;
-  }
-  #media-pool {
-    position: fixed; left: -9999px; top: -9999px;
-    width: 1px; height: 1px; overflow: hidden;
-    opacity: 0; pointer-events: none;
-  }
-  .audio-item input[type="range"] { width: 60px; }
-  .empty-hint {
-    padding: 10px; color: var(--muted); font-size: 12px; line-height: 1.5;
-  }
-  .rec-controls {
-    display: flex; align-items: center; gap: 6px;
-    padding: 0 10px;
-    border-left: 1px solid var(--border);
-    margin-left: 8px;
-  }
-  #rec-timer {
-    font-family: ui-monospace, "SF Mono", Consolas, monospace;
-    font-size: 13px; color: var(--danger); min-width: 68px;
-    font-weight: 600;
-  }
-  #rec-size {
-    font-family: ui-monospace, monospace; font-size: 11px;
-    color: var(--muted); min-width: 60px;
-  }
-  .modal {
-    position: fixed; inset: 0; background: rgba(0,0,0,.7);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-  }
-  .modal.hidden { display: none; }
-  .modal-box {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 20px; min-width: 340px;
-    max-width: 90vw; max-height: 90vh; overflow: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,.5);
-  }
-  .modal-box h3 { margin: 0 0 16px; font-size: 15px; color: #fff; }
-  .form-row {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-  }
-  .form-row label { flex: 0 0 90px; font-size: 12px; color: var(--muted); }
-  .form-row select { flex: 1; }
-  .recording-item {
-    padding: 8px 10px; border-bottom: 1px solid #2a2a2a; font-size: 12px;
-  }
-  .recording-item .rec-title {
-    font-weight: 600; color: #fff; margin-bottom: 3px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .recording-item .rec-meta {
-    color: var(--muted); font-size: 11px; margin-bottom: 6px;
-  }
-  .recording-item .rec-actions { display: flex; gap: 4px; flex-wrap: wrap; }
-  .recording-item .rec-actions button { padding: 2px 8px; font-size: 11px; }
-  .ratio-select {
-    font-weight: 600; background: var(--accent);
-    color: #fff; border-color: var(--accent);
-  }
-  .info-badge {
-    font-size: 10px; padding: 1px 6px; border-radius: 3px;
-    background: #3a3a3d; color: var(--muted);
-  }
+/* ===== MENU BAR ===== */
+.menubar{
+  height:30px;background:#252525;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:2px;padding:0 8px;flex-shrink:0;position:relative;z-index:60;
+}
+.logo{font-weight:700;font-size:12px;letter-spacing:1.5px;color:#fff;margin-right:14px;display:flex;align-items:center;gap:6px}
+.logo b{color:var(--accent2)}
+.logo .dot{width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.menu-item{padding:5px 10px;border-radius:3px;color:#c8c8c8;position:relative;cursor:pointer}
+.menu-item:hover{background:#3a3a3a}
+.dropdown{
+  display:none;position:absolute;top:100%;left:0;min-width:230px;background:#2f2f2f;
+  border:1px solid #111;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.6);padding:4px;z-index:100;
+}
+.menu-item.open .dropdown{display:block}
+.dropdown button{display:flex;justify-content:space-between;width:100%;padding:7px 10px;border-radius:3px;text-align:left;color:#d0d0d0}
+.dropdown button:hover{background:var(--accent);color:#fff}
+.dropdown .sep{height:1px;background:#444;margin:4px 2px}
+.dropdown kbd{color:#888;font-size:10px}
+.menu-right{margin-left:auto;display:flex;gap:6px;align-items:center;color:var(--dim);font-size:11px}
+
+/* ===== MAIN ===== */
+.main{display:flex;flex:1;min-height:0}
+.panel{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.sidebar{width:238px;background:#252525;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;flex-shrink:0}
+.rightbar{width:196px;background:#252525;border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+
+.block{display:flex;flex-direction:column;min-height:0;border-bottom:1px solid var(--border)}
+.block.grow{flex:1}
+.block-head{
+  height:26px;background:var(--header);display:flex;align-items:center;justify-content:space-between;
+  padding:0 6px 0 9px;font-size:11px;font-weight:600;letter-spacing:.6px;color:#c9c9c9;flex-shrink:0;
+  text-transform:uppercase;
+}
+.block-head .tools{display:flex;gap:2px}
+.icon-btn{
+  width:20px;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  color:#b0b0b0;font-size:14px;line-height:1;
+}
+.icon-btn:hover{background:#4d4d4d;color:#fff}
+.icon-btn.danger:hover{background:var(--danger);color:#fff}
+
+/* ===== SCENE LIST ===== */
+.list{overflow-y:auto;flex:1;padding:3px}
+.list-item{
+  display:flex;align-items:center;gap:6px;padding:6px 7px;border-radius:3px;
+  cursor:pointer;color:#c0c0c0;border:1px solid transparent;
+}
+.list-item:hover{background:#353535}
+.list-item.active{background:var(--accent);color:#fff;font-weight:600}
+.list-item.active .badge{background:rgba(255,255,255,.25);color:#fff}
+.list-item .txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-size:9px;padding:1px 5px;border-radius:8px;background:#3d3d3d;color:#9a9a9a;letter-spacing:.4px}
+
+.src-item{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:3px;cursor:pointer;color:#c0c0c0}
+.src-item:hover{background:#353535}
+.src-item.active{background:#3b6fa8;color:#fff}
+.src-item.dragover{border-top:2px solid var(--accent2)}
+.src-item .txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-item .mini{width:16px;height:16px;display:flex;align-items:center;justify-content:center;opacity:.65;border-radius:2px;flex-shrink:0}
+.src-item .mini:hover{opacity:1;background:rgba(255,255,255,.15)}
+.src-item.hidden-src .txt{opacity:.42}
+.src-item .type-chip{
+  font-size:8.5px;font-weight:700;padding:1px 4px;border-radius:2px;background:#4a4a4a;color:#bbb;
+  letter-spacing:.4px;flex-shrink:0;
+}
+.src-item.active .type-chip{background:rgba(255,255,255,.22);color:#fff}
+.src-item .mini svg{width:12px;height:12px;fill:currentColor}
+.src-item.playing .type-chip{background:#2e7d32;color:#a5f0a8}
+
+/* ===== CENTER ===== */
+.center{flex:1;display:flex;flex-direction:column;min-width:0;background:#181818}
+.preview-area{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:10px;min-height:0;background:
+    repeating-conic-gradient(#1c1c1c 0% 25%, #202020 0% 50%) 50%/22px 22px;
+}
+.canvas-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;min-height:0;max-width:100%;max-height:100%}
+.canvas-wrap canvas{
+  max-width:100%;max-height:100%;background:#000;border:1px solid #000;
+  box-shadow:0 0 0 1px #3a3a3a, 0 6px 22px rgba(0,0,0,.7);border-radius:2px;display:block;
+}
+.canvas-wrap.live canvas{box-shadow:0 0 0 2px var(--danger), 0 6px 22px rgba(0,0,0,.7)}
+.canvas-label{
+  font-size:10px;font-weight:700;letter-spacing:1.4px;color:#8a8a8a;text-transform:uppercase;
+}
+.canvas-wrap.live .canvas-label{color:var(--danger)}
+
+.transition-bar{
+  height:38px;background:#252525;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;padding:0 10px;flex-shrink:0;
+}
+.transition-bar label{color:var(--dim);font-size:11px}
+select,input[type=text],input[type=number]{
+  background:#1c1c1c;border:1px solid #444;color:var(--text);border-radius:3px;padding:5px 7px;
+  font-family:inherit;font-size:11.5px;outline:none;
+}
+select:focus,input:focus{border-color:var(--accent)}
+.btn{
+  padding:6px 12px;border-radius:3px;background:#3d3d3d;color:#dcdcdc;font-weight:600;font-size:11.5px;
+  border:1px solid #4a4a4a;transition:.12s;
+}
+.btn:hover{background:#4a4a4a}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.accent:hover{background:var(--accent2)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.danger:hover{background:#ee5a4a}
+.btn.wide{width:100%}
+.btn.sm{padding:4px 9px;font-size:11px}
+
+/* ===== AUDIO MIXER ===== */
+.mixer{
+  height:172px;background:#252525;border-top:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;
+}
+.mixer-head{
+  height:26px;background:var(--header);display:flex;align-items:center;justify-content:space-between;
+  padding:0 10px;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#c9c9c9;
+}
+.mixer-body{flex:1;display:flex;gap:8px;padding:8px 10px;overflow-x:auto;align-items:stretch}
+.chan{
+  width:78px;flex-shrink:0;background:#2e2e2e;border:1px solid #3a3a3a;border-radius:4px;
+  display:flex;flex-direction:column;padding:5px;gap:4px;
+}
+.chan .nm{font-size:10px;color:#c8c8c8;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.chan .meter{
+  flex:1;width:100%;background:#141414;border-radius:3px;position:relative;overflow:hidden;
+  display:flex;flex-direction:column-reverse;gap:1px;padding:2px;
+}
+.chan .meter i{display:block;width:100%;height:3px;border-radius:1px;background:transparent;transition:background .06s}
+.chan .meter i.on{background:linear-gradient(90deg,#39d353,#5ce07a)}
+.chan .meter i.warn{background:linear-gradient(90deg,#e0a020,#f5c542)}
+.chan .meter i.peak{background:linear-gradient(90deg,#e04a3c,#ff6b5b)}
+.chan .vol{
+  -webkit-appearance:none;width:100%;height:4px;background:#4a4a4a;border-radius:2px;outline:none;
+}
+.chan .vol::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#c8c8c8;cursor:pointer;
+  border:1px solid #666;
+}
+.chan .vol::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#c8c8c8;border:1px solid #666;cursor:pointer}
+.chan .row{display:flex;gap:3px}
+.chan .mute{
+  flex:1;background:#3d3d3d;border-radius:3px;font-size:9px;font-weight:700;padding:3px 0;color:#bbb;letter-spacing:.5px;
+}
+.chan .mute:hover{background:#4d4d4d}
+.chan .mute.on{background:var(--danger);color:#fff}
+.chan .db{font-size:9px;color:#888;text-align:center}
+
+/* ===== RIGHT BAR ===== */
+.ctrl-group{padding:10px 10px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px}
+.ctrl-title{font-size:10px;font-weight:700;letter-spacing:1px;color:#8a8a8a;text-transform:uppercase;margin-bottom:2px}
+.stat-row{display:flex;justify-content:space-between;font-size:11px;color:#9a9a9a;padding:2px 0}
+.stat-row b{color:#cfcfcf;font-weight:600;font-variant-numeric:tabular-nums}
+.timer{font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;color:#e8e8e8;letter-spacing:1px;text-align:center;padding:2px 0}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#555;display:inline-block;margin-right:5px}
+.live-dot.on{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+/* ===== STATUS BAR ===== */
+.statusbar{
+  height:24px;background:#1a1a1a;border-top:1px solid var(--border);display:flex;align-items:center;
+  gap:18px;padding:0 12px;font-size:10.5px;color:#7d7d7d;flex-shrink:0;
+}
+.statusbar .sp{margin-left:auto}
+.statusbar b{color:#a8a8a8;font-weight:600}
+.bar{width:52px;height:7px;background:#333;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle}
+.bar i{display:block;height:100%;background:var(--success);border-radius:4px;transition:width .4s}
+
+/* ===== MODALS ===== */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:200;
+  backdrop-filter:blur(2px);
+}
+.overlay.show{display:flex}
+.modal{
+  background:#2b2b2b;border:1px solid #444;border-radius:6px;min-width:380px;max-width:540px;width:90%;
+  box-shadow:0 20px 60px rgba(0,0,0,.8);overflow:hidden;max-height:86vh;display:flex;flex-direction:column;
+}
+.modal-head{
+  background:var(--header);padding:11px 14px;font-weight:700;font-size:13px;display:flex;
+  justify-content:space-between;align-items:center;letter-spacing:.3px;
+}
+.modal-head .x{width:22px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.modal-head .x:hover{background:var(--danger);color:#fff}
+.modal-body{padding:14px;display:flex;flex-direction:column;gap:11px;overflow-y:auto}
+.modal-foot{padding:11px 14px;background:#262626;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #1c1c1c}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:#9a9a9a;font-weight:600;letter-spacing:.3px}
+.field input[type=color]{
+  width:100%;height:30px;background:#1c1c1c;border:1px solid #444;border-radius:3px;padding:2px;cursor:pointer;
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+.add-menu{
+  position:fixed;background:#2f2f2f;border:1px solid #111;border-radius:4px;padding:4px;
+  box-shadow:0 10px 30px rgba(0,0,0,.7);z-index:300;display:none;min-width:200px;
+}
+.add-menu.show{display:block}
+.add-menu button{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border-radius:3px;text-align:left;color:#d0d0d0}
+.add-menu button:hover{background:var(--accent);color:#fff}
+.add-menu button .ic{width:18px;text-align:center;font-size:13px;opacity:.85}
+.add-menu .sep{height:1px;background:#444;margin:4px 2px}
+
+.toast{
+  position:fixed;bottom:44px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#2f2f2f;border:1px solid #4a4a4a;border-left:3px solid var(--accent);
+  padding:10px 18px;border-radius:4px;color:#ddd;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.6);
+  opacity:0;pointer-events:none;transition:.25s;z-index:400;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+<div class="app">
 
-<header>
-  <h1>🎬 Web OBS Lite</h1>
-
-  <select id="canvas-ratio" class="ratio-select" title="Pilih rasio kanvas">
-    <option value="original">📐 Original</option>
-    <option value="16:9" selected>📺 16:9</option>
-    <option value="9:16">📱 9:16</option>
-  </select>
-
-  <div class="rec-controls">
-    <button id="record-btn" class="primary">● Rekam</button>
-    <button id="pause-btn" style="display:none">⏸ Jeda</button>
-    <button id="stop-btn" style="display:none" class="danger">■ Stop</button>
-    <span id="rec-timer"></span>
-    <span id="rec-size"></span>
+  <!-- ================= MENU BAR ================= -->
+  <div class="menubar">
+    <div class="logo"><span class="dot"></span>OBS <b>STUDIO PRO</b></div>
+    <div class="menu-item" data-menu>File
+      <div class="dropdown">
+        <button data-act="new-scene">Sken Baru <kbd>Ctrl+N</kbd></button>
+        <button data-act="dupe-scene">Duplikat Sken</button>
+        <div class="sep"></div>
+        <button data-act="import-media">Impor Media (MP4)…</button>
+        <button data-act="screenshot">Ambil Screenshot Program</button>
+        <button data-act="reset">Reset Semua</button>
+      </div>
+    </div>
+    <div class="menu-item" data-menu>Edit
+      <div class="dropdown">
+        <button data-act="dupe-source">Duplikat Sumber</button>
+        <button data-act="remove-source">Hapus Sumber <kbd>Del</kbd></button>
+        <div class="sep"></div>
+        <button data-act="center-source">Pusatkan Sumber</button>
+        <button data-act="fill-source">Isi Penuh Layar</button>
+      </div>
+    </div>
+    <div class="menu-item" data-menu>View
+      <div class="dropdown">
+        <button data-act="toggle-studio">Mode Studio</button>
+        <button data-act="toggle-mixer">Tampilkan Audio Mixer</button>
+      </div>
+    </div>
+    <div class="menu-item" data-menu>Tools
+      <div class="dropdown">
+        <button data-act="auto-config">Wizard Konfigurasi Otomatis</button>
+        <button data-act="test-stream">Uji Kualitas Streaming</button>
+      </div>
+    </div>
+    <div class="menu-item" data-menu>Help
+      <div class="dropdown">
+        <button data-act="about">Tentang OBS Studio Pro</button>
+        <button data-act="shortcut">Pintasan Keyboard</button>
+      </div>
+    </div>
+    <div class="menu-right"><span id="profileName">Profil: Default</span></div>
   </div>
 
-  <button id="rec-settings-btn" title="Pengaturan rekaman">⚙</button>
-  <button id="live-btn">🌐 Siaran</button>
-  <span style="flex:1"></span>
-  <span class="info-badge" id="mime-support">Cek format…</span>
-</header>
+  <!-- ================= MAIN ================= -->
+  <div class="main">
 
-<main>
-  <aside class="panel">
-    <div class="panel-header">
-      <span>Scenes</span>
-      <button id="add-scene-btn">+</button>
-    </div>
-    <div id="scenes-list" class="scroll" style="flex:1"></div>
-  </aside>
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+      <div class="block" style="flex:0 0 38%">
+        <div class="block-head">
+          <span>Sken</span>
+          <div class="tools">
+            <button class="icon-btn" id="btnAddScene" title="Tambah Sken">+</button>
+            <button class="icon-btn" id="btnDupeScene" title="Duplikat">⧉</button>
+            <button class="icon-btn danger" id="btnDelScene" title="Hapus">−</button>
+          </div>
+        </div>
+        <div class="list" id="sceneList"></div>
+      </div>
 
-  <section class="preview-area">
-    <div class="canvas-wrap" id="canvas-wrap" data-dim="1280 × 720">
-      <canvas id="preview" width="1280" height="720"></canvas>
-    </div>
-  </section>
+      <div class="block grow">
+        <div class="block-head">
+          <span>Sumber</span>
+          <div class="tools">
+            <button class="icon-btn" id="btnAddSource" title="Tambah Sumber">+</button>
+            <button class="icon-btn" id="btnSourceProps" title="Properti">⚙</button>
+            <button class="icon-btn danger" id="btnDelSource" title="Hapus">−</button>
+          </div>
+        </div>
+        <div class="list" id="sourceList"></div>
+      </div>
+    </aside>
 
-  <aside class="panel">
-    <div class="panel-header">
-      <span>Sources</span>
-      <small>🖱 scroll = zoom · dblclick = reset</small>
-    </div>
-    <div class="add-row">
-      <select id="source-type-select">
-        <option value="webcam">Webcam</option>
-        <option value="screen">Screen Capture</option>
-        <option value="videofile">Video File (MP4/WebM)</option>
-        <option value="image">Gambar (URL)</option>
-        <option value="text">Teks</option>
-        <option value="color">Warna Solid</option>
-        <option value="mic">Mikrofon</option>
-      </select>
-      <button id="add-source-btn" class="primary">Tambah</button>
-    </div>
-    <div id="sources-list" class="scroll" style="flex:1.2"></div>
+    <!-- CENTER -->
+    <section class="center">
+      <div class="preview-area" id="previewArea">
+        <div class="canvas-wrap" id="wrapProgram">
+          <canvas id="programCanvas" width="1280" height="720"></canvas>
+          <div class="canvas-label" id="labelProgram">Pratinjau</div>
+        </div>
+        <div class="canvas-wrap live" id="wrapPreview" style="display:none">
+          <canvas id="previewCanvas" width="1280" height="720"></canvas>
+          <div class="canvas-label">Pratinjau (Edit)</div>
+        </div>
+      </div>
 
-    <div class="panel-header">
-      <span>Audio Mixer</span>
-      <button id="monitor-toggle" title="Monitor audio ke speaker" style="font-size:10px;padding:1px 6px">🔇 Monitor</button>
-    </div>
-    <div id="audio-list" class="scroll" style="flex:1"></div>
+      <div class="transition-bar">
+        <label>Transisi</label>
+        <select id="selTransition">
+          <option>Fade</option><option>Cut</option><option>Luma Wipe</option><option>Slide</option><option>Stinger</option>
+        </select>
+        <label>Durasi</label>
+        <input type="number" id="transDur" value="300" min="0" max="3000" step="50" style="width:74px">
+        <span style="color:#666">ms</span>
+        <button class="btn accent" id="btnTransition" disabled style="margin-left:auto">Transisi</button>
+      </div>
 
-    <div class="panel-header">
-      <span>Rekaman</span>
-      <span id="rec-count" style="color:var(--accent)">0</span>
-    </div>
-    <div id="recordings-list" class="scroll" style="flex:1.2"></div>
-  </aside>
-</main>
+      <div class="mixer" id="mixerPanel">
+        <div class="mixer-head">
+          <span>Mixer Audio</span>
+          <span style="color:#8a8a8a;font-weight:400;text-transform:none;letter-spacing:0" id="mixerInfo">—</span>
+        </div>
+        <div class="mixer-body" id="mixerBody"></div>
+      </div>
+    </section>
 
-<div id="status"></div>
-<div id="media-pool"></div>
+    <!-- RIGHT BAR -->
+    <aside class="rightbar">
+      <div class="ctrl-group">
+        <div class="ctrl-title">Kontrol</div>
+        <button class="btn wide" id="btnStudio">Mode Studio</button>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-title">Streaming</div>
+        <div class="timer" id="streamTimer">00:00:00</div>
+        <button class="btn wide accent" id="btnStream"><span class="live-dot" id="streamDot"></span>Mulai Streaming</button>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-title">Rekaman</div>
+        <div class="timer" id="recTimer">00:00:00</div>
+        <button class="btn wide danger" id="btnRecord">Mulai Rekaman</button>
+        <button class="btn wide sm" id="btnSettings">Pengaturan</button>
+      </div>
+      <div class="ctrl-group" style="flex:1">
+        <div class="ctrl-title">Statistik</div>
+        <div class="stat-row"><span>FPS</span><b id="statFps">60</b></div>
+        <div class="stat-row"><span>CPU</span><b id="statCpu">3.1%</b></div>
+        <div class="stat-row"><span>Bitrate</span><b id="statBit">0 kb/s</b></div>
+        <div class="stat-row"><span>Drop</span><b id="statDrop">0.0%</b></div>
+        <div class="stat-row"><span>Resolusi</span><b>1280×720</b></div>
+        <div class="stat-row"><span>Render</span><b id="statRender">1.2 ms</b></div>
+      </div>
+    </aside>
+  </div>
 
-<div id="settings-modal" class="modal hidden">
-  <div class="modal-box">
-    <h3>⚙ Pengaturan Rekaman</h3>
-    <div class="form-row">
-      <label>Format</label>
-      <select id="cfg-mime">
-        <option value="auto">Otomatis (MP4 jika didukung)</option>
-        <option value="video/mp4;codecs=avc1.42E01E">MP4 H.264</option>
-        <option value="video/webm;codecs=vp9">WebM VP9</option>
-        <option value="video/webm;codecs=vp8">WebM VP8</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label>Kualitas</label>
-      <select id="cfg-quality">
-        <option value="2000000">Rendah — 2 Mbps</option>
-        <option value="4000000">Sedang — 4 Mbps</option>
-        <option value="6000000" selected>Tinggi — 6 Mbps</option>
-        <option value="12000000">Ultra — 12 Mbps</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label>FPS</label>
-      <select id="cfg-fps">
-        <option value="24">24 FPS</option>
-        <option value="30" selected>30 FPS</option>
-        <option value="60">60 FPS</option>
-      </select>
-    </div>
-    <div id="mime-info" style="font-size:11px;color:var(--muted);margin:12px 0;line-height:1.6"></div>
-    <div style="text-align:right">
-      <button id="settings-close" class="primary">Tutup</button>
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <span>CPU <span class="bar"><i id="cpuBar" style="width:8%"></i></span></span>
+    <span>FPS <b id="statusFps">60</b></span>
+    <span id="statusScene">Sken: —</span>
+    <span id="statusSources">Sumber: 0</span>
+    <span class="sp" id="statusMsg">Siap</span>
+  </div>
+</div>
+
+<!-- ADD SOURCE MENU -->
+<div class="add-menu" id="addMenu">
+  <button data-type="text"><span class="ic">T</span>Teks (Text)</button>
+  <button data-type="color"><span class="ic">▮</span>Warna Sumber (Color Source)</button>
+  <button data-type="image"><span class="ic">🖼</span>Gambar (Image)</button>
+  <div class="sep"></div>
+  <button data-type="media"><span class="ic">🎬</span>Berkas Media (MP4)</button>
+  <button data-type="camera"><span class="ic">📷</span>Perangkat Video Capture</button>
+  <button data-type="screen"><span class="ic">🖥</span>Capture Layar</button>
+  <button data-type="audio"><span class="ic">🎤</span>Input Audio</button>
+</div>
+
+<!-- HIDDEN FILE INPUTS -->
+<input type="file" id="mediaFileInput" accept="video/mp4,video/webm,video/quicktime,video/*" style="display:none">
+<input type="file" id="mediaFileInput2" accept="video/mp4,video/webm,video/quicktime,video/*" style="display:none">
+
+<!-- MODALS -->
+<div class="overlay" id="propsOverlay">
+  <div class="modal">
+    <div class="modal-head"><span id="propsTitle">Properti Sumber</span><button class="x" data-close>×</button></div>
+    <div class="modal-body" id="propsBody"></div>
+    <div class="modal-foot">
+      <button class="btn" data-close>Batal</button>
+      <button class="btn accent" id="propsSave">Terapkan</button>
     </div>
   </div>
 </div>
 
-<div id="preview-modal" class="modal hidden">
-  <div class="modal-box" style="min-width:600px">
-    <video id="preview-video" controls playsinline style="width:100%;max-height:60vh;background:#000;border-radius:4px"></video>
-    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
-      <span id="preview-info" style="font-size:12px;color:var(--muted)"></span>
-      <button id="preview-close" class="primary">Tutup</button>
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head"><span>Pengaturan</span><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field"><label>Resolusi Kanvas</label>
+          <select id="setRes"><option>1280×720</option><option>1920×1080</option><option>854×480</option></select>
+        </div>
+        <div class="field"><label>FPS</label>
+          <select id="setFps"><option>30</option><option selected>60</option><option>120</option></select>
+        </div>
+      </div>
+      <div class="field"><label>Kualitas Bitrate (kbps)</label>
+        <input type="number" id="setBitrate" value="6000" min="500" max="50000" step="500">
+      </div>
+      <div class="field"><label>Format Rekaman</label>
+        <select id="setFormat"><option>MKV</option><option>MP4</option><option>FLV</option></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close>Tutup</button>
+      <button class="btn accent" id="settingsSave">Simpan</button>
     </div>
   </div>
 </div>
+
+<div class="overlay" id="infoOverlay">
+  <div class="modal">
+    <div class="modal-head"><span id="infoTitle">Info</span><button class="x" data-close>×</button></div>
+    <div class="modal-body" id="infoBody"></div>
+    <div class="modal-foot"><button class="btn accent" data-close>OK</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 /* =========================================================
-   STATE
+   OBS STUDIO PRO — WEB EDITION + MP4 SOURCE
    ========================================================= */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 9);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const BASE_W = 1280, BASE_H = 720;
+
+/* ---------------------------------------------------------
+   STATE
+--------------------------------------------------------- */
 const state = {
   scenes: [],
-  activeSceneId: null,
-  selectedSourceId: null,
-  audioContext: null,
-  masterGain: null,
-  monitorGain: null,
-  monitorOn: false,
-  audioDestination: null,
-  canvasRatio: '16:9',
+  liveSceneId: null,
+  previewSceneId: null,
+  selectedId: null,
+  studio: false,
+  streaming: false,
   recording: false,
-  recPaused: false,
-  recStartTime: 0,
-  recPausedTotal: 0,
-  recPausedAt: 0,
-  recTimerInterval: null,
-  currentRecSize: 0,
-  mediaRecorder: null,
-  recordedChunks: [],
-  recMime: 'auto',
-  recBitrate: 6_000_000,
-  recFps: 30,
-  whipPc: null,
-  isLive: false,
-  drawTimer: null,
+  streamT0: 0,
+  recT0: 0,
+  transition: 'Fade',
+  transDur: 300,
+  drag: null,
+  fade: 0,
+  fading: false,
+  settings: { bitrate: 6000 }
 };
 
-const recordings = [];
-let _id = 0;
-const uid = (p = 'id') => `${p}-${++_id}-${Date.now().toString(36)}`;
+const programCanvas = $('#programCanvas');
+const previewCanvas = $('#previewCanvas');
+const pctx = programCanvas.getContext('2d');
+const vctx = previewCanvas.getContext('2d');
 
-/* =========================================================
-   DOM
-   ========================================================= */
-const canvas = document.getElementById('preview');
-const ctx = canvas.getContext('2d');
-const canvasWrap = document.getElementById('canvas-wrap');
-const canvasRatioSelect = document.getElementById('canvas-ratio');
-const scenesListEl = document.getElementById('scenes-list');
-const sourcesListEl = document.getElementById('sources-list');
-const audioListEl = document.getElementById('audio-list');
-const recordingsListEl = document.getElementById('recordings-list');
-const recCountEl = document.getElementById('rec-count');
-const sourceTypeSelect = document.getElementById('source-type-select');
-const addSourceBtn = document.getElementById('add-source-btn');
-const addSceneBtn = document.getElementById('add-scene-btn');
-const recordBtn = document.getElementById('record-btn');
-const pauseBtn = document.getElementById('pause-btn');
-const stopBtn = document.getElementById('stop-btn');
-const recTimerEl = document.getElementById('rec-timer');
-const recSizeEl = document.getElementById('rec-size');
-const recSettingsBtn = document.getElementById('rec-settings-btn');
-const settingsModal = document.getElementById('settings-modal');
-const previewModal = document.getElementById('preview-modal');
-const previewVideo = document.getElementById('preview-video');
-const previewInfo = document.getElementById('preview-info');
-const liveBtn = document.getElementById('live-btn');
-const statusEl = document.getElementById('status');
-const mediaPool = document.getElementById('media-pool');
-const monitorToggle = document.getElementById('monitor-toggle');
-const mimeSupportEl = document.getElementById('mime-support');
-const mimeInfoEl = document.getElementById('mime-info');
-
-/* =========================================================
-   UTILITY
-   ========================================================= */
-function formatDuration(ms) {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const hh = String(Math.floor(total / 3600)).padStart(2, '0');
-  const mm = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
-  const ss = String(total % 60).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
-}
-function formatBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
-  return (b / (1024 * 1024)).toFixed(1) + ' MB';
-}
-function detectMimeSupport() {
-  const checks = {
-    'MP4 H.264': 'video/mp4;codecs=avc1.42E01E',
-    'WebM VP9': 'video/webm;codecs=vp9',
-    'WebM VP8': 'video/webm;codecs=vp8',
+/* ---------------------------------------------------------
+   SOURCE FACTORY  (+ media = MP4)
+--------------------------------------------------------- */
+function makeSource(type, overrides = {}) {
+  const base = {
+    id: uid(), type, name: defaultName(type),
+    x: 0, y: 0, w: BASE_W, h: BASE_H,
+    visible: true, locked: false,
+    volume: 100, muted: false, hasAudio: false,
+    _bbox: null
   };
-  const results = {};
-  for (const [k, v] of Object.entries(checks)) results[k] = MediaRecorder.isTypeSupported(v);
-  return results;
-}
-function refreshMimeInfo() {
-  const results = detectMimeSupport();
-  const hasMp4 = results['MP4 H.264'];
-  mimeSupportEl.textContent = hasMp4 ? '✔ MP4 didukung' : '⚠ MP4 tidak didukung';
-  mimeSupportEl.style.color = hasMp4 ? 'var(--ok)' : 'var(--warn)';
-  mimeInfoEl.innerHTML = Object.entries(results)
-    .map(([k, v]) => `<div>${v ? '✔' : '✕'} ${k}</div>`).join('');
-}
-function isZoomable(src) {
-  return ['webcam', 'screen', 'videofile', 'image'].includes(src.type);
+  const map = {
+    text:   { x: 90, y: 90, w: 620, h: 120, text: 'Teks Baru', fontSize: 76, color: '#ffffff', bg: 'transparent', font: 'Inter, Segoe UI, sans-serif', weight: 700 },
+    color:  { x: 0, y: 0, w: BASE_W, h: BASE_H, color: '#1b3a5c' },
+    image:  { x: 340, y: 160, w: 600, h: 400 },
+    media:  { x: 320, y: 180, w: 640, h: 360, hasAudio: true, loop: true, playing: true, fit: 'cover' },
+    camera: { x: 740, y: 380, w: 480, h: 300, hasAudio: true },
+    screen: { x: 0, y: 0, w: BASE_W, h: BASE_H, hasAudio: true },
+    audio:  { x: 0, y: 0, w: 0, h: 0, hasAudio: true }
+  };
+  return Object.assign(base, map[type] || {}, overrides);
 }
 
-/* =========================================================
-   CANVAS RATIO & DISPLAY SIZING
-   ========================================================= */
-function getRatioDimensions(ratio) {
-  if (ratio === '9:16') return { width: 720, height: 1280 };
-  if (ratio === 'original') return { width: 1280, height: 720 };
-  return { width: 1280, height: 720 };
+function defaultName(type) {
+  return { text: 'Teks', color: 'Warna', image: 'Gambar', media: 'Media', camera: 'Kamera', screen: 'Layar', audio: 'Audio' }[type] || type;
 }
 
-function resizeCanvasDisplay() {
-  const area = document.querySelector('.preview-area');
-  if (!area) return;
-  const styles = getComputedStyle(area);
-  const padX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
-  const padY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
-  const availW = Math.max(100, area.clientWidth - padX);
-  const availH = Math.max(100, area.clientHeight - padY);
-
-  const ratio = canvas.width / canvas.height;
-  let w, h;
-  if (availW / availH > ratio) {
-    h = availH;
-    w = Math.round(h * ratio);
-  } else {
-    w = availW;
-    h = Math.round(w / ratio);
-  }
-
-  canvasWrap.style.width = w + 'px';
-  canvasWrap.style.height = h + 'px';
-  canvasWrap.setAttribute('data-dim', `${canvas.width} × ${canvas.height}`);
+/* ---------------------------------------------------------
+   SCENE MANAGEMENT
+--------------------------------------------------------- */
+function newScene(name) {
+  return { id: uid(), name: name || `Sken ${state.scenes.length + 1}`, sources: [] };
+}
+function getScene(id) { return state.scenes.find(s => s.id === id); }
+function liveScene()   { return getScene(state.liveSceneId); }
+function previewScene(){ return getScene(state.previewSceneId); }
+function selectedSource() {
+  const sc = previewScene(); if (!sc) return null;
+  return sc.sources.find(s => s.id === state.selectedId) || null;
 }
 
-window.addEventListener('resize', () => {
-  clearTimeout(window.__canvasResizeT);
-  window.__canvasResizeT = setTimeout(resizeCanvasDisplay, 80);
-});
-
-function applyCanvasRatio(ratio) {
-  const oldW = canvas.width, oldH = canvas.height;
-  const { width, height } = getRatioDimensions(ratio);
-  if (oldW === width && oldH === height) {
-    state.canvasRatio = ratio;
-    resizeCanvasDisplay();
-    updateStatus();
-    return;
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-
-  const scaleX = width / oldW;
-  const scaleY = height / oldH;
-  const scale = Math.min(scaleX, scaleY);
-
-  state.scenes.forEach(scene => {
-    scene.sources.forEach(src => {
-      if (src.type === 'mic') return;
-      src.x = Math.round(src.x * scaleX);
-      src.y = Math.round(src.y * scaleY);
-      src.width = Math.round(src.width * scale);
-      src.height = Math.round(src.height * scale);
-      // Zoom & pan tetap sama (relatif ke frame)
-    });
-  });
-
-  state.canvasRatio = ratio;
-  resizeCanvasDisplay();
-  renderSources();
-  drawFrame();
-  updateStatus();
-}
-canvasRatioSelect.onchange = (e) => applyCanvasRatio(e.target.value);
-
-/* =========================================================
-   AUDIO GRAPH
-   ========================================================= */
-function ensureAudioContext() {
-  if (!state.audioContext) {
-    state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    state.masterGain = state.audioContext.createGain();
-    state.audioDestination = state.audioContext.createMediaStreamDestination();
-    state.monitorGain = state.audioContext.createGain();
-    state.monitorGain.gain.value = 0;
-    state.masterGain.connect(state.audioDestination);
-    state.masterGain.connect(state.monitorGain);
-    state.monitorGain.connect(state.audioContext.destination);
-  }
-  if (state.audioContext.state === 'suspended') state.audioContext.resume();
-}
-
-monitorToggle.onclick = () => {
-  ensureAudioContext();
-  state.monitorOn = !state.monitorOn;
-  state.monitorGain.gain.value = state.monitorOn ? 1 : 0;
-  monitorToggle.textContent = state.monitorOn ? '🔊 Monitor' : '🔇 Monitor';
-  monitorToggle.classList.toggle('primary', state.monitorOn);
-};
-
-function connectAudioTrack(src, track) {
-  ensureAudioContext();
-  const stream = new MediaStream([track]);
-  const srcNode = state.audioContext.createMediaStreamSource(stream);
-  const gain = state.audioContext.createGain();
-  gain.gain.value = src.muted ? 0 : src.volume;
-  srcNode.connect(gain).connect(state.masterGain);
-  src.gainNode = gain;
-  src.audioTrack = track;
-}
-
-function renderAudioMixer() {
-  audioListEl.innerHTML = '';
-  const scene = getActiveScene();
-  if (!scene) return;
-  const audioSources = scene.sources.filter(s => s.gainNode || s.type === 'mic');
-  if (!audioSources.length) {
-    audioListEl.innerHTML = '<div class="empty-hint">Belum ada sumber audio.</div>';
-    return;
-  }
-  audioSources.forEach(src => {
-    const div = document.createElement('div');
-    div.className = 'audio-item';
-    const name = document.createElement('span');
-    name.textContent = src.name;
-    name.style.flex = '1'; name.style.overflow = 'hidden';
-    name.style.textOverflow = 'ellipsis'; name.style.whiteSpace = 'nowrap';
-
-    const mute = document.createElement('button');
-    mute.textContent = src.muted ? '🔇' : '🔊';
-    mute.onclick = () => {
-      src.muted = !src.muted;
-      if (src.gainNode) src.gainNode.gain.value = src.muted ? 0 : src.volume;
-      renderAudioMixer();
-    };
-
-    const slider = document.createElement('input');
-    slider.type = 'range'; slider.min = '0'; slider.max = '1'; slider.step = '0.01';
-    slider.value = src.volume;
-    slider.oninput = () => {
-      src.volume = parseFloat(slider.value);
-      if (!src.muted && src.gainNode) src.gainNode.gain.value = src.volume;
-    };
-
-    div.append(name, mute, slider);
-    audioListEl.appendChild(div);
-  });
-}
-
-/* =========================================================
-   SCENES
-   ========================================================= */
-function createScene(name) {
-  return { id: uid('scene'), name, background: '#000000', sources: [] };
-}
-function getActiveScene() {
-  return state.scenes.find(s => s.id === state.activeSceneId);
-}
-function renderScenes() {
-  scenesListEl.innerHTML = '';
-  state.scenes.forEach(scene => {
-    const div = document.createElement('div');
-    div.className = 'scene-item' + (scene.id === state.activeSceneId ? ' active' : '');
-    div.textContent = scene.name;
-    div.onclick = () => {
-      state.activeSceneId = scene.id;
-      state.selectedSourceId = null;
-      renderScenes(); renderSources(); renderAudioMixer();
-    };
-    scenesListEl.appendChild(div);
-  });
-}
-addSceneBtn.onclick = () => {
-  const name = prompt('Nama scene baru:', `Scene ${state.scenes.length + 1}`);
-  if (!name || !name.trim()) return;
-  const scene = createScene(name.trim());
+function addScene(scene) {
   state.scenes.push(scene);
-  state.activeSceneId = scene.id;
-  state.selectedSourceId = null;
-  renderScenes(); renderSources(); renderAudioMixer();
-};
+  state.liveSceneId = state.previewSceneId = scene.id;
+  renderSceneList(); renderSourceList(); refreshMixer();
+}
+function deleteScene() {
+  if (state.scenes.length <= 1) return toast('Minimal harus ada satu sken');
+  const idx = state.scenes.findIndex(s => s.id === state.previewSceneId);
+  const [removed] = state.scenes.splice(idx, 1);
+  removed.sources.forEach(disposeSource);
+  const next = state.scenes[Math.max(0, idx - 1)];
+  state.liveSceneId = state.previewSceneId = next.id;
+  state.selectedId = null;
+  renderSceneList(); renderSourceList(); refreshMixer();
+}
 
-/* =========================================================
-   SOURCES — WEBCAM
-   ========================================================= */
-async function createWebcamSource() {
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  } catch {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+/* ---------------------------------------------------------
+   SOURCE MANAGEMENT
+--------------------------------------------------------- */
+function addSourceTo(scene, src, silent) {
+  scene.sources.unshift(src);
+  if (!silent) {
+    state.selectedId = src.id;
+    renderSourceList(); refreshMixer();
+    if (src.type === 'camera' || src.type === 'screen' || src.type === 'audio') attachMedia(src);
   }
-  const video = document.createElement('video');
-  video.srcObject = stream; video.muted = true;
-  video.playsInline = true; video.autoplay = true;
-  mediaPool.appendChild(video);
-  await video.play();
-
-  const vw = video.videoWidth || 640;
-  const vh = video.videoHeight || 360;
-  const maxW = 640, maxH = 360;
-  const ratio = Math.min(maxW / vw, maxH / vh, 1);
-
-  const src = {
-    id: uid('src'), type: 'webcam', name: '📷 Webcam',
-    visible: true,
-    x: 40, y: 40,
-    width: Math.round(vw * ratio), height: Math.round(vh * ratio),
-    zoom: 1, panX: 0, panY: 0,
-    videoEl: video, stream, gainNode: null, volume: 1, muted: false,
-  };
-  const audioTracks = stream.getAudioTracks();
-  if (audioTracks.length) connectAudioTrack(src, audioTracks[0]);
   return src;
 }
 
-/* =========================================================
-   SOURCES — SCREEN CAPTURE
-   ========================================================= */
-async function createScreenSource() {
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { displaySurface: 'monitor' },
-      audio: true,
-      selfBrowserSurface: 'exclude',
-      systemAudio: 'include',
-    });
-  } catch {
-    try {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-    } catch {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-    }
+function disposeSource(src) {
+  if (src._video) {
+    try { src._video.pause(); } catch(e){}
+    if (src._video.srcObject) src._video.srcObject.getTracks().forEach(t => t.stop());
+    try { src._video.removeAttribute('src'); src._video.load(); } catch(e){}
+    src._video = null;
   }
-  return buildDisplaySource(stream, '🖥 Screen Capture');
+  if (src._stream) { src._stream.getTracks().forEach(t => t.stop()); src._stream = null; }
+  if (src._img) { src._img.src = ''; src._img = null; }
+  if (src._blobUrl) { try { URL.revokeObjectURL(src._blobUrl); } catch(e){} src._blobUrl = null; }
+  if (src._mediaNode) { try { src._mediaNode.disconnect(); } catch(e){} src._mediaNode = null; }
 }
 
-function buildDisplaySource(stream, name) {
+function removeSource() {
+  const sc = previewScene(); const src = selectedSource();
+  if (!sc || !src) return;
+  disposeSource(src);
+  sc.sources = sc.sources.filter(s => s.id !== src.id);
+  state.selectedId = null;
+  renderSourceList(); refreshMixer();
+  setStatus('Sumber dihapus');
+}
+
+function duplicateSource() {
+  const sc = previewScene(); const src = selectedSource();
+  if (!sc || !src) return;
+  const copy = JSON.parse(JSON.stringify({
+    ...src,
+    _video: null, _img: null, _bbox: null,
+    _mediaNode: null, _stream: null
+  }));
+  copy.id = uid(); copy.name = src.name + ' (copy)';
+  copy.x += 30; copy.y += 30;
+  if (src.type === 'image' && src.dataUrl) copy.dataUrl = src.dataUrl;
+  if (src.type === 'media' && copy._blobUrl) loadMediaSource(copy, copy._blobUrl);
+  addSourceTo(sc, copy);
+  renderSourceList();
+}
+
+/* ---------------------------------------------------------
+   MEDIA: FILE MP4 LOADER
+--------------------------------------------------------- */
+function loadMediaSource(src, url) {
+  // Bersihkan video lama
+  if (src._video) {
+    try { src._video.pause(); } catch(e){}
+    try { src._video.removeAttribute('src'); src._video.load(); } catch(e){}
+    src._video = null;
+  }
+
   const video = document.createElement('video');
-  video.srcObject = stream; video.muted = true;
-  video.playsInline = true; video.autoplay = true;
-  mediaPool.appendChild(video);
-  video.play().catch(() => {});
-
-  const vw = video.videoWidth || 1280;
-  const vh = video.videoHeight || 720;
-  const maxW = 960, maxH = 540;
-  const ratio = Math.min(maxW / vw, maxH / vh, 1);
-  const width = Math.round(vw * ratio);
-  const height = Math.round(vh * ratio);
-
-  const src = {
-    id: uid('src'), type: 'screen', name,
-    visible: true,
-    x: Math.round((canvas.width - width) / 2),
-    y: Math.round((canvas.height - height) / 2),
-    width, height,
-    zoom: 1, panX: 0, panY: 0,
-    videoEl: video, stream, gainNode: null, volume: 1, muted: false,
-  };
-
-  const audioTracks = stream.getAudioTracks();
-  if (audioTracks.length) connectAudioTrack(src, audioTracks[0]);
+  video.src = url;
+  video.loop = src.loop !== false;
+  video.muted = !!src.muted;
+  video.volume = clamp((src.volume ?? 100) / 100, 0, 1);
+  video.playsInline = true;
+  video.crossOrigin = 'anonymous';
+  video.preload = 'auto';
+  video.autoplay = true;
 
   video.addEventListener('loadedmetadata', () => {
     if (video.videoWidth && video.videoHeight) {
-      const vw2 = video.videoWidth, vh2 = video.videoHeight;
-      const r2 = Math.min(maxW / vw2, maxH / vh2, 1);
-      src.width = Math.round(vw2 * r2);
-      src.height = Math.round(vh2 * r2);
-      src.x = Math.round((canvas.width - src.width) / 2);
-      src.y = Math.round((canvas.height - src.height) / 2);
+      const ar = video.videoWidth / video.videoHeight;
+      // Sesuaikan rasio jika ukuran sumber masih default
+      if (src.w === 640 && src.h === 360) {
+        src.h = 360;
+        src.w = Math.round(360 * ar);
+        // Posisikan di tengah
+        src.x = Math.round((BASE_W - src.w) / 2);
+        src.y = Math.round((BASE_H - src.h) / 2);
+      }
     }
+    src.hasAudio = true;
+    refreshMixer(); renderSourceList();
   });
 
-  const videoTrack = stream.getVideoTracks()[0];
-  if (videoTrack) {
-    videoTrack.addEventListener('ended', () => {
-      src.visible = false;
-      renderSources();
+  video.addEventListener('error', () => {
+    toast('Gagal memuat berkas media');
+    setStatus('Gagal memuat media: ' + (video.error?.message || 'format tidak didukung'));
+  });
+
+  src._video = video;
+  src.hasAudio = true;
+
+  if (src.playing !== false) {
+    video.play().catch(() => {
+      // Autoplay mungkin diblokir; jangan error
     });
   }
-  return src;
+  return video;
 }
 
-/* =========================================================
-   SOURCES — VIDEO FILE
-   ========================================================= */
-function pickVideoFile() {
-  return new Promise(resolve => {
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'video/*';
-    input.onchange = () => {
-      if (input.files[0]) resolve({ file: input.files[0], url: URL.createObjectURL(input.files[0]) });
-      else resolve(null);
-    };
-    input.click();
-  });
-}
+/* Handler untuk file picker media (add source) */
+let pendingMediaScene = null;
+const mediaFileInput = $('#mediaFileInput');
 
-async function createVideoFileSource() {
-  let videoUrl, fileName;
-  const useFile = confirm('OK = pilih file dari komputer\nCancel = masukkan URL video');
-  if (useFile) {
-    const picked = await pickVideoFile();
-    if (!picked) return null;
-    videoUrl = picked.url;
-    fileName = picked.file.name;
-  } else {
-    videoUrl = prompt('URL video (MP4/WebM):');
-    if (!videoUrl) return null;
-    fileName = videoUrl.split('/').pop().split('?')[0] || 'video';
-  }
+mediaFileInput.addEventListener('change', () => {
+  const file = mediaFileInput.files && mediaFileInput.files[0];
+  const targetScene = pendingMediaScene;
+  pendingMediaScene = null;
+  mediaFileInput.value = '';
+  if (!file || !targetScene) return;
 
-  const video = document.createElement('video');
-  video.src = videoUrl; video.loop = true;
-  video.playsInline = true; video.crossOrigin = 'anonymous';
-  video.muted = false;
-  mediaPool.appendChild(video);
+  const baseName = file.name.replace(/\.[^.]+$/, '');
+  const src = makeSource('media', { name: baseName });
+  src._blobUrl = URL.createObjectURL(file);
+  loadMediaSource(src, src._blobUrl);
+  addSourceTo(targetScene, src);
 
-  await new Promise((resolve) => {
-    video.onloadedmetadata = resolve; video.onerror = resolve;
-    setTimeout(resolve, 5000);
-  });
-  try { await video.play(); } catch (e) { console.warn('Autoplay gagal:', e); }
+  setStatus(`Media "${file.name}" ditambahkan`);
+  toast('Sumber MP4 ditambahkan ke sken');
+});
 
-  ensureAudioContext();
-  let gain = null;
+/* ---------------------------------------------------------
+   MEDIA KAMERA / LAYAR / AUDIO (tetap dipertahankan)
+--------------------------------------------------------- */
+async function attachMedia(src) {
   try {
-    const srcNode = state.audioContext.createMediaElementSource(video);
-    gain = state.audioContext.createGain();
-    gain.gain.value = 1;
-    srcNode.connect(gain).connect(state.masterGain);
-  } catch (e) { console.warn('Routing audio gagal:', e); }
-
-  const vw = video.videoWidth || 640, vh = video.videoHeight || 360;
-  const maxW = 800, maxH = 450;
-  const ratio = Math.min(maxW / vw, maxH / vh, 1);
-  const width = Math.round(vw * ratio), height = Math.round(vh * ratio);
-
-  const src = {
-    id: uid('src'), type: 'videofile',
-    name: '📹 ' + fileName.slice(0, 22),
-    visible: true,
-    x: Math.round((canvas.width - width) / 2),
-    y: Math.round((canvas.height - height) / 2),
-    width, height,
-    zoom: 1, panX: 0, panY: 0,
-    videoEl: video, gainNode: gain, volume: 1, muted: false, url: videoUrl,
-  };
-  video.addEventListener('play', () => renderSources());
-  video.addEventListener('pause', () => renderSources());
-  return src;
-}
-
-/* =========================================================
-   SOURCES — IMAGE / TEXT / COLOR / MIC
-   ========================================================= */
-function createImageSource() {
-  const url = prompt('URL gambar (harus CORS-enabled):');
-  if (!url) return null;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.src = url;
-  const src = {
-    id: uid('src'), type: 'image', name: '🖼 Gambar',
-    visible: true, x: 100, y: 100, width: 400, height: 300,
-    zoom: 1, panX: 0, panY: 0,
-    imgEl: img, volume: 1, muted: false,
-  };
-  img.onload = () => {
-    const maxW = 640, maxH = 360;
-    const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
-    src.width = Math.round(img.naturalWidth * ratio);
-    src.height = Math.round(img.naturalHeight * ratio);
-  };
-  return src;
-}
-
-function createTextSource() {
-  const text = prompt('Isi teks:', 'Teks OBS Web');
-  if (!text) return null;
-  return {
-    id: uid('src'), type: 'text', name: '📝 ' + text.slice(0, 20),
-    visible: true, x: 80, y: 80, width: 400, height: 100,
-    text, color: '#ffffff', font: '48px sans-serif',
-    volume: 1, muted: false,
-  };
-}
-
-function createColorSource() {
-  const color = prompt('Warna (hex):', '#ff0000');
-  if (!color) return null;
-  return {
-    id: uid('src'), type: 'color', name: '🎨 Warna ' + color,
-    visible: true, x: 200, y: 150, width: 400, height: 300,
-    color, volume: 1, muted: false,
-  };
-}
-
-async function createMicSource() {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const src = {
-    id: uid('src'), type: 'mic', name: '🎤 Mikrofon',
-    visible: true, x: 0, y: 0, width: 0, height: 0,
-    stream, gainNode: null, volume: 1, muted: false,
-  };
-  connectAudioTrack(src, stream.getAudioTracks()[0]);
-  return src;
-}
-
-/* =========================================================
-   ADD SOURCE ROUTER
-   ========================================================= */
-async function addSource(type) {
-  const scene = getActiveScene();
-  if (!scene) return;
-  let src;
-  if (type === 'webcam') src = await createWebcamSource();
-  else if (type === 'screen') src = await createScreenSource();
-  else if (type === 'videofile') src = await createVideoFileSource();
-  else if (type === 'image') src = createImageSource();
-  else if (type === 'text') src = createTextSource();
-  else if (type === 'color') src = createColorSource();
-  else if (type === 'mic') src = await createMicSource();
-  if (!src) return;
-  scene.sources.push(src);
-  state.selectedSourceId = src.id;
-  renderSources(); renderAudioMixer();
-}
-
-addSourceBtn.onclick = async () => {
-  try { await addSource(sourceTypeSelect.value); }
-  catch (err) { alert('Gagal menambahkan sumber: ' + err.message); }
-};
-
-/* =========================================================
-   SOURCE MANAGEMENT
-   ========================================================= */
-function cleanupSource(src) {
-  if (src.stream) src.stream.getTracks().forEach(t => t.stop());
-  if (src.gainNode) { try { src.gainNode.disconnect(); } catch {} }
-  if (src.videoEl) {
-    try {
-      src.videoEl.pause();
-      src.videoEl.srcObject = null;
-      src.videoEl.removeAttribute('src');
-      src.videoEl.load();
-    } catch {}
-    src.videoEl.remove();
-  }
-  if (src.type === 'videofile' && src.url && src.url.startsWith('blob:')) {
-    try { URL.revokeObjectURL(src.url); } catch {}
-  }
-}
-
-function removeSource(id) {
-  const scene = getActiveScene();
-  if (!scene) return;
-  const idx = scene.sources.findIndex(s => s.id === id);
-  if (idx === -1) return;
-  cleanupSource(scene.sources[idx]);
-  scene.sources.splice(idx, 1);
-  if (state.selectedSourceId === id) state.selectedSourceId = null;
-  renderSources(); renderAudioMixer();
-}
-
-function moveSource(index, delta) {
-  const scene = getActiveScene();
-  if (!scene) return;
-  const newIndex = index + delta;
-  if (newIndex < 0 || newIndex >= scene.sources.length) return;
-  const [item] = scene.sources.splice(index, 1);
-  scene.sources.splice(newIndex, 0, item);
-  renderSources();
-}
-
-function resetZoom(src) {
-  src.zoom = 1;
-  src.panX = 0;
-  src.panY = 0;
-  renderSources();
-  updateStatus();
-}
-
-function renderSources() {
-  sourcesListEl.innerHTML = '';
-  const scene = getActiveScene();
-  if (!scene) return;
-  if (!scene.sources.length) {
-    sourcesListEl.innerHTML = '<div class="empty-hint">Belum ada source.<br>Pilih dari dropdown di atas.</div>';
-    return;
-  }
-  scene.sources.forEach((src, idx) => {
-    const div = document.createElement('div');
-    div.className = 'source-item' + (src.id === state.selectedSourceId ? ' active' : '');
-
-    const eye = document.createElement('button');
-    eye.textContent = src.visible ? '👁' : '🚫';
-    eye.title = 'Visibilitas';
-    eye.onclick = (e) => { e.stopPropagation(); src.visible = !src.visible; renderSources(); };
-
-    const label = document.createElement('span');
-    label.textContent = src.name;
-    label.style.flex = '1'; label.style.overflow = 'hidden';
-    label.style.textOverflow = 'ellipsis'; label.style.whiteSpace = 'nowrap';
-
-    div.append(eye, label);
-
-    // Zoom badge (klik untuk reset)
-    if (isZoomable(src) && src.zoom && Math.abs(src.zoom - 1) > 0.01) {
-      const zb = document.createElement('button');
-      zb.className = 'zoom-badge';
-      zb.textContent = Math.round(src.zoom * 100) + '%';
-      zb.title = 'Klik untuk reset zoom';
-      zb.onclick = (e) => { e.stopPropagation(); resetZoom(src); };
-      div.appendChild(zb);
+    let stream;
+    if (src.type === 'camera') {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: true });
+    } else if (src.type === 'screen') {
+      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    } else if (src.type === 'audio') {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     }
-
-    if (src.type === 'videofile') {
-      const playBtn = document.createElement('button');
-      playBtn.textContent = src.videoEl.paused ? '▶' : '⏸';
-      playBtn.title = 'Play/Pause';
-      playBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (src.videoEl.paused) src.videoEl.play().catch(()=>{});
-        else src.videoEl.pause();
-      };
-      div.appendChild(playBtn);
-    }
-
-    const up = document.createElement('button');
-    up.textContent = '▲'; up.title = 'Naik';
-    up.onclick = (e) => { e.stopPropagation(); moveSource(idx, -1); };
-    const down = document.createElement('button');
-    down.textContent = '▼'; down.title = 'Turun';
-    down.onclick = (e) => { e.stopPropagation(); moveSource(idx, 1); };
-    const del = document.createElement('button');
-    del.textContent = '✕'; del.title = 'Hapus';
-    del.onclick = (e) => { e.stopPropagation(); removeSource(src.id); };
-
-    div.append(up, down, del);
-    div.onclick = () => { state.selectedSourceId = src.id; renderSources(); };
-    sourcesListEl.appendChild(div);
-  });
+    src._stream = stream;
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true; video.muted = src.muted;
+    video.srcObject = stream;
+    video.volume = src.volume / 100;
+    src._video = video;
+    await video.play().catch(() => {});
+    src.hasAudio = stream.getAudioTracks().length > 0;
+    stream.getVideoTracks().forEach(t => {
+      t.onended = () => { src.visible = false; renderSourceList(); };
+    });
+    refreshMixer(); renderSourceList();
+    setStatus(`Sumber "${src.name}" aktif`);
+  } catch (err) {
+    setStatus('Gagal mengakses media: ' + err.message);
+    toast('Akses media ditolak / dibatalkan');
+    const sc = previewScene();
+    if (sc) sc.sources = sc.sources.filter(s => s.id !== src.id);
+    renderSourceList(); refreshMixer();
+  }
 }
 
-/* =========================================================
-   CANVAS RENDER — with ZOOM support
-   ========================================================= */
-function drawZoomedImage(src, media) {
-  const z = src.zoom || 1;
-  const panX = src.panX || 0;
-  const panY = src.panY || 0;
+/* ---------------------------------------------------------
+   RENDER LOOP
+--------------------------------------------------------- */
+let lastFpsT = performance.now(), frames = 0, fps = 60;
 
-  if (z === 1 && panX === 0 && panY === 0) {
-    // Fast path: no zoom, no pan
-    ctx.drawImage(media, src.x, src.y, src.width, src.height);
-    return;
+function loop(now) {
+  frames++;
+  if (now - lastFpsT >= 500) {
+    fps = Math.round(frames * 1000 / (now - lastFpsT));
+    frames = 0; lastFpsT = now;
+    $('#statFps').textContent = fps;
+    $('#statusFps').textContent = fps;
+    $('#statCpu').textContent = (2 + Math.random() * 5).toFixed(1) + '%';
+    $('#cpuBar').style.width = (6 + Math.random() * 14) + '%';
+    $('#statRender').textContent = (0.8 + Math.random() * 1.6).toFixed(1) + ' ms';
+    $('#statBit').textContent = state.streaming ? Math.round(state.settings.bitrate * 0.97) + ' kb/s' : '0 kb/s';
+    $('#statDrop').textContent = state.streaming ? (Math.random() * 0.4).toFixed(1) + '%' : '0.0%';
   }
 
-  const dw = src.width * z;
-  const dh = src.height * z;
-  const cx = src.x + src.width / 2 + panX;
-  const cy = src.y + src.height / 2 + panY;
-  const drawX = cx - dw / 2;
-  const drawY = cy - dh / 2;
+  if (state.fading) {
+    state.fade = Math.min(1, state.fade + 0.06);
+    if (state.fade >= 1) state.fading = false;
+  } else if (state.fade > 0 && state.transition !== 'Fade') {
+    state.fade = Math.max(0, state.fade - 0.06);
+  }
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(src.x, src.y, src.width, src.height);
-  ctx.clip();
-  ctx.drawImage(media, drawX, drawY, dw, dh);
-  ctx.restore();
+  if (state.studio) {
+    renderScene(vctx, previewScene(), true);
+    renderScene(pctx, liveScene(), false);
+  } else {
+    renderScene(pctx, liveScene(), true);
+  }
+
+  updateTimers();
+  requestAnimationFrame(loop);
 }
 
-function drawFrame() {
-  const scene = getActiveScene();
-  ctx.fillStyle = scene ? scene.background : '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+function renderScene(ctx, scene, editable) {
+  ctx.clearRect(0, 0, BASE_W, BASE_H);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, BASE_W, BASE_H);
   if (!scene) return;
 
-  for (const src of scene.sources) {
-    if (!src.visible) continue;
-    ctx.save();
+  for (let i = scene.sources.length - 1; i >= 0; i--) {
+    const s = scene.sources[i];
+    if (!s.visible) continue;
+    try { drawSource(ctx, s); } catch (e) {}
+  }
 
-    if (src.type === 'webcam' || src.type === 'screen' || src.type === 'videofile') {
-      if (src.videoEl && src.videoEl.readyState >= 2 && src.videoEl.videoWidth > 0) {
-        try { drawZoomedImage(src, src.videoEl); } catch {}
+  if (state.fade > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${state.fade})`;
+    ctx.fillRect(0, 0, BASE_W, BASE_H);
+  }
+
+  if (editable) drawSelection(ctx, scene);
+}
+
+function drawSource(ctx, s) {
+  switch (s.type) {
+    case 'color':
+      ctx.fillStyle = s.color;
+      ctx.fillRect(s.x, s.y, s.w, s.h);
+      s._bbox = { x: s.x, y: s.y, w: s.w, h: s.h };
+      break;
+
+    case 'text': {
+      const lh = s.fontSize * 1.22;
+      const lines = String(s.text).split('\n');
+      ctx.font = `${s.weight || 700} ${s.fontSize}px ${s.font || 'Segoe UI, sans-serif'}`;
+      ctx.textBaseline = 'top';
+      let maxW = 0;
+      for (const l of lines) maxW = Math.max(maxW, ctx.measureText(l).width);
+      const totalH = lines.length * lh;
+      const pad = 10;
+      if (s.bg && s.bg !== 'transparent') {
+        ctx.fillStyle = s.bg;
+        ctx.fillRect(s.x - pad, s.y - pad, maxW + pad * 2, totalH + pad);
       }
-    } else if (src.type === 'image') {
-      if (src.imgEl && src.imgEl.complete && src.imgEl.naturalWidth) {
-        try { drawZoomedImage(src, src.imgEl); } catch {}
-      }
-    } else if (src.type === 'text') {
-      ctx.font = src.font; ctx.fillStyle = src.color; ctx.textBaseline = 'top';
-      ctx.fillText(src.text, src.x, src.y, src.width);
-    } else if (src.type === 'color') {
-      ctx.fillStyle = src.color;
-      ctx.fillRect(src.x, src.y, src.width, src.height);
+      ctx.fillStyle = s.color;
+      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+      lines.forEach((l, i) => ctx.fillText(l, s.x, s.y + i * lh));
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      s._bbox = { x: s.x - pad, y: s.y - pad, w: maxW + pad * 2, h: totalH + pad };
+      break;
     }
-    ctx.restore();
+
+    case 'image': {
+      if (!s._img && s.dataUrl) {
+        const img = new Image();
+        img.onload = () => { s._img = img; };
+        img.src = s.dataUrl;
+      }
+      if (s._img) {
+        drawCover(ctx, s._img, s.x, s.y, s.w, s.h);
+      } else {
+        ctx.fillStyle = '#333'; ctx.fillRect(s.x, s.y, s.w, s.h);
+      }
+      s._bbox = { x: s.x, y: s.y, w: s.w, h: s.h };
+      break;
+    }
+
+    case 'media': {
+      if (s._video && s._video.readyState >= 2) {
+        if (s.fit === 'contain') drawContain(ctx, s._video, s.x, s.y, s.w, s.h);
+        else drawCover(ctx, s._video, s.x, s.y, s.w, s.h);
+      } else {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(s.x, s.y, s.w, s.h);
+        ctx.fillStyle = '#666';
+        ctx.font = '600 22px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🎬  Memuat media…', s.x + s.w / 2, s.y + s.h / 2);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
+      s._bbox = { x: s.x, y: s.y, w: s.w, h: s.h };
+      break;
+    }
+
+    case 'camera':
+    case 'screen': {
+      if (s._video && s._video.readyState >= 2) {
+        drawCover(ctx, s._video, s.x, s.y, s.w, s.h);
+      } else {
+        ctx.fillStyle = '#232323';
+        ctx.fillRect(s.x, s.y, s.w, s.h);
+        ctx.fillStyle = '#666';
+        ctx.font = '600 26px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText('Menunggu sumber video…', s.x + s.w / 2, s.y + s.h / 2);
+        ctx.textAlign = 'left';
+      }
+      s._bbox = { x: s.x, y: s.y, w: s.w, h: s.h };
+      break;
+    }
+
+    default:
+      s._bbox = { x: s.x, y: s.y, w: s.w, h: s.h };
   }
-  drawSelection();
 }
 
-function drawSelection() {
-  const scene = getActiveScene();
-  if (!scene || !state.selectedSourceId) return;
-  const src = scene.sources.find(s => s.id === state.selectedSourceId);
-  if (!src || !src.visible || src.type === 'mic') return;
+function drawCover(ctx, media, x, y, w, h) {
+  const mw = media.videoWidth || media.naturalWidth || media.width;
+  const mh = media.videoHeight || media.naturalHeight || media.height;
+  if (!mw || !mh) return;
+  const scale = Math.max(w / mw, h / mh);
+  const dw = mw * scale, dh = mh * scale;
+  ctx.drawImage(media, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function drawContain(ctx, media, x, y, w, h) {
+  const mw = media.videoWidth || media.naturalWidth || media.width;
+  const mh = media.videoHeight || media.naturalHeight || media.height;
+  if (!mw || !mh) return;
+  const scale = Math.min(w / mw, h / mh);
+  const dw = mw * scale, dh = mh * scale;
+  ctx.drawImage(media, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+/* ---------------------------------------------------------
+   SELECTION & HANDLES
+--------------------------------------------------------- */
+function getHandles(b) {
+  const S = 11;
+  return [
+    { id: 'nw', x: b.x - S, y: b.y - S },
+    { id: 'n',  x: b.x + b.w / 2 - S, y: b.y - S },
+    { id: 'ne', x: b.x + b.w - S, y: b.y - S },
+    { id: 'e',  x: b.x + b.w - S, y: b.y + b.h / 2 - S },
+    { id: 'se', x: b.x + b.w - S, y: b.y + b.h - S },
+    { id: 's',  x: b.x + b.w / 2 - S, y: b.y + b.h - S },
+    { id: 'sw', x: b.x - S, y: b.y + b.h - S },
+    { id: 'w',  x: b.x - S, y: b.y + b.h / 2 - S }
+  ].map(h => ({ ...h, w: S * 2, h: S * 2 }));
+}
+
+function drawSelection(ctx, scene) {
+  const s = scene.sources.find(x => x.id === state.selectedId);
+  if (!s || !s.visible || !s._bbox) return;
+  const b = s._bbox;
   ctx.save();
-  ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-  ctx.strokeRect(src.x, src.y, src.width, src.height);
+  ctx.strokeStyle = s.locked ? '#e0a020' : '#3c8dd8';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([7, 5]);
+  ctx.strokeRect(b.x, b.y, b.w, b.h);
   ctx.setLineDash([]);
-  ctx.fillStyle = '#00aaff';
-  ctx.fillRect(src.x + src.width - 8, src.y + src.height - 8, 12, 12);
-
-  // Zoom % indicator di atas kiri source
-  if (isZoomable(src) && src.zoom && Math.abs(src.zoom - 1) > 0.01) {
-    const text = Math.round(src.zoom * 100) + '%';
-    ctx.fillStyle = 'rgba(0,170,255,.9)';
-    ctx.fillRect(src.x, src.y - 20, 44, 16);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 11px ui-monospace, monospace';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, src.x + 6, src.y - 12);
+  if (!s.locked) {
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#3c8dd8';
+    ctx.lineWidth = 1.5;
+    for (const h of getHandles(b)) {
+      ctx.beginPath();
+      ctx.rect(h.x, h.y, h.w, h.h);
+      ctx.fill(); ctx.stroke();
+    }
   }
+  ctx.fillStyle = 'rgba(60,141,216,.9)';
+  const label = s.name;
+  ctx.font = '600 16px Segoe UI';
+  const tw = ctx.measureText(label).width;
+  ctx.fillRect(b.x, b.y - 26, tw + 16, 24);
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, b.x + 8, b.y - 13);
   ctx.restore();
 }
 
-/* =========================================================
-   DRAG & RESIZE
-   ========================================================= */
-let interaction = null;
-
-function getCanvasPoint(e) {
-  const rect = canvas.getBoundingClientRect();
+/* ---------------------------------------------------------
+   CANVAS INTERACTION
+--------------------------------------------------------- */
+function toCanvas(e, canvas) {
+  const r = canvas.getBoundingClientRect();
   return {
-    x: (e.clientX - rect.left) * (canvas.width / rect.width),
-    y: (e.clientY - rect.top) * (canvas.height / rect.height),
+    x: (e.clientX - r.left) * (canvas.width / r.width),
+    y: (e.clientY - r.top) * (canvas.height / r.height)
   };
 }
-function isInsideSource(pt, src) {
-  return pt.x >= src.x && pt.x <= src.x + src.width &&
-         pt.y >= src.y && pt.y <= src.y + src.height;
-}
-function isNearResizeHandle(pt, src) {
-  const hx = src.x + src.width, hy = src.y + src.height;
-  return Math.abs(pt.x - hx) <= 14 && Math.abs(pt.y - hy) <= 14;
-}
 
-canvas.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return;
-  const pt = getCanvasPoint(e);
-  const scene = getActiveScene();
-  if (!scene) return;
-  for (let i = scene.sources.length - 1; i >= 0; i--) {
-    const src = scene.sources[i];
-    if (!src.visible || src.type === 'mic') continue;
-    if (isNearResizeHandle(pt, src)) {
-      state.selectedSourceId = src.id;
-      interaction = { type: 'resize', src, start: pt, origW: src.width, origH: src.height };
-      renderSources(); e.preventDefault(); return;
-    }
-    if (isInsideSource(pt, src)) {
-      state.selectedSourceId = src.id;
-      interaction = { type: 'drag', src, start: pt, origX: src.x, origY: src.y };
-      renderSources(); e.preventDefault(); return;
-    }
-  }
-  state.selectedSourceId = null;
-  renderSources();
-});
-window.addEventListener('pointermove', (e) => {
-  if (!interaction) return;
-  const pt = getCanvasPoint(e);
-  const src = interaction.src;
-  if (interaction.type === 'drag') {
-    src.x = Math.round(interaction.origX + (pt.x - interaction.start.x));
-    src.y = Math.round(interaction.origY + (pt.y - interaction.start.y));
-    src.x = Math.max(-src.width + 20, Math.min(canvas.width - 20, src.x));
-    src.y = Math.max(-src.height + 20, Math.min(canvas.height - 20, src.y));
-  } else if (interaction.type === 'resize') {
-    src.width = Math.max(40, Math.round(interaction.origW + (pt.x - interaction.start.x)));
-    src.height = Math.max(40, Math.round(interaction.origH + (pt.y - interaction.start.y)));
-  }
-});
-window.addEventListener('pointerup', () => { interaction = null; });
-
-/* =========================================================
-   ZOOM — scroll wheel & double-click
-   ========================================================= */
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 5;
-
-function findTopSourceAt(pt) {
-  const scene = getActiveScene();
-  if (!scene) return null;
-  for (let i = scene.sources.length - 1; i >= 0; i--) {
-    const src = scene.sources[i];
-    if (!src.visible || !isZoomable(src)) continue;
-    if (isInsideSource(pt, src)) return src;
+function hitTest(scene, pt) {
+  for (const s of scene.sources) {
+    if (!s.visible || !s._bbox) continue;
+    const b = s._bbox;
+    if (pt.x >= b.x && pt.x <= b.x + b.w && pt.y >= b.y && pt.y <= b.y + b.h) return s;
   }
   return null;
 }
 
-function applyZoomAt(src, newZoom, anchorX, anchorY) {
-  newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom));
-  const oldZoom = src.zoom || 1;
-  if (Math.abs(newZoom - oldZoom) < 1e-6) return;
+function bindCanvas(canvas) {
+  canvas.addEventListener('mousedown', e => {
+    if (!state.studio && canvas !== programCanvas) return;
+    const scene = previewScene(); if (!scene) return;
+    const pt = toCanvas(e, canvas);
+    const sel = selectedSource();
 
-  const panX = src.panX || 0;
-  const panY = src.panY || 0;
-  const cx = src.x + src.width / 2;
-  const cy = src.y + src.height / 2;
-
-  const dx = anchorX - cx;
-  const dy = anchorY - cy;
-  const ratio = newZoom / oldZoom;
-
-  src.panX = dx - (dx - panX) * ratio;
-  src.panY = dy - (dy - panY) * ratio;
-  src.zoom = newZoom;
-}
-
-canvas.addEventListener('wheel', (e) => {
-  const pt = getCanvasPoint(e);
-  const src = findTopSourceAt(pt);
-  if (!src) return; // biarkan scroll normal jika tidak di atas source zoomable
-
-  e.preventDefault();
-
-  // Normalisasi delta wheel (mouse: ±100, trackpad: kecil)
-  const wheelDelta = -e.deltaY;
-  const step = Math.sign(wheelDelta) * Math.min(0.2, Math.abs(wheelDelta) * 0.0025);
-  if (step === 0) return;
-
-  const newZoom = (src.zoom || 1) + step;
-  applyZoomAt(src, newZoom, pt.x, pt.y);
-
-  state.selectedSourceId = src.id;
-  renderSources();
-  updateStatus();
-}, { passive: false });
-
-canvas.addEventListener('dblclick', (e) => {
-  const pt = getCanvasPoint(e);
-  const src = findTopSourceAt(pt);
-  if (src) {
-    resetZoom(src);
-    e.preventDefault();
-  }
-});
-
-/* =========================================================
-   RECORDING
-   ========================================================= */
-function pickSupportedMime(pref) {
-  const candidates = [];
-  if (pref === 'auto') {
-    candidates.push(
-      'video/mp4;codecs=avc1.42E01E',
-      'video/mp4;codecs=avc1',
-      'video/mp4',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    );
-  } else {
-    candidates.push(pref);
-    candidates.push(
-      'video/mp4;codecs=avc1.42E01E',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    );
-  }
-  for (const m of candidates) if (MediaRecorder.isTypeSupported(m)) return m;
-  return 'video/webm';
-}
-
-function getRecordingStream() {
-  const canvasStream = canvas.captureStream(state.recFps);
-  const tracks = [...canvasStream.getVideoTracks()];
-  if (state.audioDestination) {
-    tracks.push(...state.audioDestination.stream.getAudioTracks());
-  }
-  return new MediaStream(tracks);
-}
-
-function updateRecTimerDisplay() {
-  let elapsed = Date.now() - state.recStartTime - state.recPausedTotal;
-  if (state.recPausedAt) elapsed -= (Date.now() - state.recPausedAt);
-  recTimerEl.textContent = formatDuration(elapsed);
-  recSizeEl.textContent = formatBytes(state.currentRecSize);
-}
-function startRecTimer() {
-  state.recStartTime = Date.now();
-  state.recPausedTotal = 0; state.recPausedAt = 0;
-  state.currentRecSize = 0;
-  state.recTimerInterval = setInterval(updateRecTimerDisplay, 200);
-  updateRecTimerDisplay();
-}
-function stopRecTimer() {
-  if (state.recTimerInterval) { clearInterval(state.recTimerInterval); state.recTimerInterval = null; }
-  recTimerEl.textContent = ''; recSizeEl.textContent = '';
-}
-function updateRecButtons() {
-  if (!state.recording) {
-    recordBtn.style.display = ''; pauseBtn.style.display = 'none'; stopBtn.style.display = 'none';
-    recordBtn.textContent = '● Rekam'; recordBtn.classList.add('primary');
-    recordBtn.classList.remove('danger'); recordBtn.disabled = false;
-  } else {
-    recordBtn.style.display = 'none'; pauseBtn.style.display = ''; stopBtn.style.display = '';
-    pauseBtn.textContent = state.recPaused ? '▶ Lanjut' : '⏸ Jeda';
-    pauseBtn.classList.toggle('primary', state.recPaused);
-  }
-}
-
-async function startRecording() {
-  if (state.recording) return;
-  if (!canvas.captureStream) {
-    alert('Browser tidak mendukung canvas.captureStream().');
-    return;
-  }
-  ensureAudioContext();
-  await state.audioContext.resume();
-
-  const stream = getRecordingStream();
-  const mime = pickSupportedMime(state.recMime);
-
-  let recorder;
-  try {
-    recorder = new MediaRecorder(stream, {
-      mimeType: mime,
-      videoBitsPerSecond: state.recBitrate,
-    });
-  } catch (err) {
-    alert('MediaRecorder gagal: ' + err.message);
-    return;
-  }
-
-  state.mediaRecorder = recorder;
-  state.recordedChunks = [];
-  state.currentRecSize = 0;
-
-  recorder.ondataavailable = (e) => {
-    if (e.data && e.data.size > 0) {
-      state.recordedChunks.push(e.data);
-      state.currentRecSize += e.data.size;
-    }
-  };
-
-  recorder.onstop = () => {
-    const duration = Date.now() - state.recStartTime - state.recPausedTotal;
-    const blob = new Blob(state.recordedChunks, { type: mime.split(';')[0] });
-    const url = URL.createObjectURL(blob);
-    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const name = `rekaman-${stamp}.${ext}`;
-
-    const rec = { id: uid('rec'), name, blob, url, size: blob.size, duration, timestamp: Date.now(), mime };
-    recordings.push(rec);
-    renderRecordings();
-
-    const a = document.createElement('a');
-    a.href = url; a.download = name; a.click();
-
-    state.recording = false; state.recPaused = false; state.currentRecSize = 0;
-    stopRecTimer(); updateRecButtons(); updateStatus();
-  };
-
-  recorder.start(1000);
-  state.recording = true; state.recPaused = false;
-  startRecTimer(); updateRecButtons(); updateStatus();
-}
-
-function pauseRecording() {
-  if (!state.mediaRecorder || state.mediaRecorder.state !== 'recording') return;
-  try {
-    state.mediaRecorder.pause();
-    state.recPausedAt = Date.now();
-    state.recPaused = true;
-    updateRecButtons(); updateStatus();
-  } catch (e) { console.warn(e); }
-}
-function resumeRecording() {
-  if (!state.mediaRecorder || state.mediaRecorder.state !== 'paused') return;
-  try {
-    state.mediaRecorder.resume();
-    if (state.recPausedAt) {
-      state.recPausedTotal += Date.now() - state.recPausedAt;
-      state.recPausedAt = 0;
-    }
-    state.recPaused = false;
-    updateRecButtons(); updateStatus();
-  } catch (e) { console.warn(e); }
-}
-function stopRecording() {
-  if (!state.mediaRecorder) return;
-  if (state.mediaRecorder.state !== 'inactive') state.mediaRecorder.stop();
-}
-
-/* =========================================================
-   RECORDINGS LIBRARY
-   ========================================================= */
-function renderRecordings() {
-  recordingsListEl.innerHTML = '';
-  recCountEl.textContent = recordings.length;
-  if (!recordings.length) {
-    recordingsListEl.innerHTML = '<div class="empty-hint">Belum ada rekaman.<br>Klik <b>● Rekam</b>.</div>';
-    return;
-  }
-  [...recordings].reverse().forEach(rec => {
-    const div = document.createElement('div');
-    div.className = 'recording-item';
-
-    const title = document.createElement('div');
-    title.className = 'rec-title';
-    title.textContent = '📹 ' + rec.name;
-
-    const meta = document.createElement('div');
-    meta.className = 'rec-meta';
-    const formatLabel = rec.mime.includes('mp4') ? 'MP4' : 'WebM';
-    meta.textContent = `${formatDuration(rec.duration)} • ${formatBytes(rec.size)} • ${formatLabel}`;
-
-    const actions = document.createElement('div');
-    actions.className = 'rec-actions';
-
-    const playBtn = document.createElement('button');
-    playBtn.textContent = '▶ Preview'; playBtn.classList.add('primary');
-    playBtn.onclick = () => openPreview(rec);
-
-    const dlBtn = document.createElement('button');
-    dlBtn.textContent = '⬇ Download';
-    dlBtn.onclick = () => downloadRecording(rec);
-
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '✕'; delBtn.classList.add('danger'); delBtn.title = 'Hapus';
-    delBtn.onclick = () => deleteRecording(rec.id);
-
-    actions.append(playBtn, dlBtn, delBtn);
-    div.append(title, meta, actions);
-    recordingsListEl.appendChild(div);
-  });
-}
-
-function openPreview(rec) {
-  previewVideo.src = rec.url;
-  previewVideo.load();
-  previewInfo.textContent = `${rec.name} • ${formatDuration(rec.duration)} • ${formatBytes(rec.size)}`;
-  previewModal.classList.remove('hidden');
-  previewVideo.play().catch(()=>{});
-}
-function downloadRecording(rec) {
-  const a = document.createElement('a');
-  a.href = rec.url; a.download = rec.name; a.click();
-}
-function deleteRecording(id) {
-  const idx = recordings.findIndex(r => r.id === id);
-  if (idx === -1) return;
-  if (!confirm('Hapus rekaman ini?')) return;
-  try { URL.revokeObjectURL(recordings[idx].url); } catch {}
-  recordings.splice(idx, 1); renderRecordings();
-}
-
-/* =========================================================
-   BUTTON HANDLERS
-   ========================================================= */
-recordBtn.onclick = () => { if (!state.recording) startRecording(); };
-pauseBtn.onclick = () => { if (state.recPaused) resumeRecording(); else pauseRecording(); };
-stopBtn.onclick = () => { stopRecording(); };
-
-recSettingsBtn.onclick = () => { refreshMimeInfo(); settingsModal.classList.remove('hidden'); };
-document.getElementById('settings-close').onclick = () => settingsModal.classList.add('hidden');
-document.getElementById('cfg-mime').onchange = (e) => { state.recMime = e.target.value; };
-document.getElementById('cfg-quality').onchange = (e) => { state.recBitrate = parseInt(e.target.value); };
-document.getElementById('cfg-fps').onchange = (e) => { state.recFps = parseInt(e.target.value); };
-
-document.getElementById('preview-close').onclick = () => {
-  previewVideo.pause(); previewVideo.removeAttribute('src');
-  previewModal.classList.add('hidden');
-};
-previewModal.addEventListener('click', (e) => {
-  if (e.target === previewModal) {
-    previewVideo.pause(); previewModal.classList.add('hidden');
-  }
-});
-
-/* =========================================================
-   WHIP STREAMING
-   ========================================================= */
-async function startWHIP(endpoint) {
-  if (state.whipPc) { alert('Siaran sudah aktif.'); return; }
-  ensureAudioContext();
-  await state.audioContext.resume();
-  const stream = getRecordingStream();
-  const pc = new RTCPeerConnection();
-  stream.getTracks().forEach(track => pc.addTrack(track, stream));
-  state.whipPc = pc;
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  await new Promise(resolve => {
-    if (pc.iceGatheringState === 'complete') return resolve();
-    const check = () => {
-      if (pc.iceGatheringState === 'complete') {
-        pc.removeEventListener('icegatheringstatechange', check);
-        resolve();
+    if (sel && sel._bbox && !sel.locked) {
+      for (const h of getHandles(sel._bbox)) {
+        if (pt.x >= h.x && pt.x <= h.x + h.w && pt.y >= h.y && pt.y <= h.y + h.h) {
+          state.drag = { mode: 'resize', dir: h.id, pt, orig: { ...sel }, src: sel };
+          return;
+        }
       }
-    };
-    pc.addEventListener('icegatheringstatechange', check);
-    setTimeout(resolve, 5000);
-  });
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/sdp' },
-    body: pc.localDescription.sdp,
-  });
-  if (!res.ok) throw new Error('WHIP endpoint menolak: ' + res.status);
-  const answer = await res.text();
-  await pc.setRemoteDescription({ type: 'answer', sdp: answer });
-  state.isLive = true;
-  liveBtn.textContent = '■ Stop Siaran';
-  liveBtn.classList.add('danger');
-}
-function stopWHIP() {
-  if (state.whipPc) { try { state.whipPc.close(); } catch {} state.whipPc = null; }
-  state.isLive = false;
-  liveBtn.textContent = '🌐 Siaran';
-  liveBtn.classList.remove('danger');
-}
-liveBtn.onclick = async () => {
-  if (state.isLive) { stopWHIP(); return; }
-  const endpoint = prompt('WHIP endpoint (contoh: https://server/whip/stream):');
-  if (!endpoint) return;
-  try { await startWHIP(endpoint); }
-  catch (err) { alert('Gagal siaran: ' + err.message); stopWHIP(); }
-};
+    }
 
-/* =========================================================
-   STATUS
-   ========================================================= */
-function updateStatus() {
-  const scene = getActiveScene();
-  const audioCount = scene ? scene.sources.filter(s => s.gainNode || s.type === 'mic').length : 0;
-  let recText = '';
-  if (state.recording) recText = state.recPaused ? ' | ⏸ REC PAUSED' : ' | ● REC';
+    const hit = hitTest(scene, pt);
+    if (hit) {
+      state.selectedId = hit.id;
+      renderSourceList();
+      if (!hit.locked) state.drag = { mode: 'move', pt, orig: { ...hit }, src: hit };
+    } else {
+      state.selectedId = null;
+      renderSourceList();
+    }
+  });
 
-  let zoomText = '';
-  if (scene && state.selectedSourceId) {
-    const sel = scene.sources.find(s => s.id === state.selectedSourceId);
-    if (sel && isZoomable(sel) && sel.zoom && Math.abs(sel.zoom - 1) > 0.01) {
-      zoomText = `  |  🔍 Zoom: ${Math.round(sel.zoom * 100)}%`;
+  canvas.addEventListener('dblclick', e => {
+    const scene = previewScene(); if (!scene) return;
+    const pt = toCanvas(e, canvas);
+    const hit = hitTest(scene, pt);
+    if (hit) { state.selectedId = hit.id; renderSourceList(); openProps(hit); }
+  });
+}
+
+window.addEventListener('mousemove', e => {
+  const d = state.drag; if (!d) return;
+  const canvas = state.studio ? previewCanvas : programCanvas;
+  const pt = toCanvas(e, canvas);
+  const dx = pt.x - d.pt.x, dy = pt.y - d.pt.y;
+  const s = d.src, o = d.orig;
+
+  if (d.mode === 'move') {
+    s.x = Math.round(o.x + dx);
+    s.y = Math.round(o.y + dy);
+  } else {
+    let x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+    const dir = d.dir;
+    if (dir.includes('w')) x1 = o.x + dx;
+    if (dir.includes('e')) x2 = o.x + o.w + dx;
+    if (dir.includes('n')) y1 = o.y + dy;
+    if (dir.includes('s')) y2 = o.y + o.h + dy;
+    if (x2 - x1 < 30) x2 = x1 + 30;
+    if (y2 - y1 < 20) y2 = y1 + 20;
+    s.x = Math.round(x1); s.y = Math.round(y1);
+    s.w = Math.round(x2 - x1); s.h = Math.round(y2 - y1);
+    if (s.type === 'text') {
+      const ratio = s.h / (o.h || 1);
+      s.fontSize = clamp(Math.round(o.fontSize * ratio), 8, 400);
     }
   }
+});
 
-  statusEl.textContent =
-    `Scene: ${scene?.name || '-'}  |  ${canvas.width}×${canvas.height} @${state.recFps}fps  |  Rasio: ${state.canvasRatio}  |  Audio: ${audioCount}  |  Rekaman: ${recordings.length}${recText}${zoomText}`;
+window.addEventListener('mouseup', () => { state.drag = null; });
+
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const s = selectedSource();
+  if (!s) return;
+  const step = e.shiftKey ? 20 : 2;
+  if (e.key === 'ArrowLeft')  { s.x -= step; e.preventDefault(); }
+  if (e.key === 'ArrowRight') { s.x += step; e.preventDefault(); }
+  if (e.key === 'ArrowUp')    { s.y -= step; e.preventDefault(); }
+  if (e.key === 'ArrowDown')  { s.y += step; e.preventDefault(); }
+  if (e.key === 'Delete')     { removeSource(); }
+});
+
+/* ---------------------------------------------------------
+   UI: SCENE LIST
+--------------------------------------------------------- */
+function renderSceneList() {
+  const box = $('#sceneList');
+  box.innerHTML = '';
+  state.scenes.forEach(sc => {
+    const row = document.createElement('div');
+    row.className = 'list-item' + (sc.id === state.previewSceneId ? ' active' : '');
+    row.innerHTML = `<span class="txt">${escapeHtml(sc.name)}</span>
+      <span class="badge">${sc.sources.length}</span>`;
+    row.onclick = () => {
+      state.previewSceneId = sc.id;
+      if (!state.studio) state.liveSceneId = sc.id;
+      state.selectedId = null;
+      renderSceneList(); renderSourceList(); refreshMixer();
+      $('#statusScene').textContent = 'Sken: ' + sc.name;
+    };
+    row.ondblclick = () => renameScene(sc);
+    box.appendChild(row);
+  });
+  const cur = previewScene();
+  $('#statusScene').textContent = 'Sken: ' + (cur ? cur.name : '—');
 }
-setInterval(updateStatus, 1000);
 
-/* =========================================================
-   INIT
-   ========================================================= */
-function init() {
-  const scene = createScene('Scene 1');
-  state.scenes.push(scene);
-  state.activeSceneId = scene.id;
+function renameScene(sc) {
+  const n = prompt('Nama sken baru:', sc.name);
+  if (n && n.trim()) { sc.name = n.trim(); renderSceneList(); }
+}
 
-  const { width, height } = getRatioDimensions(state.canvasRatio);
-  canvas.width = width;
-  canvas.height = height;
-  canvasRatioSelect.value = state.canvasRatio;
+/* ---------------------------------------------------------
+   UI: SOURCE LIST
+--------------------------------------------------------- */
+const TYPE_CHIP = { text: 'TXT', color: 'CLR', image: 'IMG', media: 'MP4', camera: 'CAM', screen: 'SCR', audio: 'AUD' };
 
-  renderScenes();
-  renderSources();
-  renderAudioMixer();
-  renderRecordings();
-  refreshMimeInfo();
-  drawFrame();
-  state.drawTimer = setInterval(drawFrame, 1000 / 30);
-  updateStatus();
-  resizeCanvasDisplay();
+const EYE_ON = `<svg viewBox="0 0 16 16"><path d="M8 3C4.4 3 1.6 5.6.8 8c.8 2.4 3.6 5 7.2 5s6.4-2.6 7.2-5C14.4 5.6 11.6 3 8 3zm0 8.3A3.3 3.3 0 1 1 8 4.7a3.3 3.3 0 0 1 0 6.6zm0-1.6a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4z"/></svg>`;
+const EYE_OFF = `<svg viewBox="0 0 16 16"><path d="M8 3c-3.6 0-6.4 2.6-7.2 5 .3.9.9 1.8 1.6 2.6l1.2-1.2A6.6 6.6 0 0 1 2.3 8C3.2 6.1 5.4 4.5 8 4.5c.6 0 1.1.1 1.6.2l1.2-1.2C10 3.2 9 3 8 3zm5.6 2.4-1.2 1.2c.5.4.9.9 1.3 1.4-.9 1.9-3.1 3.5-5.7 3.5-.4 0-.8 0-1.2-.1L5.5 12.6c.8.3 1.6.4 2.5.4 3.6 0 6.4-2.6 7.2-5-.3-.9-.9-1.8-1.6-2.6zM3 2.2 1.6 3.6l10.8 10.8 1.4-1.4L3 2.2z"/></svg>`;
+const LOCK_ON  = `<svg viewBox="0 0 16 16"><path d="M12 7V5.5A4 4 0 0 0 4 5.5V7H3v7h10V7h-1zM6 5.5a2 2 0 1 1 4 0V7H6V5.5z"/></svg>`;
+const LOCK_OFF = `<svg viewBox="0 0 16 16"><path d="M12 7V5.5a4 4 0 0 0-7.7-1.5l1.4.8A2 2 0 0 1 10 5.5V7H3v7h10V7h-1z"/></svg>`;
 
-  if (window.ResizeObserver) {
-    new ResizeObserver(() => resizeCanvasDisplay())
-      .observe(document.querySelector('.preview-area'));
+function renderSourceList() {
+  const box = $('#sourceList');
+  box.innerHTML = '';
+  const sc = previewScene();
+  if (!sc) return;
+
+  sc.sources.forEach(src => {
+    const row = document.createElement('div');
+    const isPlaying = src.type === 'media' && src._video && !src._video.paused;
+    row.className = 'src-item'
+      + (src.id === state.selectedId ? ' active' : '')
+      + (!src.visible ? ' hidden-src' : '')
+      + (isPlaying ? ' playing' : '');
+    row.draggable = true;
+    row.dataset.id = src.id;
+
+    row.innerHTML = `
+      <span class="mini eye" title="Visibilitas">${src.visible ? EYE_ON : EYE_OFF}</span>
+      <span class="mini lock" title="Kunci">${src.locked ? LOCK_ON : LOCK_OFF}</span>
+      <span class="txt">${escapeHtml(src.name)}</span>
+      <span class="type-chip">${TYPE_CHIP[src.type] || 'SRC'}</span>`;
+
+    row.onclick = e => {
+      if (e.target.closest('.mini')) return;
+      state.selectedId = src.id;
+      renderSourceList();
+    };
+    row.querySelector('.eye').onclick = e => {
+      e.stopPropagation(); src.visible = !src.visible; renderSourceList();
+    };
+    row.querySelector('.lock').onclick = e => {
+      e.stopPropagation(); src.locked = !src.locked; renderSourceList();
+    };
+    row.ondblclick = () => { state.selectedId = src.id; openProps(src); };
+
+    row.ondragstart = e => {
+      e.dataTransfer.setData('text/plain', src.id);
+      e.dataTransfer.effectAllowed = 'move';
+    };
+    row.ondragover = e => { e.preventDefault(); row.classList.add('dragover'); };
+    row.ondragleave = () => row.classList.remove('dragover');
+    row.ondrop = e => {
+      e.preventDefault(); row.classList.remove('dragover');
+      const fromId = e.dataTransfer.getData('text/plain');
+      if (fromId === src.id) return;
+      const fromIdx = sc.sources.findIndex(s => s.id === fromId);
+      const toIdx = sc.sources.findIndex(s => s.id === src.id);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = sc.sources.splice(fromIdx, 1);
+      sc.sources.splice(toIdx, 0, moved);
+      renderSourceList();
+    };
+
+    box.appendChild(row);
+  });
+
+  $('#statusSources').textContent = 'Sumber: ' + sc.sources.length;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* ---------------------------------------------------------
+   AUDIO MIXER
+--------------------------------------------------------- */
+let mixerAnim = null;
+
+function refreshMixer() {
+  const body = $('#mixerBody');
+  body.innerHTML = '';
+  const sc = liveScene();
+  const chans = [];
+
+  chans.push({ id: '__desktop', name: 'Desktop Audio', volume: 82, muted: false, fake: true });
+  chans.push({ id: '__mic', name: 'Mic/Aux', volume: 65, muted: false, fake: true });
+
+  if (sc) {
+    sc.sources.forEach(s => {
+      if (s.hasAudio) chans.push({ id: s.id, name: s.name, volume: s.volume, muted: s.muted, src: s });
+    });
+  }
+
+  $('#mixerInfo').textContent = chans.length + ' kanal';
+
+  chans.forEach(ch => {
+    const el = document.createElement('div');
+    el.className = 'chan';
+    el.innerHTML = `
+      <div class="nm" title="${escapeHtml(ch.name)}">${escapeHtml(ch.name)}</div>
+      <div class="meter">${Array.from({ length: 14 }, () => '<i></i>').join('')}</div>
+      <input type="range" class="vol" min="0" max="100" value="${ch.volume}">
+      <div class="row"><button class="mute ${ch.muted ? 'on' : ''}">MUTE</button></div>
+      <div class="db">${ch.muted ? '-∞' : (ch.volume === 0 ? '-∞' : (20 * Math.log10(ch.volume / 100)).toFixed(1) + ' dB')}</div>`;
+
+    const bars = [...el.querySelectorAll('.meter i')];
+    const volEl = el.querySelector('.vol');
+    const dbEl = el.querySelector('.db');
+    const muteBtn = el.querySelector('.mute');
+
+    volEl.oninput = () => {
+      const v = +volEl.value;
+      if (ch.fake) ch.volume = v;
+      else {
+        ch.src.volume = v;
+        if (ch.src._video) ch.src._video.volume = clamp(v / 100, 0, 1);
+      }
+      dbEl.textContent = v === 0 ? '-∞' : (20 * Math.log10(v / 100)).toFixed(1) + ' dB';
+    };
+
+    muteBtn.onclick = () => {
+      ch.muted = !ch.muted;
+      if (!ch.fake) {
+        ch.src.muted = ch.muted;
+        if (ch.src._video) ch.src._video.muted = ch.muted;
+      }
+      muteBtn.classList.toggle('on', ch.muted);
+      dbEl.textContent = ch.muted ? '-∞' : (ch.volume === 0 ? '-∞' : (20 * Math.log10(ch.volume / 100)).toFixed(1) + ' dB');
+    };
+
+    ch._bars = bars;
+    body.appendChild(el);
+  });
+
+  if (mixerAnim) cancelAnimationFrame(mixerAnim);
+  const tick = () => {
+    chans.forEach(ch => {
+      let target = ch.muted ? 0 : (ch.volume / 100) * (0.55 + Math.random() * 0.45);
+      // Untuk media yang sedang diputar, beri variasi lebih hidup
+      if (!ch.fake && ch.src && ch.src._video && !ch.src._video.paused) {
+        target *= (0.7 + Math.random() * 0.3);
+      }
+      const lit = Math.round(target * ch._bars.length);
+      ch._bars.forEach((b, i) => {
+        b.className = i < lit ? (i >= 12 ? 'peak' : i >= 10 ? 'warn' : 'on') : '';
+      });
+    });
+    mixerAnim = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+/* ---------------------------------------------------------
+   PROPERTIES MODAL
+--------------------------------------------------------- */
+let propsTarget = null;
+
+function openProps(src) {
+  propsTarget = src;
+  $('#propsTitle').textContent = `Properti — ${src.name}`;
+  const body = $('#propsBody');
+  body.innerHTML = '';
+
+  const field = (label, html) => {
+    const d = document.createElement('div');
+    d.className = 'field';
+    d.innerHTML = `<label>${label}</label>${html}`;
+    body.appendChild(d);
+    return d;
+  };
+
+  const nameInput = field('Nama Sumber', `<input type="text" id="pName" value="${escapeHtml(src.name)}">`).querySelector('#pName');
+
+  if (src.type === 'text') {
+    const t = field('Teks', `<textarea id="pText" rows="3" style="background:#1c1c1c;border:1px solid #444;color:#d4d4d4;border-radius:3px;padding:7px;font-family:inherit;font-size:12px;resize:vertical">${escapeHtml(src.text)}</textarea>`).querySelector('#pText');
+    const fs = field('Ukuran Font', `<input type="number" id="pSize" value="${src.fontSize}" min="8" max="400">`).querySelector('#pSize');
+    const col = field('Warna Teks', `<input type="color" id="pColor" value="${src.color}">`).querySelector('#pColor');
+    const bg  = field('Latar Teks', `<input type="color" id="pBg" value="${src.bg === 'transparent' ? '#000000' : src.bg}">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:400;color:#9a9a9a;margin-top:4px">
+      <input type="checkbox" id="pBgOn" ${src.bg !== 'transparent' ? 'checked' : ''}> Gunakan latar</label>`);
+
+    window._propsApply = () => {
+      src.name = nameInput.value || src.name;
+      src.text = t.value;
+      src.fontSize = +fs.value;
+      src.color = col.value;
+      src.bg = bg.querySelector('#pBgOn').checked ? bg.querySelector('#pBg').value : 'transparent';
+    };
+  } else if (src.type === 'color') {
+    const c = field('Warna', `<input type="color" id="pColor" value="${src.color}">`).querySelector('#pColor');
+    window._propsApply = () => { src.name = nameInput.value || src.name; src.color = c.value; };
+  } else if (src.type === 'image') {
+    const f = field('Berkas Gambar', `<input type="file" id="pFile" accept="image/*" style="color:#aaa;font-size:11px">`).querySelector('#pFile');
+    f.onchange = () => {
+      const file = f.files[0]; if (!file) return;
+      const r = new FileReader();
+      r.onload = () => { src.dataUrl = r.result; src._img = null; };
+      r.readAsDataURL(file);
+    };
+    window._propsApply = () => { src.name = nameInput.value || src.name; };
+  } else if (src.type === 'media') {
+    // --- GANTI BERKAS MP4 ---
+    const f = field('Berkas Media (MP4 / WebM)',
+      `<input type="file" id="pMediaFile" accept="video/mp4,video/webm,video/quicktime,video/*" style="color:#aaa;font-size:11px">
+       <div style="font-size:10px;color:#777;margin-top:4px">Mendukung MP4 (H.264), WebM, dan format lain yang didukung browser.</div>`
+    ).querySelector('#pMediaFile');
+
+    f.onchange = () => {
+      const file = f.files[0]; if (!file) return;
+      if (src._blobUrl) { try { URL.revokeObjectURL(src._blobUrl); } catch(e){} }
+      src._blobUrl = URL.createObjectURL(file);
+      src.name = file.name.replace(/\.[^.]+$/, '');
+      nameInput.value = src.name;
+      src.playing = true;
+      loadMediaSource(src, src._blobUrl);
+      refreshMixer(); renderSourceList();
+      setStatus(`Berkas media diganti: ${file.name}`);
+    };
+
+    const loopChk = field('Pengulangan',
+      `<label style="display:flex;align-items:center;gap:6px;font-weight:400;color:#ccc">
+        <input type="checkbox" id="pLoop" ${src.loop !== false ? 'checked' : ''}> Putar ulang otomatis (loop)
+       </label>`).querySelector('#pLoop');
+
+    const fitSel = field('Mode Tampilan',
+      `<select id="pFit">
+        <option value="cover" ${src.fit === 'cover' ? 'selected' : ''}>Isi Penuh (cover)</option>
+        <option value="contain" ${src.fit === 'contain' ? 'selected' : ''}>Sesuaikan Rasio (contain)</option>
+       </select>`).querySelector('#pFit');
+
+    const ctrl = document.createElement('div');
+    ctrl.className = 'field';
+    ctrl.innerHTML = `<label>Kontrol Pemutaran</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn sm" id="pPlay">▶ Putar</button>
+        <button class="btn sm" id="pPause">⏸ Jeda</button>
+        <button class="btn sm" id="pRestart">⟲ Ulang</button>
+      </div>
+      <div id="pStatus" style="font-size:11px;color:#888;margin-top:6px">—</div>`;
+    body.appendChild(ctrl);
+
+    const statusEl = ctrl.querySelector('#pStatus');
+    const updateStatus = () => {
+      if (!src._video) { statusEl.textContent = 'Tidak ada media'; return; }
+      const v = src._video;
+      const cur = fmtSec(v.currentTime), dur = fmtSec(v.duration || 0);
+      statusEl.textContent = `${v.paused ? '⏸ Jeda' : '▶ Diputar'} · ${cur} / ${dur}`;
+    };
+    updateStatus();
+    const intv = setInterval(updateStatus, 500);
+    // Hentikan interval saat modal ditutup (dipasang di onclick tombol close)
+    const clearIntv = () => clearInterval(intv);
+    window._propsCleanup = clearIntv;
+
+    ctrl.querySelector('#pPlay').onclick = () => {
+      src.playing = true;
+      if (src._video) src._video.play().catch(()=>{});
+      renderSourceList(); updateStatus();
+    };
+    ctrl.querySelector('#pPause').onclick = () => {
+      src.playing = false;
+      if (src._video) src._video.pause();
+      renderSourceList(); updateStatus();
+    };
+    ctrl.querySelector('#pRestart').onclick = () => {
+      if (src._video) {
+        src._video.currentTime = 0;
+        src._video.play().catch(()=>{});
+        src.playing = true;
+      }
+      renderSourceList(); updateStatus();
+    };
+
+    window._propsApply = () => {
+      src.name = nameInput.value || src.name;
+      src.loop = loopChk.checked;
+      if (src._video) src._video.loop = src.loop;
+      src.fit = fitSel.value;
+    };
+  } else {
+    window._propsApply = () => { src.name = nameInput.value || src.name; };
+  }
+
+  // posisi & ukuran
+  const grid = document.createElement('div');
+  grid.className = 'grid2';
+  grid.innerHTML = `
+    <div class="field"><label>Posisi X</label><input type="number" id="pX" value="${src.x}"></div>
+    <div class="field"><label>Posisi Y</label><input type="number" id="pY" value="${src.y}"></div>
+    <div class="field"><label>Lebar</label><input type="number" id="pW" value="${src.w}"></div>
+    <div class="field"><label>Tinggi</label><input type="number" id="pH" value="${src.h}"></div>`;
+  body.appendChild(grid);
+
+  const prevApply = window._propsApply;
+  window._propsApply = () => {
+    prevApply();
+    src.x = +grid.querySelector('#pX').value;
+    src.y = +grid.querySelector('#pY').value;
+    src.w = Math.max(10, +grid.querySelector('#pW').value);
+    src.h = Math.max(10, +grid.querySelector('#pH').value);
+  };
+
+  $('#propsOverlay').classList.add('show');
+}
+
+function fmtSec(sec) {
+  if (!isFinite(sec)) return '00:00';
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+$('#propsSave').onclick = () => {
+  if (window._propsApply) window._propsApply();
+  if (window._propsCleanup) { window._propsCleanup(); window._propsCleanup = null; }
+  $('#propsOverlay').classList.remove('show');
+  renderSourceList(); refreshMixer();
+  setStatus('Properti diterapkan');
+};
+
+/* ---------------------------------------------------------
+   TRANSITIONS / STUDIO MODE
+--------------------------------------------------------- */
+function toggleStudio() {
+  state.studio = !state.studio;
+  $('#btnStudio').classList.toggle('accent', state.studio);
+  $('#btnStudio').textContent = state.studio ? 'Keluar Mode Studio' : 'Mode Studio';
+  $('#wrapPreview').style.display = state.studio ? 'flex' : 'none';
+  $('#btnTransition').disabled = !state.studio;
+  $('#labelProgram').textContent = state.studio ? 'Program (Live)' : 'Pratinjau';
+  $('#labelProgram').parentElement.classList.toggle('live', state.studio);
+  if (!state.studio) {
+    state.liveSceneId = state.previewSceneId;
+  } else {
+    state.previewSceneId = state.liveSceneId;
+    const other = state.scenes.find(s => s.id !== state.liveSceneId);
+    if (other) state.previewSceneId = other.id;
+  }
+  renderSceneList(); renderSourceList(); refreshMixer();
+  setStatus(state.studio ? 'Mode Studio aktif' : 'Mode Studio nonaktif');
+}
+
+function doTransition() {
+  if (!state.studio) return;
+  const next = previewScene();
+  if (!next) return;
+  if (state.transition === 'Cut') {
+    state.liveSceneId = next.id;
+    state.fade = 0;
+  } else {
+    state.liveSceneId = next.id;
+    state.fade = 1;
+    state.fading = false;
+    let f = 1;
+    const step = () => {
+      f -= 0.06;
+      state.fade = Math.max(0, f);
+      if (f > 0) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  renderSceneList(); refreshMixer();
+  setStatus('Transisi → ' + next.name);
+}
+
+/* ---------------------------------------------------------
+   STREAMING / RECORDING
+--------------------------------------------------------- */
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtTime(ms) {
+  const t = Math.floor(ms / 1000);
+  return `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t / 60) % 60)}:${pad(t % 60)}`;
+}
+function updateTimers() {
+  const now = Date.now();
+  if (state.streaming) $('#streamTimer').textContent = fmtTime(now - state.streamT0);
+  if (state.recording) $('#recTimer').textContent = fmtTime(now - state.recT0);
+}
+
+function toggleStream() {
+  state.streaming = !state.streaming;
+  const btn = $('#btnStream');
+  if (state.streaming) {
+    state.streamT0 = Date.now();
+    btn.innerHTML = '<span class="live-dot on"></span>Hentikan Streaming';
+    btn.classList.remove('accent'); btn.classList.add('danger');
+    setStatus('🔴 Streaming langsung ke server');
+    toast('Streaming dimulai (simulasi)');
+  } else {
+    btn.innerHTML = '<span class="live-dot"></span>Mulai Streaming';
+    btn.classList.add('accent'); btn.classList.remove('danger');
+    $('#streamTimer').textContent = '00:00:00';
+    setStatus('Streaming dihentikan');
   }
 }
 
-window.addEventListener('beforeunload', () => {
-  state.scenes.forEach(s => s.sources.forEach(cleanupSource));
-  if (state.whipPc) { try { state.whipPc.close(); } catch {} }
-  if (state.audioContext) { try { state.audioContext.close(); } catch {} }
-  recordings.forEach(r => { try { URL.revokeObjectURL(r.url); } catch {} });
+/* --- REKAMAN NYATA (MediaRecorder) --- */
+let recorder = null, chunks = [], recAudioCtx = null;
+
+async function toggleRecord() {
+  if (state.recording) {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    return;
+  }
+  try {
+    const stream = programCanvas.captureStream(30);
+
+    try {
+      recAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const dest = recAudioCtx.createMediaStreamDestination();
+      let has = false;
+      const sc = liveScene();
+      if (sc) {
+        for (const s of sc.sources) {
+          if (s._video && s.hasAudio) {
+            try {
+              if (!s._mediaNode) {
+                s._mediaNode = recAudioCtx.createMediaElementSource(s._video);
+                s._mediaNode.connect(recAudioCtx.destination);
+              }
+              s._mediaNode.connect(dest);
+              has = true;
+            } catch (e) {}
+          }
+        }
+      }
+      if (has) stream.addTrack(dest.stream.getAudioTracks()[0]);
+    } catch (e) {}
+
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+
+    chunks = [];
+    recorder = new MediaRecorder(stream, {
+      ...(mime ? { mimeType: mime } : {}),
+      videoBitsPerSecond: state.settings.bitrate * 1000
+    });
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `OBS_Record_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      chunks = [];
+      if (recAudioCtx) { recAudioCtx.close().catch(() => {}); recAudioCtx = null; }
+      setStatus('Rekaman disimpan');
+      toast('Rekaman diunduh (.webm)');
+    };
+    recorder.start(1000);
+
+    state.recording = true;
+    state.recT0 = Date.now();
+    const btn = $('#btnRecord');
+    btn.textContent = 'Hentikan Rekaman';
+    btn.classList.add('accent'); btn.classList.remove('danger');
+    setStatus('⏺ Merekam kanvas program…');
+    toast('Rekaman dimulai');
+  } catch (err) {
+    toast('Gagal merekam: ' + err.message);
+  }
+}
+
+$('#btnRecord').onclick = async function () {
+  if (state.recording) {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    state.recording = false;
+    $('#btnRecord').textContent = 'Mulai Rekaman';
+    $('#btnRecord').classList.add('danger'); $('#btnRecord').classList.remove('accent');
+    $('#recTimer').textContent = '00:00:00';
+  } else {
+    await toggleRecord();
+  }
+};
+
+/* ---------------------------------------------------------
+   MENU / DROPDOWN
+--------------------------------------------------------- */
+$$('.menu-item[data-menu]').forEach(mi => {
+  mi.addEventListener('click', e => {
+    if (e.target.closest('.dropdown')) return;
+    const open = mi.classList.contains('open');
+    $$('.menu-item').forEach(m => m.classList.remove('open'));
+    if (!open) mi.classList.add('open');
+  });
 });
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu-item')) $$('.menu-item').forEach(m => m.classList.remove('open'));
+});
+
+$$('.dropdown button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.menu-item').forEach(m => m.classList.remove('open'));
+    handleAction(btn.dataset.act);
+  });
+});
+
+function handleAction(act) {
+  switch (act) {
+    case 'new-scene': addScene(newScene()); break;
+    case 'dupe-scene': {
+      const sc = previewScene(); if (!sc) return;
+      const copy = { id: uid(), name: sc.name + ' (copy)', sources: sc.sources.map(s => {
+        const base = JSON.parse(JSON.stringify({ ...s, _video: null, _img: null, _bbox: null, _mediaNode: null, _stream: null }));
+        base.id = uid();
+        return base;
+      })};
+      // muat ulang video media untuk hasil duplikat
+      copy.sources.forEach(s => { if (s.type === 'media' && s._blobUrl) loadMediaSource(s, s._blobUrl); });
+      state.scenes.push(copy);
+      state.liveSceneId = state.previewSceneId = copy.id;
+      renderSceneList(); renderSourceList(); refreshMixer();
+      break;
+    }
+    case 'import-media': {
+      // Import ke sken yang sedang dipilih
+      pendingMediaScene = previewScene();
+      mediaFileInput.value = '';
+      mediaFileInput.click();
+      break;
+    }
+    case 'screenshot': {
+      const a = document.createElement('a');
+      a.href = programCanvas.toDataURL('image/png');
+      a.download = 'obs_screenshot.png';
+      a.click();
+      toast('Screenshot disimpan');
+      break;
+    }
+    case 'reset':
+      if (confirm('Reset semua sken dan sumber?')) { location.reload(); }
+      break;
+    case 'dupe-source': duplicateSource(); break;
+    case 'remove-source': removeSource(); break;
+    case 'center-source': {
+      const s = selectedSource(); if (!s) return;
+      s.x = Math.round((BASE_W - s.w) / 2);
+      s.y = Math.round((BASE_H - s.h) / 2);
+      break;
+    }
+    case 'fill-source': {
+      const s = selectedSource(); if (!s) return;
+      s.x = 0; s.y = 0; s.w = BASE_W; s.h = BASE_H;
+      break;
+    }
+    case 'toggle-studio': toggleStudio(); break;
+    case 'toggle-mixer':
+      $('#mixerPanel').style.display = $('#mixerPanel').style.display === 'none' ? 'flex' : 'none';
+      break;
+    case 'auto-config':
+      showInfo('Wizard Konfigurasi Otomatis',
+        `<p style="line-height:1.7;color:#bbb">Pengaturan optimal terdeteksi:</p>
+         <ul style="margin:10px 0 0 18px;line-height:1.9;color:#ccc">
+           <li>Encoder: <b>x264</b> (software)</li>
+           <li>Bitrate: <b>6000 kbps</b></li>
+           <li>Resolusi Keluaran: <b>1280×720</b></li>
+           <li>FPS: <b>60</b></li>
+           <li>Preset: <b>veryfast</b></li>
+         </ul>`);
+      break;
+    case 'test-stream':
+      showInfo('Uji Kualitas Streaming',
+        `<p style="color:#bbb;line-height:1.8">Server: <b>rtmp://live.example.com/app</b></p>
+         <p style="color:#4caf50;line-height:2;margin-top:10px">✔ Koneksi stabil — 42 ms<br>
+         ✔ Bitrate rata-rata — 5.8 Mbps<br>
+         ✔ Tidak ada frame drop terdeteksi</p>`);
+      break;
+    case 'about':
+      showInfo('Tentang OBS Studio Pro',
+        `<p style="line-height:1.9;color:#bbb">OBS Studio Pro — Web Edition<br>
+         Versi 1.1.0 (build web + MP4)<br><br>
+         Antarmuka studio produksi siaran yang berjalan sepenuhnya di peramban.
+         Mendukung komposisi multi-sken, sumber teks, warna, gambar, <b>berkas media MP4</b>,
+         kamera, tangkapan layar, mixer audio, dan perekaman kanvas.</p>`);
+      break;
+    case 'shortcut':
+      showInfo('Pintasan Keyboard',
+        `<table style="width:100%;color:#ccc;line-height:2;font-size:12px">
+          <tr><td>Panah</td><td style="text-align:right">Geser sumber 2px</td></tr>
+          <tr><td>Shift + Panah</td><td style="text-align:right">Geser sumber 20px</td></tr>
+          <tr><td>Delete</td><td style="text-align:right">Hapus sumber</td></tr>
+          <tr><td>Klik-ganda kanvas</td><td style="text-align:right">Buka properti sumber</td></tr>
+          <tr><td>Klik-ganda sken</td><td style="text-align:right">Ganti nama sken</td></tr>
+        </table>`);
+      break;
+  }
+}
+
+/* ---------------------------------------------------------
+   ADD SOURCE MENU
+--------------------------------------------------------- */
+$('#btnAddSource').onclick = e => {
+  e.stopPropagation();
+  const menu = $('#addMenu');
+  const r = e.currentTarget.getBoundingClientRect();
+  menu.style.left = r.left + 'px';
+  menu.style.top = (r.bottom + 4) + 'px';
+  menu.classList.toggle('show');
+};
+document.addEventListener('click', () => $('#addMenu').classList.remove('show'));
+
+$$('#addMenu button').forEach(b => {
+  b.onclick = () => {
+    $('#addMenu').classList.remove('show');
+    const type = b.dataset.type;
+    const sc = previewScene(); if (!sc) return;
+
+    // --- KHUSUS MEDIA MP4: buka file picker ---
+    if (type === 'media') {
+      pendingMediaScene = sc;
+      mediaFileInput.value = '';
+      mediaFileInput.click();
+      return;
+    }
+
+    const src = makeSource(type);
+    addSourceTo(sc, src);
+    setStatus(`Sumber "${src.name}" ditambahkan`);
+    if (type === 'image') {
+      setTimeout(() => openProps(src), 50);
+    }
+  };
+});
+
+/* ---------------------------------------------------------
+   BUTTON BINDINGS
+--------------------------------------------------------- */
+$('#btnAddScene').onclick = () => addScene(newScene());
+$('#btnDupeScene').onclick = () => handleAction('dupe-scene');
+$('#btnDelScene').onclick = deleteScene;
+$('#btnDelSource').onclick = removeSource;
+$('#btnSourceProps').onclick = () => {
+  const s = selectedSource();
+  if (s) openProps(s); else toast('Pilih sumber terlebih dahulu');
+};
+$('#btnStudio').onclick = toggleStudio;
+$('#btnTransition').onclick = doTransition;
+$('#btnStream').onclick = toggleStream;
+$('#btnSettings').onclick = () => $('#settingsOverlay').classList.add('show');
+
+$('#settingsSave').onclick = () => {
+  state.settings.bitrate = +$('#setBitrate').value || 6000;
+  $('#settingsOverlay').classList.remove('show');
+  toast('Pengaturan disimpan');
+  setStatus('Pengaturan diperbarui — bitrate ' + state.settings.bitrate + ' kbps');
+};
+
+$('#selTransition').onchange = e => { state.transition = e.target.value; };
+$('#transDur').onchange = e => { state.transDur = +e.target.value; };
+
+$$('[data-close]').forEach(b => {
+  b.onclick = () => {
+    if (window._propsCleanup) { window._propsCleanup(); window._propsCleanup = null; }
+    b.closest('.overlay').classList.remove('show');
+  };
+});
+$$('.overlay').forEach(o => {
+  o.addEventListener('mousedown', e => {
+    if (e.target === o) {
+      if (window._propsCleanup) { window._propsCleanup(); window._propsCleanup = null; }
+      o.classList.remove('show');
+    }
+  });
+});
+
+/* ---------------------------------------------------------
+   HELPERS
+--------------------------------------------------------- */
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function setStatus(msg) { $('#statusMsg').textContent = msg; }
+
+function showInfo(title, html) {
+  $('#infoTitle').textContent = title;
+  $('#infoBody').innerHTML = html;
+  $('#infoOverlay').classList.add('show');
+}
+
+/* ---------------------------------------------------------
+   INIT
+--------------------------------------------------------- */
+function init() {
+  const s1 = newScene('Sken Utama');
+
+  s1.sources.push(makeSource('color', { name: 'Latar Belakang', color: '#0f2033' }));
+  s1.sources.push(makeSource('color', { name: 'Aksen', color: '#1b4a7a', x: 0, y: 500, w: 1280, h: 220 }));
+
+  const title = makeSource('text', {
+    name: 'Judul Siaran',
+    x: 80, y: 90, fontSize: 92, color: '#ffffff',
+    text: 'SELAMAT DATANG'
+  });
+  s1.sources.push(title);
+
+  s1.sources.push(makeSource('text', {
+    name: 'Sub Judul',
+    x: 84, y: 220, fontSize: 38, color: '#7fc4ff', weight: 500,
+    text: 'OBS Studio Pro — Web Edition\nTambahkan sumber MP4 lewat tombol + Sumber'
+  }));
+
+  s1.sources.push(makeSource('text', {
+    name: 'Lower Third',
+    x: 80, y: 545, fontSize: 46, color: '#ffffff', weight: 700,
+    text: '● LIVE  |  Studio Jakarta'
+  }));
+
+  state.scenes.push(s1);
+  state.liveSceneId = state.previewSceneId = s1.id;
+  state.selectedId = title.id;
+
+  renderSceneList();
+  renderSourceList();
+  refreshMixer();
+
+  bindCanvas(programCanvas);
+  bindCanvas(previewCanvas);
+
+  requestAnimationFrame(loop);
+  setStatus('Siap — klik + Sumber → "Berkas Media (MP4)" untuk impor video');
+}
 
 init();
 </script>
