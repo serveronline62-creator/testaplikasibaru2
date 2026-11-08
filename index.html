@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Web OBS Lite — Rasio & MP4</title>
+<title>Web OBS Lite — Final + Zoom</title>
 <style>
   :root {
     --bg: #1e1e1e; --panel: #252526; --panel2: #2d2d30;
@@ -12,6 +12,7 @@
     --warn: #d7ba7d;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     background: var(--bg); color: var(--text); height: 100vh;
@@ -21,8 +22,9 @@
     height: 52px; display: flex; align-items: center; gap: 8px;
     padding: 0 12px; background: var(--panel);
     border-bottom: 1px solid var(--border); flex-shrink: 0;
+    overflow-x: auto;
   }
-  header h1 { font-size: 15px; font-weight: 600; margin: 0 12px 0 0; color: #fff; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0 12px 0 0; color: #fff; white-space: nowrap; }
   main {
     flex: 1; display: grid;
     grid-template-columns: 260px 1fr 300px; min-height: 0;
@@ -38,6 +40,7 @@
     border-bottom: 1px solid var(--border); display: flex;
     justify-content: space-between; align-items: center; flex-shrink: 0;
   }
+  .panel-header small { font-size: 9px; text-transform: none; letter-spacing: 0; opacity: .8; }
   .scroll { overflow-y: auto; flex: 1; min-height: 60px; }
   .scene-item, .source-item, .audio-item {
     padding: 6px 10px; font-size: 13px; cursor: pointer;
@@ -48,21 +51,58 @@
   .source-item button, .audio-item button {
     padding: 1px 5px; font-size: 11px; line-height: 1;
   }
+  .zoom-badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 3px;
+    background: var(--warn); color: #1e1e1e; border: none;
+    cursor: pointer; font-weight: 600; line-height: 1.4;
+  }
+  .zoom-badge:hover { opacity: .8; }
+
+  /* ===== PREVIEW AREA + FRAME ===== */
   .preview-area {
     display: flex; align-items: center; justify-content: center;
-    background: #111; padding: 16px; min-width: 0; overflow: hidden;
+    background: radial-gradient(ellipse at center, #141414 0%, #0a0a0a 100%);
+    padding: 32px 24px 44px;
+    min-width: 0; overflow: hidden;
+    position: relative;
   }
   .canvas-wrap {
-    position: relative; width: 100%; max-width: 1280px;
-    aspect-ratio: 16 / 9; background: #000;
-    box-shadow: 0 0 0 1px #000, 0 10px 30px rgba(0,0,0,.5);
-    transition: aspect-ratio 0.3s ease;
+    position: relative;
+    background: #000;
+    border-radius: 3px;
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 0 2px #3a3a3d,
+      0 0 0 4px #1a1a1a,
+      0 16px 48px rgba(0,0,0,.75);
+    transition: width 0.28s cubic-bezier(.4,0,.2,1),
+                height 0.28s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
   }
-  canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  .canvas-wrap::after {
+    content: attr(data-dim);
+    position: absolute;
+    bottom: -26px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    color: #7a7a7a;
+    letter-spacing: 0.8px;
+    white-space: nowrap; pointer-events: none;
+    background: #0a0a0a; padding: 2px 10px;
+    border-radius: 10px; border: 1px solid #2a2a2a;
+  }
+  canvas {
+    width: 100%; height: 100%;
+    display: block; touch-action: none;
+    border-radius: 2px;
+  }
+
   button {
     background: var(--panel2); color: var(--text);
     border: 1px solid var(--border); border-radius: 4px;
     padding: 5px 10px; font-size: 12px; cursor: pointer;
+    white-space: nowrap;
   }
   button:hover { background: #3a3a3d; }
   button:disabled { opacity: .4; cursor: not-allowed; }
@@ -84,6 +124,7 @@
     border-top: 1px solid var(--border); font-size: 11px;
     color: var(--muted); display: flex; align-items: center;
     padding: 0 12px; flex-shrink: 0; gap: 12px;
+    overflow-x: auto; white-space: nowrap;
   }
   #media-pool {
     position: fixed; left: -9999px; top: -9999px;
@@ -109,7 +150,6 @@
     font-family: ui-monospace, monospace; font-size: 11px;
     color: var(--muted); min-width: 60px;
   }
-  /* Modal */
   .modal {
     position: fixed; inset: 0; background: rgba(0,0,0,.7);
     display: flex; align-items: center; justify-content: center;
@@ -122,19 +162,14 @@
     max-width: 90vw; max-height: 90vh; overflow: auto;
     box-shadow: 0 20px 60px rgba(0,0,0,.5);
   }
-  .modal-box h3 {
-    margin: 0 0 16px; font-size: 15px; color: #fff;
-  }
+  .modal-box h3 { margin: 0 0 16px; font-size: 15px; color: #fff; }
   .form-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
   }
   .form-row label { flex: 0 0 90px; font-size: 12px; color: var(--muted); }
   .form-row select { flex: 1; }
-  /* Recordings */
   .recording-item {
-    padding: 8px 10px; border-bottom: 1px solid #2a2a2a;
-    font-size: 12px;
+    padding: 8px 10px; border-bottom: 1px solid #2a2a2a; font-size: 12px;
   }
   .recording-item .rec-title {
     font-weight: 600; color: #fff; margin-bottom: 3px;
@@ -144,21 +179,14 @@
     color: var(--muted); font-size: 11px; margin-bottom: 6px;
   }
   .recording-item .rec-actions { display: flex; gap: 4px; flex-wrap: wrap; }
-  .recording-item .rec-actions button {
-    padding: 2px 8px; font-size: 11px;
-  }
-  .rec-badge {
-    display: inline-block; padding: 1px 6px; border-radius: 3px;
-    font-size: 10px; background: var(--danger); color: #fff;
-    margin-left: 6px; animation: pulse 1.5s infinite;
-  }
-  .rec-badge.paused { background: var(--warn); animation: none; }
-  @keyframes pulse { 50% { opacity: .5; } }
+  .recording-item .rec-actions button { padding: 2px 8px; font-size: 11px; }
   .ratio-select {
-    font-weight: 600;
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
+    font-weight: 600; background: var(--accent);
+    color: #fff; border-color: var(--accent);
+  }
+  .info-badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 3px;
+    background: #3a3a3d; color: var(--muted);
   }
 </style>
 </head>
@@ -167,7 +195,6 @@
 <header>
   <h1>🎬 Web OBS Lite</h1>
 
-  <!-- RASIO KANVAS -->
   <select id="canvas-ratio" class="ratio-select" title="Pilih rasio kanvas">
     <option value="original">📐 Original</option>
     <option value="16:9" selected>📺 16:9</option>
@@ -185,7 +212,7 @@
   <button id="rec-settings-btn" title="Pengaturan rekaman">⚙</button>
   <button id="live-btn">🌐 Siaran</button>
   <span style="flex:1"></span>
-  <span style="font-size:11px;color:var(--muted)">Chrome / Edge • MP4 native atau WebM</span>
+  <span class="info-badge" id="mime-support">Cek format…</span>
 </header>
 
 <main>
@@ -198,13 +225,16 @@
   </aside>
 
   <section class="preview-area">
-    <div class="canvas-wrap" id="canvas-wrap">
+    <div class="canvas-wrap" id="canvas-wrap" data-dim="1280 × 720">
       <canvas id="preview" width="1280" height="720"></canvas>
     </div>
   </section>
 
   <aside class="panel">
-    <div class="panel-header"><span>Sources</span></div>
+    <div class="panel-header">
+      <span>Sources</span>
+      <small>🖱 scroll = zoom · dblclick = reset</small>
+    </div>
     <div class="add-row">
       <select id="source-type-select">
         <option value="webcam">Webcam</option>
@@ -221,7 +251,7 @@
 
     <div class="panel-header">
       <span>Audio Mixer</span>
-      <button id="monitor-toggle" title="Monitor audio" style="font-size:10px;padding:1px 6px">🔇 Monitor</button>
+      <button id="monitor-toggle" title="Monitor audio ke speaker" style="font-size:10px;padding:1px 6px">🔇 Monitor</button>
     </div>
     <div id="audio-list" class="scroll" style="flex:1"></div>
 
@@ -236,7 +266,6 @@
 <div id="status"></div>
 <div id="media-pool"></div>
 
-<!-- Modal Pengaturan Rekaman -->
 <div id="settings-modal" class="modal hidden">
   <div class="modal-box">
     <h3>⚙ Pengaturan Rekaman</h3>
@@ -244,7 +273,7 @@
       <label>Format</label>
       <select id="cfg-mime">
         <option value="auto">Otomatis (MP4 jika didukung)</option>
-        <option value="video/mp4;codecs=avc1.42E01E">MP4 H.264 (Chrome 126+)</option>
+        <option value="video/mp4;codecs=avc1.42E01E">MP4 H.264</option>
         <option value="video/webm;codecs=vp9">WebM VP9</option>
         <option value="video/webm;codecs=vp8">WebM VP8</option>
       </select>
@@ -266,16 +295,13 @@
         <option value="60">60 FPS</option>
       </select>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin:12px 0">
-      Jika MP4 tidak didukung, file WebM akan dibuat. Tombol <b>Convert ke MP4</b> tersedia di library rekaman.
-    </div>
+    <div id="mime-info" style="font-size:11px;color:var(--muted);margin:12px 0;line-height:1.6"></div>
     <div style="text-align:right">
       <button id="settings-close" class="primary">Tutup</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Preview Rekaman -->
 <div id="preview-modal" class="modal hidden">
   <div class="modal-box" style="min-width:600px">
     <video id="preview-video" controls playsinline style="width:100%;max-height:60vh;background:#000;border-radius:4px"></video>
@@ -299,8 +325,7 @@ const state = {
   monitorGain: null,
   monitorOn: false,
   audioDestination: null,
-  canvasRatio: '16:9', // 'original', '16:9', '9:16'
-  // Recording
+  canvasRatio: '16:9',
   recording: false,
   recPaused: false,
   recStartTime: 0,
@@ -308,20 +333,17 @@ const state = {
   recPausedAt: 0,
   recTimerInterval: null,
   currentRecSize: 0,
-  currentRecDuration: 0,
   mediaRecorder: null,
   recordedChunks: [],
   recMime: 'auto',
   recBitrate: 6_000_000,
   recFps: 30,
-  // WHIP
   whipPc: null,
   isLive: false,
-  // Rendering
   drawTimer: null,
 };
 
-const recordings = []; // {id, name, blob, url, size, duration, timestamp, mime}
+const recordings = [];
 let _id = 0;
 const uid = (p = 'id') => `${p}-${++_id}-${Date.now().toString(36)}`;
 
@@ -354,6 +376,8 @@ const liveBtn = document.getElementById('live-btn');
 const statusEl = document.getElementById('status');
 const mediaPool = document.getElementById('media-pool');
 const monitorToggle = document.getElementById('monitor-toggle');
+const mimeSupportEl = document.getElementById('mime-support');
+const mimeInfoEl = document.getElementById('mime-info');
 
 /* =========================================================
    UTILITY
@@ -370,59 +394,101 @@ function formatBytes(b) {
   if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
   return (b / (1024 * 1024)).toFixed(1) + ' MB';
 }
+function detectMimeSupport() {
+  const checks = {
+    'MP4 H.264': 'video/mp4;codecs=avc1.42E01E',
+    'WebM VP9': 'video/webm;codecs=vp9',
+    'WebM VP8': 'video/webm;codecs=vp8',
+  };
+  const results = {};
+  for (const [k, v] of Object.entries(checks)) results[k] = MediaRecorder.isTypeSupported(v);
+  return results;
+}
+function refreshMimeInfo() {
+  const results = detectMimeSupport();
+  const hasMp4 = results['MP4 H.264'];
+  mimeSupportEl.textContent = hasMp4 ? '✔ MP4 didukung' : '⚠ MP4 tidak didukung';
+  mimeSupportEl.style.color = hasMp4 ? 'var(--ok)' : 'var(--warn)';
+  mimeInfoEl.innerHTML = Object.entries(results)
+    .map(([k, v]) => `<div>${v ? '✔' : '✕'} ${k}</div>`).join('');
+}
+function isZoomable(src) {
+  return ['webcam', 'screen', 'videofile', 'image'].includes(src.type);
+}
 
 /* =========================================================
-   CANVAS RATIO HANDLING
+   CANVAS RATIO & DISPLAY SIZING
    ========================================================= */
 function getRatioDimensions(ratio) {
-  if (ratio === 'original') {
-    // Gunakan ukuran default atau ukuran source pertama jika ada
-    return { width: 1280, height: 720 };
-  }
-  if (ratio === '16:9') {
-    return { width: 1280, height: 720 };
-  }
-  if (ratio === '9:16') {
-    return { width: 720, height: 1280 };
-  }
+  if (ratio === '9:16') return { width: 720, height: 1280 };
+  if (ratio === 'original') return { width: 1280, height: 720 };
   return { width: 1280, height: 720 };
 }
 
-function applyCanvasRatio(ratio) {
-  const oldW = canvas.width;
-  const oldH = canvas.height;
-  const { width, height } = getRatioDimensions(ratio);
+function resizeCanvasDisplay() {
+  const area = document.querySelector('.preview-area');
+  if (!area) return;
+  const styles = getComputedStyle(area);
+  const padX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+  const padY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+  const availW = Math.max(100, area.clientWidth - padX);
+  const availH = Math.max(100, area.clientHeight - padY);
 
-  if (oldW === width && oldH === height) return;
+  const ratio = canvas.width / canvas.height;
+  let w, h;
+  if (availW / availH > ratio) {
+    h = availH;
+    w = Math.round(h * ratio);
+  } else {
+    w = availW;
+    h = Math.round(w / ratio);
+  }
+
+  canvasWrap.style.width = w + 'px';
+  canvasWrap.style.height = h + 'px';
+  canvasWrap.setAttribute('data-dim', `${canvas.width} × ${canvas.height}`);
+}
+
+window.addEventListener('resize', () => {
+  clearTimeout(window.__canvasResizeT);
+  window.__canvasResizeT = setTimeout(resizeCanvasDisplay, 80);
+});
+
+function applyCanvasRatio(ratio) {
+  const oldW = canvas.width, oldH = canvas.height;
+  const { width, height } = getRatioDimensions(ratio);
+  if (oldW === width && oldH === height) {
+    state.canvasRatio = ratio;
+    resizeCanvasDisplay();
+    updateStatus();
+    return;
+  }
 
   canvas.width = width;
   canvas.height = height;
-  canvasWrap.style.aspectRatio = `${width} / ${height}`;
 
-  // Scale semua source di semua scene secara proporsional
   const scaleX = width / oldW;
   const scaleY = height / oldH;
-  const scale = Math.min(scaleX, scaleY); // Gunakan skala terkecil agar tidak overflow
+  const scale = Math.min(scaleX, scaleY);
 
   state.scenes.forEach(scene => {
     scene.sources.forEach(src => {
-      if (src.type === 'mic') return; // mic tidak punya posisi visual
+      if (src.type === 'mic') return;
       src.x = Math.round(src.x * scaleX);
       src.y = Math.round(src.y * scaleY);
       src.width = Math.round(src.width * scale);
       src.height = Math.round(src.height * scale);
+      // Zoom & pan tetap sama (relatif ke frame)
     });
   });
 
   state.canvasRatio = ratio;
+  resizeCanvasDisplay();
   renderSources();
   drawFrame();
   updateStatus();
 }
-
-canvasRatioSelect.onchange = (e) => {
-  applyCanvasRatio(e.target.value);
-};
+canvasRatioSelect.onchange = (e) => applyCanvasRatio(e.target.value);
 
 /* =========================================================
    AUDIO GRAPH
@@ -532,7 +598,7 @@ addSceneBtn.onclick = () => {
 };
 
 /* =========================================================
-   SOURCES
+   SOURCES — WEBCAM
    ========================================================= */
 async function createWebcamSource() {
   let stream;
@@ -547,9 +613,17 @@ async function createWebcamSource() {
   mediaPool.appendChild(video);
   await video.play();
 
+  const vw = video.videoWidth || 640;
+  const vh = video.videoHeight || 360;
+  const maxW = 640, maxH = 360;
+  const ratio = Math.min(maxW / vw, maxH / vh, 1);
+
   const src = {
-    id: uid('src'), type: 'webcam', name: 'Webcam',
-    visible: true, x: 40, y: 40, width: 640, height: 360,
+    id: uid('src'), type: 'webcam', name: '📷 Webcam',
+    visible: true,
+    x: 40, y: 40,
+    width: Math.round(vw * ratio), height: Math.round(vh * ratio),
+    zoom: 1, panX: 0, panY: 0,
     videoEl: video, stream, gainNode: null, volume: 1, muted: false,
   };
   const audioTracks = stream.getAudioTracks();
@@ -557,39 +631,83 @@ async function createWebcamSource() {
   return src;
 }
 
+/* =========================================================
+   SOURCES — SCREEN CAPTURE
+   ========================================================= */
 async function createScreenSource() {
   let stream;
   try {
-    stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: 'monitor' },
+      audio: true,
+      selfBrowserSurface: 'exclude',
+      systemAudio: 'include',
+    });
   } catch {
-    stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    } catch {
+      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    }
   }
+  return buildDisplaySource(stream, '🖥 Screen Capture');
+}
+
+function buildDisplaySource(stream, name) {
   const video = document.createElement('video');
   video.srcObject = stream; video.muted = true;
   video.playsInline = true; video.autoplay = true;
   mediaPool.appendChild(video);
-  await video.play();
+  video.play().catch(() => {});
+
+  const vw = video.videoWidth || 1280;
+  const vh = video.videoHeight || 720;
+  const maxW = 960, maxH = 540;
+  const ratio = Math.min(maxW / vw, maxH / vh, 1);
+  const width = Math.round(vw * ratio);
+  const height = Math.round(vh * ratio);
 
   const src = {
-    id: uid('src'), type: 'screen', name: 'Screen Capture',
-    visible: true, x: 80, y: 60, width: 960, height: 540,
+    id: uid('src'), type: 'screen', name,
+    visible: true,
+    x: Math.round((canvas.width - width) / 2),
+    y: Math.round((canvas.height - height) / 2),
+    width, height,
+    zoom: 1, panX: 0, panY: 0,
     videoEl: video, stream, gainNode: null, volume: 1, muted: false,
   };
+
   const audioTracks = stream.getAudioTracks();
   if (audioTracks.length) connectAudioTrack(src, audioTracks[0]);
 
+  video.addEventListener('loadedmetadata', () => {
+    if (video.videoWidth && video.videoHeight) {
+      const vw2 = video.videoWidth, vh2 = video.videoHeight;
+      const r2 = Math.min(maxW / vw2, maxH / vh2, 1);
+      src.width = Math.round(vw2 * r2);
+      src.height = Math.round(vh2 * r2);
+      src.x = Math.round((canvas.width - src.width) / 2);
+      src.y = Math.round((canvas.height - src.height) / 2);
+    }
+  });
+
   const videoTrack = stream.getVideoTracks()[0];
   if (videoTrack) {
-    videoTrack.addEventListener('ended', () => { src.visible = false; renderSources(); });
+    videoTrack.addEventListener('ended', () => {
+      src.visible = false;
+      renderSources();
+    });
   }
   return src;
 }
 
+/* =========================================================
+   SOURCES — VIDEO FILE
+   ========================================================= */
 function pickVideoFile() {
   return new Promise(resolve => {
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'video/*';
+    input.type = 'file'; input.accept = 'video/*';
     input.onchange = () => {
       if (input.files[0]) resolve({ file: input.files[0], url: URL.createObjectURL(input.files[0]) });
       else resolve(null);
@@ -600,14 +718,14 @@ function pickVideoFile() {
 
 async function createVideoFileSource() {
   let videoUrl, fileName;
-  const useFile = confirm('OK = pilih file\nCancel = masukkan URL');
+  const useFile = confirm('OK = pilih file dari komputer\nCancel = masukkan URL video');
   if (useFile) {
     const picked = await pickVideoFile();
     if (!picked) return null;
     videoUrl = picked.url;
     fileName = picked.file.name;
   } else {
-    videoUrl = prompt('URL video:');
+    videoUrl = prompt('URL video (MP4/WebM):');
     if (!videoUrl) return null;
     fileName = videoUrl.split('/').pop().split('?')[0] || 'video';
   }
@@ -619,7 +737,8 @@ async function createVideoFileSource() {
   mediaPool.appendChild(video);
 
   await new Promise((resolve) => {
-    video.onloadedmetadata = resolve; video.onerror = resolve; setTimeout(resolve, 5000);
+    video.onloadedmetadata = resolve; video.onerror = resolve;
+    setTimeout(resolve, 5000);
   });
   try { await video.play(); } catch (e) { console.warn('Autoplay gagal:', e); }
 
@@ -639,11 +758,12 @@ async function createVideoFileSource() {
 
   const src = {
     id: uid('src'), type: 'videofile',
-    name: '📹 ' + fileName.slice(0, 24),
+    name: '📹 ' + fileName.slice(0, 22),
     visible: true,
     x: Math.round((canvas.width - width) / 2),
     y: Math.round((canvas.height - height) / 2),
     width, height,
+    zoom: 1, panX: 0, panY: 0,
     videoEl: video, gainNode: gain, volume: 1, muted: false, url: videoUrl,
   };
   video.addEventListener('play', () => renderSources());
@@ -651,14 +771,19 @@ async function createVideoFileSource() {
   return src;
 }
 
+/* =========================================================
+   SOURCES — IMAGE / TEXT / COLOR / MIC
+   ========================================================= */
 function createImageSource() {
-  const url = prompt('URL gambar:');
+  const url = prompt('URL gambar (harus CORS-enabled):');
   if (!url) return null;
   const img = new Image();
-  img.crossOrigin = 'anonymous'; img.src = url;
+  img.crossOrigin = 'anonymous';
+  img.src = url;
   const src = {
-    id: uid('src'), type: 'image', name: 'Gambar',
+    id: uid('src'), type: 'image', name: '🖼 Gambar',
     visible: true, x: 100, y: 100, width: 400, height: 300,
+    zoom: 1, panX: 0, panY: 0,
     imgEl: img, volume: 1, muted: false,
   };
   img.onload = () => {
@@ -674,7 +799,7 @@ function createTextSource() {
   const text = prompt('Isi teks:', 'Teks OBS Web');
   if (!text) return null;
   return {
-    id: uid('src'), type: 'text', name: 'Teks: ' + text.slice(0, 24),
+    id: uid('src'), type: 'text', name: '📝 ' + text.slice(0, 20),
     visible: true, x: 80, y: 80, width: 400, height: 100,
     text, color: '#ffffff', font: '48px sans-serif',
     volume: 1, muted: false,
@@ -685,7 +810,7 @@ function createColorSource() {
   const color = prompt('Warna (hex):', '#ff0000');
   if (!color) return null;
   return {
-    id: uid('src'), type: 'color', name: 'Warna ' + color,
+    id: uid('src'), type: 'color', name: '🎨 Warna ' + color,
     visible: true, x: 200, y: 150, width: 400, height: 300,
     color, volume: 1, muted: false,
   };
@@ -694,7 +819,7 @@ function createColorSource() {
 async function createMicSource() {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const src = {
-    id: uid('src'), type: 'mic', name: 'Mikrofon',
+    id: uid('src'), type: 'mic', name: '🎤 Mikrofon',
     visible: true, x: 0, y: 0, width: 0, height: 0,
     stream, gainNode: null, volume: 1, muted: false,
   };
@@ -702,6 +827,9 @@ async function createMicSource() {
   return src;
 }
 
+/* =========================================================
+   ADD SOURCE ROUTER
+   ========================================================= */
 async function addSource(type) {
   const scene = getActiveScene();
   if (!scene) return;
@@ -724,11 +852,19 @@ addSourceBtn.onclick = async () => {
   catch (err) { alert('Gagal menambahkan sumber: ' + err.message); }
 };
 
+/* =========================================================
+   SOURCE MANAGEMENT
+   ========================================================= */
 function cleanupSource(src) {
   if (src.stream) src.stream.getTracks().forEach(t => t.stop());
   if (src.gainNode) { try { src.gainNode.disconnect(); } catch {} }
   if (src.videoEl) {
-    try { src.videoEl.pause(); src.videoEl.srcObject = null; src.videoEl.removeAttribute('src'); src.videoEl.load(); } catch {}
+    try {
+      src.videoEl.pause();
+      src.videoEl.srcObject = null;
+      src.videoEl.removeAttribute('src');
+      src.videoEl.load();
+    } catch {}
     src.videoEl.remove();
   }
   if (src.type === 'videofile' && src.url && src.url.startsWith('blob:')) {
@@ -757,12 +893,20 @@ function moveSource(index, delta) {
   renderSources();
 }
 
+function resetZoom(src) {
+  src.zoom = 1;
+  src.panX = 0;
+  src.panY = 0;
+  renderSources();
+  updateStatus();
+}
+
 function renderSources() {
   sourcesListEl.innerHTML = '';
   const scene = getActiveScene();
   if (!scene) return;
   if (!scene.sources.length) {
-    sourcesListEl.innerHTML = '<div class="empty-hint">Belum ada source.</div>';
+    sourcesListEl.innerHTML = '<div class="empty-hint">Belum ada source.<br>Pilih dari dropdown di atas.</div>';
     return;
   }
   scene.sources.forEach((src, idx) => {
@@ -771,6 +915,7 @@ function renderSources() {
 
     const eye = document.createElement('button');
     eye.textContent = src.visible ? '👁' : '🚫';
+    eye.title = 'Visibilitas';
     eye.onclick = (e) => { e.stopPropagation(); src.visible = !src.visible; renderSources(); };
 
     const label = document.createElement('span');
@@ -780,9 +925,20 @@ function renderSources() {
 
     div.append(eye, label);
 
+    // Zoom badge (klik untuk reset)
+    if (isZoomable(src) && src.zoom && Math.abs(src.zoom - 1) > 0.01) {
+      const zb = document.createElement('button');
+      zb.className = 'zoom-badge';
+      zb.textContent = Math.round(src.zoom * 100) + '%';
+      zb.title = 'Klik untuk reset zoom';
+      zb.onclick = (e) => { e.stopPropagation(); resetZoom(src); };
+      div.appendChild(zb);
+    }
+
     if (src.type === 'videofile') {
       const playBtn = document.createElement('button');
       playBtn.textContent = src.videoEl.paused ? '▶' : '⏸';
+      playBtn.title = 'Play/Pause';
       playBtn.onclick = (e) => {
         e.stopPropagation();
         if (src.videoEl.paused) src.videoEl.play().catch(()=>{});
@@ -808,8 +964,34 @@ function renderSources() {
 }
 
 /* =========================================================
-   CANVAS RENDER
+   CANVAS RENDER — with ZOOM support
    ========================================================= */
+function drawZoomedImage(src, media) {
+  const z = src.zoom || 1;
+  const panX = src.panX || 0;
+  const panY = src.panY || 0;
+
+  if (z === 1 && panX === 0 && panY === 0) {
+    // Fast path: no zoom, no pan
+    ctx.drawImage(media, src.x, src.y, src.width, src.height);
+    return;
+  }
+
+  const dw = src.width * z;
+  const dh = src.height * z;
+  const cx = src.x + src.width / 2 + panX;
+  const cy = src.y + src.height / 2 + panY;
+  const drawX = cx - dw / 2;
+  const drawY = cy - dh / 2;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(src.x, src.y, src.width, src.height);
+  ctx.clip();
+  ctx.drawImage(media, drawX, drawY, dw, dh);
+  ctx.restore();
+}
+
 function drawFrame() {
   const scene = getActiveScene();
   ctx.fillStyle = scene ? scene.background : '#000';
@@ -819,13 +1001,14 @@ function drawFrame() {
   for (const src of scene.sources) {
     if (!src.visible) continue;
     ctx.save();
+
     if (src.type === 'webcam' || src.type === 'screen' || src.type === 'videofile') {
       if (src.videoEl && src.videoEl.readyState >= 2 && src.videoEl.videoWidth > 0) {
-        try { ctx.drawImage(src.videoEl, src.x, src.y, src.width, src.height); } catch {}
+        try { drawZoomedImage(src, src.videoEl); } catch {}
       }
     } else if (src.type === 'image') {
       if (src.imgEl && src.imgEl.complete && src.imgEl.naturalWidth) {
-        ctx.drawImage(src.imgEl, src.x, src.y, src.width, src.height);
+        try { drawZoomedImage(src, src.imgEl); } catch {}
       }
     } else if (src.type === 'text') {
       ctx.font = src.font; ctx.fillStyle = src.color; ctx.textBaseline = 'top';
@@ -850,6 +1033,17 @@ function drawSelection() {
   ctx.setLineDash([]);
   ctx.fillStyle = '#00aaff';
   ctx.fillRect(src.x + src.width - 8, src.y + src.height - 8, 12, 12);
+
+  // Zoom % indicator di atas kiri source
+  if (isZoomable(src) && src.zoom && Math.abs(src.zoom - 1) > 0.01) {
+    const text = Math.round(src.zoom * 100) + '%';
+    ctx.fillStyle = 'rgba(0,170,255,.9)';
+    ctx.fillRect(src.x, src.y - 20, 44, 16);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px ui-monospace, monospace';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, src.x + 6, src.y - 12);
+  }
   ctx.restore();
 }
 
@@ -913,7 +1107,72 @@ window.addEventListener('pointermove', (e) => {
 window.addEventListener('pointerup', () => { interaction = null; });
 
 /* =========================================================
-   RECORDING — MP4 Preferred
+   ZOOM — scroll wheel & double-click
+   ========================================================= */
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 5;
+
+function findTopSourceAt(pt) {
+  const scene = getActiveScene();
+  if (!scene) return null;
+  for (let i = scene.sources.length - 1; i >= 0; i--) {
+    const src = scene.sources[i];
+    if (!src.visible || !isZoomable(src)) continue;
+    if (isInsideSource(pt, src)) return src;
+  }
+  return null;
+}
+
+function applyZoomAt(src, newZoom, anchorX, anchorY) {
+  newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom));
+  const oldZoom = src.zoom || 1;
+  if (Math.abs(newZoom - oldZoom) < 1e-6) return;
+
+  const panX = src.panX || 0;
+  const panY = src.panY || 0;
+  const cx = src.x + src.width / 2;
+  const cy = src.y + src.height / 2;
+
+  const dx = anchorX - cx;
+  const dy = anchorY - cy;
+  const ratio = newZoom / oldZoom;
+
+  src.panX = dx - (dx - panX) * ratio;
+  src.panY = dy - (dy - panY) * ratio;
+  src.zoom = newZoom;
+}
+
+canvas.addEventListener('wheel', (e) => {
+  const pt = getCanvasPoint(e);
+  const src = findTopSourceAt(pt);
+  if (!src) return; // biarkan scroll normal jika tidak di atas source zoomable
+
+  e.preventDefault();
+
+  // Normalisasi delta wheel (mouse: ±100, trackpad: kecil)
+  const wheelDelta = -e.deltaY;
+  const step = Math.sign(wheelDelta) * Math.min(0.2, Math.abs(wheelDelta) * 0.0025);
+  if (step === 0) return;
+
+  const newZoom = (src.zoom || 1) + step;
+  applyZoomAt(src, newZoom, pt.x, pt.y);
+
+  state.selectedSourceId = src.id;
+  renderSources();
+  updateStatus();
+}, { passive: false });
+
+canvas.addEventListener('dblclick', (e) => {
+  const pt = getCanvasPoint(e);
+  const src = findTopSourceAt(pt);
+  if (src) {
+    resetZoom(src);
+    e.preventDefault();
+  }
+});
+
+/* =========================================================
+   RECORDING
    ========================================================= */
 function pickSupportedMime(pref) {
   const candidates = [];
@@ -928,7 +1187,6 @@ function pickSupportedMime(pref) {
     );
   } else {
     candidates.push(pref);
-    // Fallbacks
     candidates.push(
       'video/mp4;codecs=avc1.42E01E',
       'video/webm;codecs=vp9',
@@ -936,9 +1194,7 @@ function pickSupportedMime(pref) {
       'video/webm'
     );
   }
-  for (const m of candidates) {
-    if (MediaRecorder.isTypeSupported(m)) return m;
-  }
+  for (const m of candidates) if (MediaRecorder.isTypeSupported(m)) return m;
   return 'video/webm';
 }
 
@@ -958,7 +1214,8 @@ function updateRecTimerDisplay() {
   recSizeEl.textContent = formatBytes(state.currentRecSize);
 }
 function startRecTimer() {
-  state.recStartTime = Date.now(); state.recPausedTotal = 0; state.recPausedAt = 0;
+  state.recStartTime = Date.now();
+  state.recPausedTotal = 0; state.recPausedAt = 0;
   state.currentRecSize = 0;
   state.recTimerInterval = setInterval(updateRecTimerDisplay, 200);
   updateRecTimerDisplay();
@@ -1025,7 +1282,6 @@ async function startRecording() {
     recordings.push(rec);
     renderRecordings();
 
-    // Auto-download
     const a = document.createElement('a');
     a.href = url; a.download = name; a.click();
 
@@ -1040,11 +1296,24 @@ async function startRecording() {
 
 function pauseRecording() {
   if (!state.mediaRecorder || state.mediaRecorder.state !== 'recording') return;
-  try { state.mediaRecorder.pause(); state.recPausedAt = Date.now(); state.recPaused = true; updateRecButtons(); updateStatus(); } catch (e) { console.warn(e); }
+  try {
+    state.mediaRecorder.pause();
+    state.recPausedAt = Date.now();
+    state.recPaused = true;
+    updateRecButtons(); updateStatus();
+  } catch (e) { console.warn(e); }
 }
 function resumeRecording() {
   if (!state.mediaRecorder || state.mediaRecorder.state !== 'paused') return;
-  try { state.mediaRecorder.resume(); if (state.recPausedAt) { state.recPausedTotal += Date.now() - state.recPausedAt; state.recPausedAt = 0; } state.recPaused = false; updateRecButtons(); updateStatus(); } catch (e) { console.warn(e); }
+  try {
+    state.mediaRecorder.resume();
+    if (state.recPausedAt) {
+      state.recPausedTotal += Date.now() - state.recPausedAt;
+      state.recPausedAt = 0;
+    }
+    state.recPaused = false;
+    updateRecButtons(); updateStatus();
+  } catch (e) { console.warn(e); }
 }
 function stopRecording() {
   if (!state.mediaRecorder) return;
@@ -1058,7 +1327,7 @@ function renderRecordings() {
   recordingsListEl.innerHTML = '';
   recCountEl.textContent = recordings.length;
   if (!recordings.length) {
-    recordingsListEl.innerHTML = '<div class="empty-hint">Belum ada rekaman.</div>';
+    recordingsListEl.innerHTML = '<div class="empty-hint">Belum ada rekaman.<br>Klik <b>● Rekam</b>.</div>';
     return;
   }
   [...recordings].reverse().forEach(rec => {
@@ -1121,25 +1390,29 @@ recordBtn.onclick = () => { if (!state.recording) startRecording(); };
 pauseBtn.onclick = () => { if (state.recPaused) resumeRecording(); else pauseRecording(); };
 stopBtn.onclick = () => { stopRecording(); };
 
-recSettingsBtn.onclick = () => settingsModal.classList.remove('hidden');
+recSettingsBtn.onclick = () => { refreshMimeInfo(); settingsModal.classList.remove('hidden'); };
 document.getElementById('settings-close').onclick = () => settingsModal.classList.add('hidden');
 document.getElementById('cfg-mime').onchange = (e) => { state.recMime = e.target.value; };
 document.getElementById('cfg-quality').onchange = (e) => { state.recBitrate = parseInt(e.target.value); };
 document.getElementById('cfg-fps').onchange = (e) => { state.recFps = parseInt(e.target.value); };
 
 document.getElementById('preview-close').onclick = () => {
-  previewVideo.pause(); previewVideo.removeAttribute('src'); previewModal.classList.add('hidden');
+  previewVideo.pause(); previewVideo.removeAttribute('src');
+  previewModal.classList.add('hidden');
 };
 previewModal.addEventListener('click', (e) => {
-  if (e.target === previewModal) { previewVideo.pause(); previewModal.classList.add('hidden'); }
+  if (e.target === previewModal) {
+    previewVideo.pause(); previewModal.classList.add('hidden');
+  }
 });
 
 /* =========================================================
-   WHIP
+   WHIP STREAMING
    ========================================================= */
 async function startWHIP(endpoint) {
   if (state.whipPc) { alert('Siaran sudah aktif.'); return; }
-  ensureAudioContext(); await state.audioContext.resume();
+  ensureAudioContext();
+  await state.audioContext.resume();
   const stream = getRecordingStream();
   const pc = new RTCPeerConnection();
   stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -1150,26 +1423,38 @@ async function startWHIP(endpoint) {
   await new Promise(resolve => {
     if (pc.iceGatheringState === 'complete') return resolve();
     const check = () => {
-      if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', check); resolve(); }
+      if (pc.iceGatheringState === 'complete') {
+        pc.removeEventListener('icegatheringstatechange', check);
+        resolve();
+      }
     };
     pc.addEventListener('icegatheringstatechange', check);
     setTimeout(resolve, 5000);
   });
-  const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/sdp' }, body: pc.localDescription.sdp });
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp' },
+    body: pc.localDescription.sdp,
+  });
   if (!res.ok) throw new Error('WHIP endpoint menolak: ' + res.status);
   const answer = await res.text();
   await pc.setRemoteDescription({ type: 'answer', sdp: answer });
-  state.isLive = true; liveBtn.textContent = '■ Stop Siaran'; liveBtn.classList.add('danger');
+  state.isLive = true;
+  liveBtn.textContent = '■ Stop Siaran';
+  liveBtn.classList.add('danger');
 }
 function stopWHIP() {
   if (state.whipPc) { try { state.whipPc.close(); } catch {} state.whipPc = null; }
-  state.isLive = false; liveBtn.textContent = '🌐 Siaran'; liveBtn.classList.remove('danger');
+  state.isLive = false;
+  liveBtn.textContent = '🌐 Siaran';
+  liveBtn.classList.remove('danger');
 }
 liveBtn.onclick = async () => {
   if (state.isLive) { stopWHIP(); return; }
-  const endpoint = prompt('WHIP endpoint:');
+  const endpoint = prompt('WHIP endpoint (contoh: https://server/whip/stream):');
   if (!endpoint) return;
-  try { await startWHIP(endpoint); } catch (err) { alert('Gagal siaran: ' + err.message); stopWHIP(); }
+  try { await startWHIP(endpoint); }
+  catch (err) { alert('Gagal siaran: ' + err.message); stopWHIP(); }
 };
 
 /* =========================================================
@@ -1180,8 +1465,17 @@ function updateStatus() {
   const audioCount = scene ? scene.sources.filter(s => s.gainNode || s.type === 'mic').length : 0;
   let recText = '';
   if (state.recording) recText = state.recPaused ? ' | ⏸ REC PAUSED' : ' | ● REC';
+
+  let zoomText = '';
+  if (scene && state.selectedSourceId) {
+    const sel = scene.sources.find(s => s.id === state.selectedSourceId);
+    if (sel && isZoomable(sel) && sel.zoom && Math.abs(sel.zoom - 1) > 0.01) {
+      zoomText = `  |  🔍 Zoom: ${Math.round(sel.zoom * 100)}%`;
+    }
+  }
+
   statusEl.textContent =
-    `Scene: ${scene?.name || '-'}  |  ${canvas.width}x${canvas.height} @${state.recFps}fps  |  Rasio: ${state.canvasRatio}  |  Audio: ${audioCount}  |  Rekaman: ${recordings.length}${recText}`;
+    `Scene: ${scene?.name || '-'}  |  ${canvas.width}×${canvas.height} @${state.recFps}fps  |  Rasio: ${state.canvasRatio}  |  Audio: ${audioCount}  |  Rekaman: ${recordings.length}${recText}${zoomText}`;
 }
 setInterval(updateStatus, 1000);
 
@@ -1192,17 +1486,26 @@ function init() {
   const scene = createScene('Scene 1');
   state.scenes.push(scene);
   state.activeSceneId = scene.id;
-  // Set rasio awal
+
   const { width, height } = getRatioDimensions(state.canvasRatio);
   canvas.width = width;
   canvas.height = height;
-  canvasWrap.style.aspectRatio = `${width} / ${height}`;
   canvasRatioSelect.value = state.canvasRatio;
 
-  renderScenes(); renderSources(); renderAudioMixer(); renderRecordings();
+  renderScenes();
+  renderSources();
+  renderAudioMixer();
+  renderRecordings();
+  refreshMimeInfo();
   drawFrame();
   state.drawTimer = setInterval(drawFrame, 1000 / 30);
   updateStatus();
+  resizeCanvasDisplay();
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => resizeCanvasDisplay())
+      .observe(document.querySelector('.preview-area'));
+  }
 }
 
 window.addEventListener('beforeunload', () => {
