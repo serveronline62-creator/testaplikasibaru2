@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Web OBS Lite — Rekam Video</title>
+<title>Web OBS Lite — Rasio & MP4</title>
 <style>
   :root {
     --bg: #1e1e1e; --panel: #252526; --panel2: #2d2d30;
@@ -56,6 +56,7 @@
     position: relative; width: 100%; max-width: 1280px;
     aspect-ratio: 16 / 9; background: #000;
     box-shadow: 0 0 0 1px #000, 0 10px 30px rgba(0,0,0,.5);
+    transition: aspect-ratio 0.3s ease;
   }
   canvas { width: 100%; height: 100%; display: block; touch-action: none; }
   button {
@@ -142,7 +143,7 @@
   .recording-item .rec-meta {
     color: var(--muted); font-size: 11px; margin-bottom: 6px;
   }
-  .recording-item .rec-actions { display: flex; gap: 4px; }
+  .recording-item .rec-actions { display: flex; gap: 4px; flex-wrap: wrap; }
   .recording-item .rec-actions button {
     padding: 2px 8px; font-size: 11px;
   }
@@ -153,12 +154,25 @@
   }
   .rec-badge.paused { background: var(--warn); animation: none; }
   @keyframes pulse { 50% { opacity: .5; } }
+  .ratio-select {
+    font-weight: 600;
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>🎬 Web OBS Lite</h1>
+
+  <!-- RASIO KANVAS -->
+  <select id="canvas-ratio" class="ratio-select" title="Pilih rasio kanvas">
+    <option value="original">📐 Original</option>
+    <option value="16:9" selected>📺 16:9</option>
+    <option value="9:16">📱 9:16</option>
+  </select>
 
   <div class="rec-controls">
     <button id="record-btn" class="primary">● Rekam</button>
@@ -171,7 +185,7 @@
   <button id="rec-settings-btn" title="Pengaturan rekaman">⚙</button>
   <button id="live-btn">🌐 Siaran</button>
   <span style="flex:1"></span>
-  <span style="font-size:11px;color:var(--muted)">Chrome / Edge • localhost atau HTTPS</span>
+  <span style="font-size:11px;color:var(--muted)">Chrome / Edge • MP4 native atau WebM</span>
 </header>
 
 <main>
@@ -184,7 +198,7 @@
   </aside>
 
   <section class="preview-area">
-    <div class="canvas-wrap">
+    <div class="canvas-wrap" id="canvas-wrap">
       <canvas id="preview" width="1280" height="720"></canvas>
     </div>
   </section>
@@ -207,7 +221,7 @@
 
     <div class="panel-header">
       <span>Audio Mixer</span>
-      <button id="monitor-toggle" title="Monitor audio ke speaker" style="font-size:10px;padding:1px 6px">🔇 Monitor</button>
+      <button id="monitor-toggle" title="Monitor audio" style="font-size:10px;padding:1px 6px">🔇 Monitor</button>
     </div>
     <div id="audio-list" class="scroll" style="flex:1"></div>
 
@@ -229,11 +243,10 @@
     <div class="form-row">
       <label>Format</label>
       <select id="cfg-mime">
-        <option value="auto">Otomatis (WebM VP9)</option>
-        <option value="video/webm;codecs=vp9">WebM VP9 (kompresi bagus)</option>
-        <option value="video/webm;codecs=vp8">WebM VP8 (kompatibel)</option>
-        <option value="video/webm;codecs=h264">WebM H.264</option>
-        <option value="video/mp4">MP4 (jika didukung browser)</option>
+        <option value="auto">Otomatis (MP4 jika didukung)</option>
+        <option value="video/mp4;codecs=avc1.42E01E">MP4 H.264 (Chrome 126+)</option>
+        <option value="video/webm;codecs=vp9">WebM VP9</option>
+        <option value="video/webm;codecs=vp8">WebM VP8</option>
       </select>
     </div>
     <div class="form-row">
@@ -254,7 +267,7 @@
       </select>
     </div>
     <div style="font-size:11px;color:var(--muted);margin:12px 0">
-      File akan otomatis tersimpan di panel <b>Rekaman</b>. Klik ⬇ untuk download.
+      Jika MP4 tidak didukung, file WebM akan dibuat. Tombol <b>Convert ke MP4</b> tersedia di library rekaman.
     </div>
     <div style="text-align:right">
       <button id="settings-close" class="primary">Tutup</button>
@@ -286,6 +299,7 @@ const state = {
   monitorGain: null,
   monitorOn: false,
   audioDestination: null,
+  canvasRatio: '16:9', // 'original', '16:9', '9:16'
   // Recording
   recording: false,
   recPaused: false,
@@ -297,7 +311,7 @@ const state = {
   currentRecDuration: 0,
   mediaRecorder: null,
   recordedChunks: [],
-  recMime: 'video/webm;codecs=vp9',
+  recMime: 'auto',
   recBitrate: 6_000_000,
   recFps: 30,
   // WHIP
@@ -307,7 +321,7 @@ const state = {
   drawTimer: null,
 };
 
-const recordings = []; // {id, name, blob, url, size, duration, timestamp}
+const recordings = []; // {id, name, blob, url, size, duration, timestamp, mime}
 let _id = 0;
 const uid = (p = 'id') => `${p}-${++_id}-${Date.now().toString(36)}`;
 
@@ -316,6 +330,8 @@ const uid = (p = 'id') => `${p}-${++_id}-${Date.now().toString(36)}`;
    ========================================================= */
 const canvas = document.getElementById('preview');
 const ctx = canvas.getContext('2d');
+const canvasWrap = document.getElementById('canvas-wrap');
+const canvasRatioSelect = document.getElementById('canvas-ratio');
 const scenesListEl = document.getElementById('scenes-list');
 const sourcesListEl = document.getElementById('sources-list');
 const audioListEl = document.getElementById('audio-list');
@@ -354,6 +370,59 @@ function formatBytes(b) {
   if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
   return (b / (1024 * 1024)).toFixed(1) + ' MB';
 }
+
+/* =========================================================
+   CANVAS RATIO HANDLING
+   ========================================================= */
+function getRatioDimensions(ratio) {
+  if (ratio === 'original') {
+    // Gunakan ukuran default atau ukuran source pertama jika ada
+    return { width: 1280, height: 720 };
+  }
+  if (ratio === '16:9') {
+    return { width: 1280, height: 720 };
+  }
+  if (ratio === '9:16') {
+    return { width: 720, height: 1280 };
+  }
+  return { width: 1280, height: 720 };
+}
+
+function applyCanvasRatio(ratio) {
+  const oldW = canvas.width;
+  const oldH = canvas.height;
+  const { width, height } = getRatioDimensions(ratio);
+
+  if (oldW === width && oldH === height) return;
+
+  canvas.width = width;
+  canvas.height = height;
+  canvasWrap.style.aspectRatio = `${width} / ${height}`;
+
+  // Scale semua source di semua scene secara proporsional
+  const scaleX = width / oldW;
+  const scaleY = height / oldH;
+  const scale = Math.min(scaleX, scaleY); // Gunakan skala terkecil agar tidak overflow
+
+  state.scenes.forEach(scene => {
+    scene.sources.forEach(src => {
+      if (src.type === 'mic') return; // mic tidak punya posisi visual
+      src.x = Math.round(src.x * scaleX);
+      src.y = Math.round(src.y * scaleY);
+      src.width = Math.round(src.width * scale);
+      src.height = Math.round(src.height * scale);
+    });
+  });
+
+  state.canvasRatio = ratio;
+  renderSources();
+  drawFrame();
+  updateStatus();
+}
+
+canvasRatioSelect.onchange = (e) => {
+  applyCanvasRatio(e.target.value);
+};
 
 /* =========================================================
    AUDIO GRAPH
@@ -403,13 +472,10 @@ function renderAudioMixer() {
   audioSources.forEach(src => {
     const div = document.createElement('div');
     div.className = 'audio-item';
-
     const name = document.createElement('span');
     name.textContent = src.name;
-    name.style.flex = '1';
-    name.style.overflow = 'hidden';
-    name.style.textOverflow = 'ellipsis';
-    name.style.whiteSpace = 'nowrap';
+    name.style.flex = '1'; name.style.overflow = 'hidden';
+    name.style.textOverflow = 'ellipsis'; name.style.whiteSpace = 'nowrap';
 
     const mute = document.createElement('button');
     mute.textContent = src.muted ? '🔇' : '🔊';
@@ -420,8 +486,7 @@ function renderAudioMixer() {
     };
 
     const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = '0'; slider.max = '1'; slider.step = '0.01';
+    slider.type = 'range'; slider.min = '0'; slider.max = '1'; slider.step = '0.01';
     slider.value = src.volume;
     slider.oninput = () => {
       src.volume = parseFloat(slider.value);
@@ -515,9 +580,7 @@ async function createScreenSource() {
 
   const videoTrack = stream.getVideoTracks()[0];
   if (videoTrack) {
-    videoTrack.addEventListener('ended', () => {
-      src.visible = false; renderSources();
-    });
+    videoTrack.addEventListener('ended', () => { src.visible = false; renderSources(); });
   }
   return src;
 }
@@ -537,35 +600,29 @@ function pickVideoFile() {
 
 async function createVideoFileSource() {
   let videoUrl, fileName;
-  const useFile = confirm('OK = pilih file dari komputer\nCancel = masukkan URL video');
+  const useFile = confirm('OK = pilih file\nCancel = masukkan URL');
   if (useFile) {
     const picked = await pickVideoFile();
     if (!picked) return null;
     videoUrl = picked.url;
     fileName = picked.file.name;
   } else {
-    videoUrl = prompt('URL video (MP4/WebM):');
+    videoUrl = prompt('URL video:');
     if (!videoUrl) return null;
     fileName = videoUrl.split('/').pop().split('?')[0] || 'video';
   }
 
   const video = document.createElement('video');
-  video.src = videoUrl;
-  video.loop = true;
-  video.playsInline = true;
-  video.crossOrigin = 'anonymous';
+  video.src = videoUrl; video.loop = true;
+  video.playsInline = true; video.crossOrigin = 'anonymous';
   video.muted = false;
   mediaPool.appendChild(video);
 
   await new Promise((resolve) => {
-    video.onloadedmetadata = resolve;
-    video.onerror = resolve;
-    setTimeout(resolve, 5000);
+    video.onloadedmetadata = resolve; video.onerror = resolve; setTimeout(resolve, 5000);
   });
-
   try { await video.play(); } catch (e) { console.warn('Autoplay gagal:', e); }
 
-  // Route audio via Web Audio
   ensureAudioContext();
   let gain = null;
   try {
@@ -573,17 +630,12 @@ async function createVideoFileSource() {
     gain = state.audioContext.createGain();
     gain.gain.value = 1;
     srcNode.connect(gain).connect(state.masterGain);
-  } catch (e) {
-    console.warn('Routing audio video gagal:', e);
-  }
+  } catch (e) { console.warn('Routing audio gagal:', e); }
 
-  // Calculate aspect-ratio-fitting size
-  const vw = video.videoWidth || 640;
-  const vh = video.videoHeight || 360;
+  const vw = video.videoWidth || 640, vh = video.videoHeight || 360;
   const maxW = 800, maxH = 450;
   const ratio = Math.min(maxW / vw, maxH / vh, 1);
-  const width = Math.round(vw * ratio);
-  const height = Math.round(vh * ratio);
+  const width = Math.round(vw * ratio), height = Math.round(vh * ratio);
 
   const src = {
     id: uid('src'), type: 'videofile',
@@ -592,23 +644,18 @@ async function createVideoFileSource() {
     x: Math.round((canvas.width - width) / 2),
     y: Math.round((canvas.height - height) / 2),
     width, height,
-    videoEl: video, gainNode: gain,
-    volume: 1, muted: false, url: videoUrl,
+    videoEl: video, gainNode: gain, volume: 1, muted: false, url: videoUrl,
   };
-
   video.addEventListener('play', () => renderSources());
   video.addEventListener('pause', () => renderSources());
-
   return src;
 }
 
 function createImageSource() {
-  const url = prompt('URL gambar (CORS-enabled):');
+  const url = prompt('URL gambar:');
   if (!url) return null;
   const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.src = url;
-
+  img.crossOrigin = 'anonymous'; img.src = url;
   const src = {
     id: uid('src'), type: 'image', name: 'Gambar',
     visible: true, x: 100, y: 100, width: 400, height: 300,
@@ -715,7 +762,7 @@ function renderSources() {
   const scene = getActiveScene();
   if (!scene) return;
   if (!scene.sources.length) {
-    sourcesListEl.innerHTML = '<div class="empty-hint">Belum ada source.<br>Gunakan panel di atas.</div>';
+    sourcesListEl.innerHTML = '<div class="empty-hint">Belum ada source.</div>';
     return;
   }
   scene.sources.forEach((src, idx) => {
@@ -728,18 +775,14 @@ function renderSources() {
 
     const label = document.createElement('span');
     label.textContent = src.name;
-    label.style.flex = '1';
-    label.style.overflow = 'hidden';
-    label.style.textOverflow = 'ellipsis';
-    label.style.whiteSpace = 'nowrap';
+    label.style.flex = '1'; label.style.overflow = 'hidden';
+    label.style.textOverflow = 'ellipsis'; label.style.whiteSpace = 'nowrap';
 
     div.append(eye, label);
 
-    // Play/pause for video files
     if (src.type === 'videofile') {
       const playBtn = document.createElement('button');
       playBtn.textContent = src.videoEl.paused ? '▶' : '⏸';
-      playBtn.title = 'Play/Pause';
       playBtn.onclick = (e) => {
         e.stopPropagation();
         if (src.videoEl.paused) src.videoEl.play().catch(()=>{});
@@ -785,9 +828,7 @@ function drawFrame() {
         ctx.drawImage(src.imgEl, src.x, src.y, src.width, src.height);
       }
     } else if (src.type === 'text') {
-      ctx.font = src.font;
-      ctx.fillStyle = src.color;
-      ctx.textBaseline = 'top';
+      ctx.font = src.font; ctx.fillStyle = src.color; ctx.textBaseline = 'top';
       ctx.fillText(src.text, src.x, src.y, src.width);
     } else if (src.type === 'color') {
       ctx.fillStyle = src.color;
@@ -804,9 +845,7 @@ function drawSelection() {
   const src = scene.sources.find(s => s.id === state.selectedSourceId);
   if (!src || !src.visible || src.type === 'mic') return;
   ctx.save();
-  ctx.strokeStyle = '#00aaff';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
   ctx.strokeRect(src.x, src.y, src.width, src.height);
   ctx.setLineDash([]);
   ctx.fillStyle = '#00aaff';
@@ -874,22 +913,30 @@ window.addEventListener('pointermove', (e) => {
 window.addEventListener('pointerup', () => { interaction = null; });
 
 /* =========================================================
-   RECORDING — Enhanced
+   RECORDING — MP4 Preferred
    ========================================================= */
 function pickSupportedMime(pref) {
+  const candidates = [];
   if (pref === 'auto') {
-    const order = [
+    candidates.push(
+      'video/mp4;codecs=avc1.42E01E',
+      'video/mp4;codecs=avc1',
+      'video/mp4',
       'video/webm;codecs=vp9',
       'video/webm;codecs=vp8',
-      'video/webm',
-      'video/mp4',
-    ];
-    for (const m of order) if (MediaRecorder.isTypeSupported(m)) return m;
-    return 'video/webm';
+      'video/webm'
+    );
+  } else {
+    candidates.push(pref);
+    // Fallbacks
+    candidates.push(
+      'video/mp4;codecs=avc1.42E01E',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm'
+    );
   }
-  if (MediaRecorder.isTypeSupported(pref)) return pref;
-  // Fallback
-  for (const m of ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
+  for (const m of candidates) {
     if (MediaRecorder.isTypeSupported(m)) return m;
   }
   return 'video/webm';
@@ -910,37 +957,23 @@ function updateRecTimerDisplay() {
   recTimerEl.textContent = formatDuration(elapsed);
   recSizeEl.textContent = formatBytes(state.currentRecSize);
 }
-
 function startRecTimer() {
-  state.recStartTime = Date.now();
-  state.recPausedTotal = 0;
-  state.recPausedAt = 0;
+  state.recStartTime = Date.now(); state.recPausedTotal = 0; state.recPausedAt = 0;
   state.currentRecSize = 0;
   state.recTimerInterval = setInterval(updateRecTimerDisplay, 200);
   updateRecTimerDisplay();
 }
 function stopRecTimer() {
-  if (state.recTimerInterval) {
-    clearInterval(state.recTimerInterval);
-    state.recTimerInterval = null;
-  }
-  recTimerEl.textContent = '';
-  recSizeEl.textContent = '';
+  if (state.recTimerInterval) { clearInterval(state.recTimerInterval); state.recTimerInterval = null; }
+  recTimerEl.textContent = ''; recSizeEl.textContent = '';
 }
-
 function updateRecButtons() {
   if (!state.recording) {
-    recordBtn.style.display = '';
-    pauseBtn.style.display = 'none';
-    stopBtn.style.display = 'none';
-    recordBtn.textContent = '● Rekam';
-    recordBtn.classList.add('primary');
-    recordBtn.classList.remove('danger');
-    recordBtn.disabled = false;
+    recordBtn.style.display = ''; pauseBtn.style.display = 'none'; stopBtn.style.display = 'none';
+    recordBtn.textContent = '● Rekam'; recordBtn.classList.add('primary');
+    recordBtn.classList.remove('danger'); recordBtn.disabled = false;
   } else {
-    recordBtn.style.display = 'none';
-    pauseBtn.style.display = '';
-    stopBtn.style.display = '';
+    recordBtn.style.display = 'none'; pauseBtn.style.display = ''; stopBtn.style.display = '';
     pauseBtn.textContent = state.recPaused ? '▶ Lanjut' : '⏸ Jeda';
     pauseBtn.classList.toggle('primary', state.recPaused);
   }
@@ -949,7 +982,7 @@ function updateRecButtons() {
 async function startRecording() {
   if (state.recording) return;
   if (!canvas.captureStream) {
-    alert('Browser tidak mendukung canvas.captureStream(). Gunakan Chrome/Edge terbaru.');
+    alert('Browser tidak mendukung canvas.captureStream().');
     return;
   }
   ensureAudioContext();
@@ -984,77 +1017,38 @@ async function startRecording() {
     const duration = Date.now() - state.recStartTime - state.recPausedTotal;
     const blob = new Blob(state.recordedChunks, { type: mime.split(';')[0] });
     const url = URL.createObjectURL(blob);
-
-    // Auto file name & extension
     const ext = mime.includes('mp4') ? 'mp4' : 'webm';
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const name = `rekaman-${stamp}.${ext}`;
 
-    const rec = {
-      id: uid('rec'),
-      name,
-      blob, url,
-      size: blob.size,
-      duration,
-      timestamp: Date.now(),
-      mime,
-    };
+    const rec = { id: uid('rec'), name, blob, url, size: blob.size, duration, timestamp: Date.now(), mime };
     recordings.push(rec);
     renderRecordings();
 
     // Auto-download
     const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
+    a.href = url; a.download = name; a.click();
 
-    // Cleanup state
-    state.recording = false;
-    state.recPaused = false;
-    state.currentRecSize = 0;
-    stopRecTimer();
-    updateRecButtons();
-    updateStatus();
+    state.recording = false; state.recPaused = false; state.currentRecSize = 0;
+    stopRecTimer(); updateRecButtons(); updateStatus();
   };
 
-  recorder.start(1000); // chunk every 1s
-  state.recording = true;
-  state.recPaused = false;
-  startRecTimer();
-  updateRecButtons();
-  updateStatus();
+  recorder.start(1000);
+  state.recording = true; state.recPaused = false;
+  startRecTimer(); updateRecButtons(); updateStatus();
 }
 
 function pauseRecording() {
   if (!state.mediaRecorder || state.mediaRecorder.state !== 'recording') return;
-  try {
-    state.mediaRecorder.pause();
-    state.recPausedAt = Date.now();
-    state.recPaused = true;
-    updateRecButtons();
-    updateStatus();
-  } catch (e) { console.warn(e); }
+  try { state.mediaRecorder.pause(); state.recPausedAt = Date.now(); state.recPaused = true; updateRecButtons(); updateStatus(); } catch (e) { console.warn(e); }
 }
-
 function resumeRecording() {
   if (!state.mediaRecorder || state.mediaRecorder.state !== 'paused') return;
-  try {
-    state.mediaRecorder.resume();
-    if (state.recPausedAt) {
-      state.recPausedTotal += Date.now() - state.recPausedAt;
-      state.recPausedAt = 0;
-    }
-    state.recPaused = false;
-    updateRecButtons();
-    updateStatus();
-  } catch (e) { console.warn(e); }
+  try { state.mediaRecorder.resume(); if (state.recPausedAt) { state.recPausedTotal += Date.now() - state.recPausedAt; state.recPausedAt = 0; } state.recPaused = false; updateRecButtons(); updateStatus(); } catch (e) { console.warn(e); }
 }
-
 function stopRecording() {
   if (!state.mediaRecorder) return;
-  if (state.mediaRecorder.state !== 'inactive') {
-    state.mediaRecorder.stop();
-  }
+  if (state.mediaRecorder.state !== 'inactive') state.mediaRecorder.stop();
 }
 
 /* =========================================================
@@ -1064,10 +1058,9 @@ function renderRecordings() {
   recordingsListEl.innerHTML = '';
   recCountEl.textContent = recordings.length;
   if (!recordings.length) {
-    recordingsListEl.innerHTML = '<div class="empty-hint">Belum ada rekaman.<br>Klik <b>● Rekam</b> di header.</div>';
+    recordingsListEl.innerHTML = '<div class="empty-hint">Belum ada rekaman.</div>';
     return;
   }
-  // Reverse: terbaru di atas
   [...recordings].reverse().forEach(rec => {
     const div = document.createElement('div');
     div.className = 'recording-item';
@@ -1078,14 +1071,14 @@ function renderRecordings() {
 
     const meta = document.createElement('div');
     meta.className = 'rec-meta';
-    meta.textContent = `${formatDuration(rec.duration)} • ${formatBytes(rec.size)} • ${rec.mime.split(';')[0].replace('video/', '').toUpperCase()}`;
+    const formatLabel = rec.mime.includes('mp4') ? 'MP4' : 'WebM';
+    meta.textContent = `${formatDuration(rec.duration)} • ${formatBytes(rec.size)} • ${formatLabel}`;
 
     const actions = document.createElement('div');
     actions.className = 'rec-actions';
 
     const playBtn = document.createElement('button');
-    playBtn.textContent = '▶ Preview';
-    playBtn.classList.add('primary');
+    playBtn.textContent = '▶ Preview'; playBtn.classList.add('primary');
     playBtn.onclick = () => openPreview(rec);
 
     const dlBtn = document.createElement('button');
@@ -1093,9 +1086,7 @@ function renderRecordings() {
     dlBtn.onclick = () => downloadRecording(rec);
 
     const delBtn = document.createElement('button');
-    delBtn.textContent = '✕';
-    delBtn.classList.add('danger');
-    delBtn.title = 'Hapus rekaman';
+    delBtn.textContent = '✕'; delBtn.classList.add('danger'); delBtn.title = 'Hapus';
     delBtn.onclick = () => deleteRecording(rec.id);
 
     actions.append(playBtn, dlBtn, delBtn);
@@ -1111,21 +1102,16 @@ function openPreview(rec) {
   previewModal.classList.remove('hidden');
   previewVideo.play().catch(()=>{});
 }
-
 function downloadRecording(rec) {
   const a = document.createElement('a');
-  a.href = rec.url;
-  a.download = rec.name;
-  a.click();
+  a.href = rec.url; a.download = rec.name; a.click();
 }
-
 function deleteRecording(id) {
   const idx = recordings.findIndex(r => r.id === id);
   if (idx === -1) return;
   if (!confirm('Hapus rekaman ini?')) return;
   try { URL.revokeObjectURL(recordings[idx].url); } catch {}
-  recordings.splice(idx, 1);
-  renderRecordings();
+  recordings.splice(idx, 1); renderRecordings();
 }
 
 /* =========================================================
@@ -1137,21 +1123,15 @@ stopBtn.onclick = () => { stopRecording(); };
 
 recSettingsBtn.onclick = () => settingsModal.classList.remove('hidden');
 document.getElementById('settings-close').onclick = () => settingsModal.classList.add('hidden');
-
 document.getElementById('cfg-mime').onchange = (e) => { state.recMime = e.target.value; };
 document.getElementById('cfg-quality').onchange = (e) => { state.recBitrate = parseInt(e.target.value); };
 document.getElementById('cfg-fps').onchange = (e) => { state.recFps = parseInt(e.target.value); };
 
 document.getElementById('preview-close').onclick = () => {
-  previewVideo.pause();
-  previewVideo.removeAttribute('src');
-  previewModal.classList.add('hidden');
+  previewVideo.pause(); previewVideo.removeAttribute('src'); previewModal.classList.add('hidden');
 };
 previewModal.addEventListener('click', (e) => {
-  if (e.target === previewModal) {
-    previewVideo.pause();
-    previewModal.classList.add('hidden');
-  }
+  if (e.target === previewModal) { previewVideo.pause(); previewModal.classList.add('hidden'); }
 });
 
 /* =========================================================
@@ -1159,8 +1139,7 @@ previewModal.addEventListener('click', (e) => {
    ========================================================= */
 async function startWHIP(endpoint) {
   if (state.whipPc) { alert('Siaran sudah aktif.'); return; }
-  ensureAudioContext();
-  await state.audioContext.resume();
+  ensureAudioContext(); await state.audioContext.resume();
   const stream = getRecordingStream();
   const pc = new RTCPeerConnection();
   stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -1171,38 +1150,26 @@ async function startWHIP(endpoint) {
   await new Promise(resolve => {
     if (pc.iceGatheringState === 'complete') return resolve();
     const check = () => {
-      if (pc.iceGatheringState === 'complete') {
-        pc.removeEventListener('icegatheringstatechange', check);
-        resolve();
-      }
+      if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', check); resolve(); }
     };
     pc.addEventListener('icegatheringstatechange', check);
     setTimeout(resolve, 5000);
   });
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/sdp' },
-    body: pc.localDescription.sdp,
-  });
+  const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/sdp' }, body: pc.localDescription.sdp });
   if (!res.ok) throw new Error('WHIP endpoint menolak: ' + res.status);
   const answer = await res.text();
   await pc.setRemoteDescription({ type: 'answer', sdp: answer });
-  state.isLive = true;
-  liveBtn.textContent = '■ Stop Siaran';
-  liveBtn.classList.add('danger');
+  state.isLive = true; liveBtn.textContent = '■ Stop Siaran'; liveBtn.classList.add('danger');
 }
 function stopWHIP() {
   if (state.whipPc) { try { state.whipPc.close(); } catch {} state.whipPc = null; }
-  state.isLive = false;
-  liveBtn.textContent = '🌐 Siaran';
-  liveBtn.classList.remove('danger');
+  state.isLive = false; liveBtn.textContent = '🌐 Siaran'; liveBtn.classList.remove('danger');
 }
 liveBtn.onclick = async () => {
   if (state.isLive) { stopWHIP(); return; }
-  const endpoint = prompt('WHIP endpoint (contoh: https://server/whip):');
+  const endpoint = prompt('WHIP endpoint:');
   if (!endpoint) return;
-  try { await startWHIP(endpoint); }
-  catch (err) { alert('Gagal siaran: ' + err.message); stopWHIP(); }
+  try { await startWHIP(endpoint); } catch (err) { alert('Gagal siaran: ' + err.message); stopWHIP(); }
 };
 
 /* =========================================================
@@ -1212,11 +1179,9 @@ function updateStatus() {
   const scene = getActiveScene();
   const audioCount = scene ? scene.sources.filter(s => s.gainNode || s.type === 'mic').length : 0;
   let recText = '';
-  if (state.recording) {
-    recText = state.recPaused ? ' | ⏸ REC PAUSED' : ' | ● REC';
-  }
+  if (state.recording) recText = state.recPaused ? ' | ⏸ REC PAUSED' : ' | ● REC';
   statusEl.textContent =
-    `Scene: ${scene?.name || '-'}  |  ${canvas.width}x${canvas.height} @${state.recFps}fps  |  Audio: ${audioCount}  |  Rekaman: ${recordings.length}${recText}`;
+    `Scene: ${scene?.name || '-'}  |  ${canvas.width}x${canvas.height} @${state.recFps}fps  |  Rasio: ${state.canvasRatio}  |  Audio: ${audioCount}  |  Rekaman: ${recordings.length}${recText}`;
 }
 setInterval(updateStatus, 1000);
 
@@ -1227,10 +1192,14 @@ function init() {
   const scene = createScene('Scene 1');
   state.scenes.push(scene);
   state.activeSceneId = scene.id;
-  renderScenes();
-  renderSources();
-  renderAudioMixer();
-  renderRecordings();
+  // Set rasio awal
+  const { width, height } = getRatioDimensions(state.canvasRatio);
+  canvas.width = width;
+  canvas.height = height;
+  canvasWrap.style.aspectRatio = `${width} / ${height}`;
+  canvasRatioSelect.value = state.canvasRatio;
+
+  renderScenes(); renderSources(); renderAudioMixer(); renderRecordings();
   drawFrame();
   state.drawTimer = setInterval(drawFrame, 1000 / 30);
   updateStatus();
