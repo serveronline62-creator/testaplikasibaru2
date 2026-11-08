@@ -168,6 +168,7 @@
     box-shadow: 0 8px 24px rgba(0,0,0,.5);
     animation: toastIn .25s ease;
     max-width: 480px; pointer-events: auto;
+    white-space: pre-line;
   }
   .toast.warn { border-left-color: var(--warn); }
   .toast.success { border-left-color: var(--ok); }
@@ -339,6 +340,7 @@ const state = {
 const recordings = [];
 let _id = 0;
 const uid = (p = 'id') => `${p}-${++_id}-${Date.now().toString(36)}`;
+const isMacPlatform = () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
 
 /* =========================================================
    DOM
@@ -439,20 +441,47 @@ monitorToggle.onclick = () => {
   monitorToggle.classList.toggle('primary', state.monitorOn);
 };
 
+/**
+ * FIX: connectAudioTrack sekarang memverifikasi track sebelum dipakai,
+ * membersihkan node lama, dan mencetak log diagnostik.
+ */
 function connectAudioTrack(src, track) {
   ensureAudioContext();
+  if (!state.audioContext) {
+    throw new Error('AudioContext tidak tersedia');
+  }
+  if (state.audioContext.state === 'suspended') {
+    console.warn('[AUDIO] AudioContext suspended — mencoba resume…');
+    state.audioContext.resume().catch(e => console.warn('[AUDIO] Resume gagal:', e));
+  }
+
+  track.enabled = true;
+  if (track.readyState === 'ended') {
+    throw new Error('Audio track sudah ended — tidak bisa dipakai');
+  }
+
+  if (src.audioSourceNode) { try { src.audioSourceNode.disconnect(); } catch {} }
+  if (src.gainNode)        { try { src.gainNode.disconnect(); } catch {} }
+
   const stream = new MediaStream([track]);
   const srcNode = state.audioContext.createMediaStreamSource(stream);
   const gain = state.audioContext.createGain();
-  // FIX: jangan paksa 0 di awal. updateAllSceneAudio() akan mute kalau perlu.
   gain.gain.value = src.muted ? 0 : (src.volume ?? 1);
   srcNode.connect(gain).connect(state.masterGain);
+
   src.gainNode = gain;
   src.audioTrack = track;
   src.audioSourceNode = srcNode;
+
+  console.log('[AUDIO] Connected:', {
+    label: track.label,
+    enabled: track.enabled,
+    state: track.readyState,
+    ctxState: state.audioContext.state,
+    gain: gain.gain.value,
+  });
 }
 
-/* Mute audio untuk source di scene yang tidak aktif */
 function updateAllSceneAudio() {
   state.scenes.forEach(scene => {
     const isActive = scene.id === state.activeSceneId;
@@ -596,7 +625,7 @@ addSceneBtn.onclick = () => {
 };
 
 /* =========================================================
-   SOURCES
+   SOURCE — WEBCAM
    ========================================================= */
 async function createWebcamSource() {
   let stream;
@@ -635,30 +664,79 @@ async function createWebcamSource() {
   return src;
 }
 
+/* =========================================================
+   SOURCE — SCREEN CAPTURE (FIXED)
+   ========================================================= */
 async function createScreenSource() {
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { displaySurface: 'monitor' },
-      audio: true,
-      selfBrowserSurface: 'exclude',
-      systemAudio: 'include',
-    });
-  } catch {
-    try {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-    } catch {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-    }
-  }
+  const isMac = isMacPlatform();
+
+  const proceed = confirm(
+    '🖥 SCREEN CAPTURE\n\n' +
+    'Untuk merekam AUDIO layar:\n' +
+    '1. Pilih "Seluruh Layar" / "Entire Screen"\n' +
+    '   (JANGAN pilih tab atau jendela)\n' +
+    '2. Centang "Bagikan audio sistem" /\n' +
+    '   "Share system audio"\n\n' +
+    (isMac
+      ? '⚠ macOS: Chrome TIDAK mendukung system audio.\n' +
+        'Gunakan sumber Mikrofon sebagai gantinya.\n\n'
+      : '') +
+    'Lanjutkan?'
+  );
+  if (!proceed) return null;
+
+  const stream = await getDisplayMediaWithFallback();
+  if (!stream) return null;
+
   await resumeAudioContext();
   return buildDisplaySource(stream, '🖥 Screen Capture');
 }
 
+/**
+ * Coba beberapa constraint berurutan. Kalau user cancel (NotAllowedError),
+ * STOP dan return null — jangan loop dialog picker berkali-kali.
+ */
+async function getDisplayMediaWithFallback() {
+  const attempts = [
+    {
+      video: { displaySurface: 'monitor' },
+      audio: true,
+      systemAudio: 'include',
+      selfBrowserSurface: 'exclude',
+      surfaceSwitching: 'include',
+      monitorTypeSurfaces: 'include',
+    },
+    { video: true, audio: true },
+    { video: true, audio: false },
+  ];
+
+  let lastErr = null;
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      console.log(`[SCREEN] getDisplayMedia attempt ${i + 1}`, attempts[i]);
+      const stream = await navigator.mediaDevices.getDisplayMedia(attempts[i]);
+      console.log('[SCREEN] Stream OK. audioTracks =', stream.getAudioTracks().length);
+      return stream;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[SCREEN] attempt ${i + 1} gagal:`, err.name, err.message);
+      if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
+        showToast('❌ Screen capture dibatalkan.', 'warn', 3000);
+        return null;
+      }
+    }
+  }
+
+  showToast('❌ Screen capture gagal: ' + (lastErr?.message || 'unknown'), 'error', 6000);
+  return null;
+}
+
 function buildDisplaySource(stream, name) {
   const video = document.createElement('video');
-  video.srcObject = stream; video.muted = true;
-  video.playsInline = true; video.autoplay = true;
+  video.srcObject = stream;
+  video.muted = true;
+  video.playsInline = true;
+  video.autoplay = true;
   mediaPool.appendChild(video);
   video.play().catch(() => {});
 
@@ -677,14 +755,39 @@ function buildDisplaySource(stream, name) {
     width, height,
     zoom: 1, panX: 0, panY: 0,
     videoEl: video, stream, gainNode: null, volume: 1, muted: false,
+    audioMissing: false,
   };
 
+  // FIX: VERIFIKASI audio track
   const audioTracks = stream.getAudioTracks();
-  if (audioTracks.length) {
-    connectAudioTrack(src, audioTracks[0]);
-    showToast('🖥 Screen capture dengan audio', 'success', 3000);
+  console.log('[SCREEN] Audio tracks ditemukan:', audioTracks.length,
+    audioTracks.map(t => ({ label: t.label, enabled: t.enabled, state: t.readyState })));
+
+  if (audioTracks.length > 0) {
+    try {
+      connectAudioTrack(src, audioTracks[0]);
+      src.audioMissing = false;
+      showToast('🖥 Screen capture + AUDIO sistem ✓', 'success', 3500);
+    } catch (e) {
+      console.error('[SCREEN] Audio routing gagal:', e);
+      src.audioMissing = true;
+      showToast(
+        '⚠ Audio track ada tapi gagal di-route: ' + e.message +
+        '\nKlik tombol 🎤 di source untuk retry.',
+        'error', 8000
+      );
+    }
   } else {
-    showToast('⚠ Screen capture TANPA audio.\nCentang "Share audio" di dialog picker.', 'warn', 7000);
+    src.audioMissing = true;
+    showToast(
+      '⚠ Screen capture TANPA AUDIO\n\n' +
+      (isMacPlatform()
+        ? 'macOS tidak mendukung system audio di Chrome.\nGunakan sumber Mikrofon.'
+        : 'Klik tombol 🎤 di source untuk ambil ulang audio.\n' +
+          'Pastikan pilih "Entire Screen" & centang\n' +
+          '"Share system audio".'),
+      'warn', 10000
+    );
   }
 
   video.addEventListener('loadedmetadata', () => {
@@ -701,12 +804,83 @@ function buildDisplaySource(stream, name) {
   const videoTrack = stream.getVideoTracks()[0];
   if (videoTrack) {
     videoTrack.addEventListener('ended', () => {
-      src.visible = false; renderSources();
+      src.visible = false;
+      renderSources();
     });
   }
   return src;
 }
 
+/**
+ * Retry ambil audio screen capture tanpa harus hapus source.
+ */
+async function retryScreenAudio(src) {
+  const proceed = confirm(
+    '🔄 AMBIL ULANG AUDIO SCREEN CAPTURE\n\n' +
+    '• Pilih "Seluruh Layar" / "Entire Screen"\n' +
+    '• Centang "Bagikan audio sistem" / "Share system audio"\n\n' +
+    'Video akan diganti dengan capture baru.\n' +
+    'Lanjutkan?'
+  );
+  if (!proceed) return;
+
+  try {
+    const newStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: true,
+      systemAudio: 'include',
+      selfBrowserSurface: 'exclude',
+    });
+
+    const newAudioTracks = newStream.getAudioTracks();
+    console.log('[RETRY] Audio tracks baru:', newAudioTracks.length);
+
+    if (newAudioTracks.length === 0) {
+      showToast(
+        '❌ Masih tanpa audio.\n' +
+        'Pastikan centang "Share system audio" di dialog.',
+        'error', 6000
+      );
+      newStream.getTracks().forEach(t => t.stop());
+      return;
+    }
+
+    await resumeAudioContext();
+
+    src.videoEl.srcObject = newStream;
+    await src.videoEl.play().catch(() => {});
+
+    if (src.stream && src.stream !== newStream) {
+      src.stream.getTracks().forEach(t => t.stop());
+    }
+
+    connectAudioTrack(src, newAudioTracks[0]);
+    src.stream = newStream;
+    src.audioMissing = false;
+
+    const videoTrack = newStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.addEventListener('ended', () => {
+        src.visible = false;
+        renderSources();
+      });
+    }
+
+    updateAllSceneAudio();
+    renderAudioMixer();
+    renderSources();
+    showToast('✅ Audio screen capture berhasil diaktifkan!', 'success', 4000);
+  } catch (err) {
+    console.error('[RETRY] Error:', err);
+    if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+      showToast('Gagal ambil ulang audio: ' + err.message, 'error', 5000);
+    }
+  }
+}
+
+/* =========================================================
+   SOURCE — VIDEO FILE
+   ========================================================= */
 function pickVideoFile() {
   return new Promise(resolve => {
     const input = document.createElement('input');
@@ -794,6 +968,9 @@ async function createVideoFileSource() {
   return src;
 }
 
+/* =========================================================
+   SOURCE — IMAGE / TEXT / COLOR / MIC
+   ========================================================= */
 function createImageSource() {
   const url = prompt('URL gambar (harus CORS-enabled):');
   if (!url) return null;
@@ -949,6 +1126,19 @@ function renderSources() {
       zb.title = 'Klik untuk reset zoom';
       zb.onclick = (e) => { e.stopPropagation(); resetZoom(src); };
       div.appendChild(zb);
+    }
+
+    // FIX: tombol retry audio untuk screen capture tanpa audio
+    if (src.type === 'screen' && src.audioMissing) {
+      const retryBtn = document.createElement('button');
+      retryBtn.textContent = '🎤';
+      retryBtn.title = 'Tidak ada audio — klik untuk ambil ulang';
+      retryBtn.style.background = 'var(--warn)';
+      retryBtn.style.color = '#1e1e1e';
+      retryBtn.style.fontSize = '10px';
+      retryBtn.style.padding = '1px 5px';
+      retryBtn.onclick = (e) => { e.stopPropagation(); retryScreenAudio(src); };
+      div.appendChild(retryBtn);
     }
 
     if (src.type === 'videofile') {
@@ -1169,7 +1359,7 @@ canvas.addEventListener('dblclick', (e) => {
 });
 
 /* =========================================================
-   ⭐ RECORDING — MIME DENGAN AUDIO CODEC
+   RECORDING — MIME + AUDIO
    ========================================================= */
 function detectMimeSupport() {
   const checks = {
@@ -1204,10 +1394,6 @@ function refreshMimeInfo() {
     .map(([k, v]) => `<div>${v ? '✔' : '✕'} ${k}</div>`).join('');
 }
 
-/**
- * Pilih mimeType. Jika `withAudio`, utamakan mime yang MENYERTAKAN audio codec
- * (mp4a untuk MP4, opus untuk WebM) supaya audio track tidak dibuang browser.
- */
 function pickSupportedMime(pref, withAudio = true) {
   const list = [];
 
@@ -1234,7 +1420,6 @@ function pickSupportedMime(pref, withAudio = true) {
       );
     }
   } else {
-    // Preferensi user — coba dulu versi yang menyertakan audio codec
     if (withAudio) {
       if (/mp4/i.test(pref) && !/mp4a/i.test(pref) && /codecs=/.test(pref)) {
         list.push(pref.replace(/(codecs=[^,;]+)/i, '$1,mp4a.40.2'));
@@ -1244,7 +1429,6 @@ function pickSupportedMime(pref, withAudio = true) {
       }
     }
     list.push(pref);
-    // Fallback
     list.push(
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp8,opus',
@@ -1260,17 +1444,12 @@ function pickSupportedMime(pref, withAudio = true) {
   return 'video/webm';
 }
 
-/**
- * Bangun stream untuk direkam: canvas video + audio dari MediaStreamDestination.
- * Kembalikan { stream, hasAudio }.
- */
 function getRecordingStream() {
   const canvasStream = canvas.captureStream(state.recFps);
   const videoTracks = [...canvasStream.getVideoTracks()];
   let audioTracks = [];
   if (state.audioDestination) {
     audioTracks = state.audioDestination.stream.getAudioTracks();
-    // pastikan track tidak disabled
     audioTracks.forEach(t => { t.enabled = true; });
   }
   const stream = new MediaStream([...videoTracks, ...audioTracks]);
@@ -1313,13 +1492,24 @@ async function startRecording() {
     return;
   }
 
-  // Pastikan AudioContext running
   const ctxState = await resumeAudioContext();
   if (ctxState !== 'running') {
     showToast('⚠ AudioContext belum running — audio mungkin tidak terekam. Coba klik lagi.', 'warn', 5000);
   }
 
   const { stream, hasAudio } = getRecordingStream();
+
+  // Cek apakah ada screen source tanpa audio
+  const activeScene = getActiveScene();
+  const brokenScreen = activeScene?.sources.filter(s => s.type === 'screen' && s.audioMissing) || [];
+  if (brokenScreen.length > 0) {
+    showToast(
+      `⚠ ${brokenScreen.length} screen source tanpa audio.\n` +
+      'Klik tombol 🎤 di source untuk retry.',
+      'warn', 6000
+    );
+  }
+
   if (!hasAudio) {
     showToast('⚠ Tidak ada audio track — rekaman tanpa suara.', 'warn', 5000);
   }
@@ -1332,7 +1522,7 @@ async function startRecording() {
     recorder = new MediaRecorder(stream, {
       mimeType: mime,
       videoBitsPerSecond: state.recBitrate,
-      audioBitsPerSecond: 128000,   // FIX: set kualitas audio
+      audioBitsPerSecond: 128000,
     });
   } catch (err) {
     console.error('[REC] MediaRecorder error:', err);
