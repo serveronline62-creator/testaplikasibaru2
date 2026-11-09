@@ -1,1421 +1,3557 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>OBS Pro Web - Functional</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; user-select:none; }
-:root{
-  --bg-darker:#0f0f0f; --bg-dark:#1e1e1e; --bg-panel:#252525;
-  --bg-hover:#333; --bg-active:#3a3a3a; --border:#3a3a3a;
-  --text:#e0e0e0; --text-dim:#a0a0a0; --accent:#ff4444; --accent-h:#ff6666;
-  --success:#2ecc71; --danger:#e74c3c; --warning:#f1c40f; --radius:4px;
-}
-body{ background:var(--bg-darker); color:var(--text); height:100vh; overflow:hidden;
-  display:flex; flex-direction:column; font-size:13px; }
-::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:#444;border-radius:4px;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <title>Split Screen Recorder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* MENUBAR */
-.menubar{display:flex;align-items:center;background:var(--bg-dark);border-bottom:1px solid var(--border);height:30px;padding:0 8px;font-size:12px;flex-shrink:0;position:relative;z-index:100;}
-.menubar .logo{font-weight:700;color:var(--accent);margin-right:16px;font-size:13px;}
-.menu-item{position:relative;padding:5px 10px;cursor:pointer;color:var(--text-dim);border-radius:var(--radius);}
-.menu-item:hover{background:var(--bg-hover);color:var(--text);}
-.dropdown{display:none;position:absolute;top:100%;left:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,.5);min-width:220px;z-index:1000;padding:4px 0;}
-.menu-item:hover .dropdown{display:block;}
-.dropdown-item{padding:6px 14px;cursor:pointer;color:var(--text-dim);display:flex;justify-content:space-between;font-size:12px;}
-.dropdown-item:hover{background:var(--accent);color:#fff;}
-.dropdown-item.disabled{opacity:.4;pointer-events:none;}
-.dd-sep{height:1px;background:var(--border);margin:4px 0;}
-.dd-shortcut{color:#666;font-size:11px;}
+    :root {
+      --bg: #000;
+      --panel: #0a0a0c;
+      --border: rgba(255,255,255,0.08);
+      --surface: rgba(255,255,255,0.06);
+      --surface-hover: rgba(255,255,255,0.12);
+      --text: #fff;
+      --muted: rgba(255,255,255,0.55);
+      --accent: #6366f1;
+      --accent-2: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --ticker-offset: 0px;
+    }
 
-/* LAYOUT */
-.main{display:flex;flex:1;overflow:hidden;}
-.sidebar{width:240px;display:flex;flex-direction:column;gap:2px;padding:2px;flex-shrink:0;}
-.dock{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;}
-.dock-header{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg-dark);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-dim);flex-shrink:0;}
-.dock-header .actions{display:flex;gap:2px;}
-.dock-header button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;padding:1px 5px;font-size:14px;border-radius:2px;}
-.dock-header button:hover{background:var(--bg-hover);color:var(--text);}
-.dock-body{flex:1;overflow-y:auto;padding:3px;}
-.scenes-dock{flex:1;min-height:100px;} .sources-dock{flex:1.5;min-height:150px;}
-.mixer-dock{flex:1.5;min-height:180px;} .trans-dock{flex:.7;min-height:80px;}
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
 
-/* CENTER */
-.center{flex:1;display:flex;flex-direction:column;padding:2px;gap:2px;overflow:hidden;}
-.preview-toolbar{display:flex;gap:4px;padding:4px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);flex-shrink:0;align-items:center;}
-.preview-toolbar .spacer{flex:1;}
-.tb-btn{background:transparent;border:1px solid transparent;color:var(--text-dim);padding:3px 8px;border-radius:var(--radius);cursor:pointer;font-size:12px;}
-.tb-btn:hover{background:var(--bg-hover);color:var(--text);border-color:var(--border);}
-.tb-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.tb-info{font-size:11px;color:var(--text-dim);padding:0 6px;}
+    .app {
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-.preview-area{flex:1;display:flex;gap:2px;min-height:0;}
-.preview-pane{flex:1;background:#000;border:1px solid var(--border);border-radius:var(--radius);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
-.preview-pane canvas{max-width:100%;max-height:100%;display:block;cursor:crosshair;}
-.preview-label{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.75);padding:2px 8px;border-radius:3px;font-size:10px;color:var(--text-dim);z-index:5;pointer-events:none;}
-.preview-label.live{color:var(--danger);}
-.preview-label.off{color:#666;}
+    .phone-frame {
+      position: relative;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-.controls{display:flex;gap:6px;padding:6px 10px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);justify-content:center;flex-shrink:0;}
-.btn{padding:6px 14px;border:none;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s,transform .1s;}
-.btn:active{transform:scale(.96);}
-.btn-stream{background:var(--accent);color:#fff;} .btn-stream:hover{background:var(--accent-h);}
-.btn-stream.active{background:var(--danger);animation:pulse 1.4s infinite;}
-.btn-record{background:var(--bg-hover);color:var(--text);border:1px solid var(--border);}
-.btn-record:hover{background:var(--bg-active);}
-.btn-record.active{background:var(--danger);color:#fff;animation:pulse 1.4s infinite;}
-.btn-sec{background:var(--bg-hover);color:var(--text-dim);border:1px solid var(--border);}
-.btn-sec:hover{background:var(--bg-active);color:var(--text);}
-.btn-sec.active{background:var(--accent);color:#fff;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+    .phone-frame.mode-9-16 {
+      width: min(100vw, calc(100dvh * 9 / 16));
+      height: min(100dvh, calc(100vw * 16 / 9));
+    }
+    .phone-frame.mode-16-9 {
+      width: min(100vw, calc(100dvh * 16 / 9));
+      height: min(100dvh, calc(100vw * 9 / 16));
+    }
+    .phone-frame.mode-asli {
+      width: 100vw;
+      height: 100dvh;
+    }
 
-/* ITEMS */
-.scene-item,.source-item{display:flex;align-items:center;padding:5px 8px;border-radius:var(--radius);cursor:pointer;color:var(--text-dim);gap:6px;margin-bottom:1px;font-size:12px;}
-.scene-item:hover,.source-item:hover{background:var(--bg-hover);}
-.scene-item.active{background:var(--accent);color:#fff;font-weight:600;}
-.source-item.active{background:var(--bg-active);color:var(--text);}
-.source-item .icon{width:12px;height:12px;border-radius:2px;background:#555;flex-shrink:0;}
-.source-item.hidden-src{opacity:.5;}
-.source-item.locked-src{opacity:.6;}
-.source-item .vis{margin-left:auto;background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:0 2px;}
-.source-item .vis:hover{color:var(--text);}
-.audio-ch{display:flex;align-items:center;gap:5px;padding:3px 4px;border-bottom:1px solid var(--border);font-size:11px;}
-.audio-ch:last-child{border-bottom:none;}
-.audio-ch .name{width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-dim);}
-.audio-slider{flex:1;height:5px;-webkit-appearance:none;background:#3a3a3a;border-radius:3px;cursor:pointer;outline:none;}
-.audio-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--accent);border-radius:50%;cursor:pointer;}
-.audio-meter{width:36px;height:5px;background:#333;border-radius:3px;overflow:hidden;}
-.audio-meter-fill{height:100%;width:0;background:linear-gradient(90deg,var(--success),var(--warning),var(--danger));transition:width .05s;}
-.audio-btn{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;}
-.audio-btn.muted{color:var(--danger);}
-.trans-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--text-dim);}
-.trans-item:hover{background:var(--bg-hover);}
-.trans-item.active{background:var(--bg-active);color:var(--text);}
-.trans-dur{color:#666;font-size:11px;}
+    .video-area {
+      flex: 1 1 0;
+      min-height: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .phone-frame.mode-16-9 .video-area {
+      flex-direction: row;
+    }
 
-/* STATUSBAR */
-.statusbar{display:flex;align-items:center;justify-content:space-between;padding:2px 12px;background:var(--bg-dark);border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);height:22px;flex-shrink:0;}
-.status-left,.status-right{display:flex;gap:14px;align-items:center;}
-.status-dot{width:7px;height:7px;border-radius:50%;background:#555;display:inline-block;margin-right:4px;}
-.status-dot.live{background:var(--danger);animation:pulse 1.4s infinite;}
-.status-dot.rec{background:var(--warning);animation:pulse 1s infinite;}
-.status-dot.ok{background:var(--success);}
+    .screen {
+      position: relative;
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #0d0d0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center;}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.6);width:520px;max-width:92vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;}
-.modal-h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px;}
-.modal-h button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;padding:0 4px;}
-.modal-h button:hover{color:var(--text);}
-.modal-b{padding:14px;overflow-y:auto;}
-.modal-b label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;margin-top:10px;}
-.modal-b label:first-child{margin-top:0;}
-.modal-b input[type=text],.modal-b input[type=number],.modal-b select,.modal-b textarea{width:100%;padding:6px 9px;background:var(--bg-darker);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;outline:none;font-family:inherit;}
-.modal-b input:focus,.modal-b select:focus,.modal-b textarea:focus{border-color:var(--accent);}
-.modal-b input[type=color]{width:50px;height:30px;padding:0;border:1px solid var(--border);background:var(--bg-darker);cursor:pointer;}
-.modal-b input[type=range]{width:100%;}
-.row{display:flex;gap:10px;} .row > *{flex:1;}
-.modal-f{padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+    .screen-live   { flex: 0.8 1 0; }
+    .screen-upload { flex: 1.2 1 0; }
 
-/* TOAST */
-#toast-container{position:fixed;bottom:40px;right:20px;display:flex;flex-direction:column;gap:6px;z-index:3000;}
-.toast{background:var(--bg-panel);border:1px solid var(--border);border-left:3px solid var(--accent);padding:8px 14px;border-radius:4px;font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.5);animation:slideIn .2s ease;}
-.toast.success{border-left-color:var(--success);}
-.toast.error{border-left-color:var(--danger);}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    .screen video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+      display: block;
+      touch-action: none;
+      cursor: grab;
+      will-change: width, height, left, top;
+    }
+    .screen video.grabbing { cursor: grabbing; }
 
-/* CONTEXT MENU */
-#ctx-menu{display:none;position:fixed;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.6);min-width:180px;padding:4px 0;z-index:4000;}
-#ctx-menu.open{display:block;}
-.ctx-item{padding:5px 14px;cursor:pointer;color:var(--text-dim);font-size:12px;}
-.ctx-item:hover{background:var(--accent);color:#fff;}
-.ctx-item.disabled{opacity:.4;pointer-events:none;}
-</style>
+    .live-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      touch-action: none;
+      pointer-events: none;
+      z-index: 6;
+      will-change: width, height, left, top;
+    }
+
+    .pan-hint {
+      position: absolute;
+      left: 50%;
+      bottom: calc(14px + var(--ticker-offset));
+      transform: translateX(-50%) translateY(6px);
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #fff;
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 7;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      white-space: nowrap;
+    }
+    .pan-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .screen-tools {
+      position: absolute;
+      right: 10px;
+      bottom: calc(12px + var(--ticker-offset));
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .screen-tools > * { pointer-events: auto; }
+
+    .tool-toggle {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.15s, background 0.2s;
+    }
+    .tool-toggle svg { width: 16px; height: 16px; }
+    .tool-toggle:active { transform: scale(0.9); }
+    .tool-toggle.open { background: rgba(99,102,241,0.85); border-color: transparent; }
+
+    .tool-panel {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(12,12,16,0.92);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+      animation: modalIn 0.18s ease;
+    }
+    .tool-panel.open { display: flex; }
+
+    .pos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      width: 96px;
+    }
+    .pos-grid button {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .pos-grid button::after {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      transition: background 0.2s, transform 0.2s;
+    }
+    .pos-grid button:hover { background: rgba(255,255,255,0.15); }
+    .pos-grid button.active { background: rgba(99,102,241,0.25); border-color: rgba(99,102,241,0.6); }
+    .pos-grid button.active::after { background: var(--accent); transform: scale(1.5); }
+
+    .tool-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tool-row button {
+      width: 26px; height: 26px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s, background 0.2s;
+    }
+    .tool-row button:hover { background: rgba(255,255,255,0.15); }
+    .tool-row button:active { transform: scale(0.9); }
+    .tool-row button svg { width: 13px; height: 13px; }
+    .zoom-label {
+      flex: 1;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,255,255,0.8);
+      letter-spacing: 0.3px;
+    }
+
+    .divider {
+      flex: 0 0 2px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      z-index: 20;
+      position: relative;
+      cursor: ns-resize;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .divider::before {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 64px; height: 44px;
+      background: transparent;
+    }
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.32);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      pointer-events: none;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s;
+      z-index: 1;
+    }
+    .divider:hover::after,
+    .divider.dragging::after {
+      background: rgba(99,102,241,0.55);
+      border-color: rgba(139,92,246,0.7);
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+    .divider.vert {
+      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.4), transparent);
+      cursor: ew-resize;
+    }
+    .divider.vert::before { width: 44px; height: 64px; }
+
+    .split-pct {
+      position: absolute;
+      left: calc(50% + 22px);
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(99,102,241,0.95);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 2;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .divider.dragging .split-pct { opacity: 1; }
+
+    .badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: #fff;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      pointer-events: none;
+    }
+    .badge.live { background: rgba(239,68,68,0.85); }
+    .badge.live .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulseDot 1.5s ease-in-out infinite;
+    }
+    .badge.upload { background: rgba(99,102,241,0.85); }
+    .badge.upload.screen { background: rgba(16,185,129,0.85); }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .rec-badge {
+      position: absolute;
+      top: calc(12px + var(--safe-top));
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(239,68,68,0.95);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 30;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      box-shadow: 0 4px 24px rgba(239,68,68,0.5);
+    }
+    .rec-badge.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .rec-badge .rec-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulseDot 1s ease-in-out infinite;
+    }
+
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 20px;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 5;
+    }
+    .placeholder svg {
+      width: 40px; height: 40px;
+      opacity: 0.4;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.5;
+    }
+    .placeholder.hidden { opacity: 0; visibility: hidden; }
+
+    .video-progress {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: rgba(255,255,255,0.12);
+      z-index: 12;
+      cursor: pointer;
+      transition: height 0.2s;
+    }
+    .video-progress:hover { height: 5px; }
+    .video-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px rgba(99,102,241,0.6);
+    }
+
+    .control-panel {
+      flex: 0 0 auto;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 12px 14px calc(12px + var(--safe-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 25;
+      overflow-y: auto;
+      max-height: 55vh;
+    }
+
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .circle-btn {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, background 0.2s, opacity 0.2s;
+    }
+    .circle-btn svg { width: 18px; height: 18px; }
+    .circle-btn:active { transform: scale(0.9); }
+    .circle-btn:disabled { opacity: 0.3; pointer-events: none; }
+    .circle-btn:hover { background: var(--surface-hover); }
+    .circle-btn.primary {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+    }
+    .circle-btn.primary svg { width: 22px; height: 22px; }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.15s, background 0.2s, opacity 0.2s;
+      white-space: nowrap;
+    }
+    .pill svg { width: 14px; height: 14px; }
+    .pill:active { transform: scale(0.95); }
+    .pill:disabled { opacity: 0.35; pointer-events: none; }
+    .pill:hover { background: var(--surface-hover); }
+    .pill.active {
+      background: rgba(16,185,129,0.15);
+      border-color: rgba(16,185,129,0.4);
+      color: var(--green);
+    }
+    .pill.bg-active {
+      background: rgba(139,92,246,0.18);
+      border-color: rgba(139,92,246,0.5);
+      color: #c4b5fd;
+    }
+    .pill.icon-only { padding: 8px; width: 34px; justify-content: center; }
+
+    .split-row { gap: 6px; padding: 0 2px; }
+    .split-label {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-right: 2px;
+    }
+    .split-btn {
+      flex: 1 1 0;
+      padding: 7px 2px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .split-btn:hover { background: var(--surface-hover); }
+    .split-btn:active { transform: scale(0.94); }
+    .split-btn.active {
+      background: rgba(99,102,241,0.2);
+      border-color: rgba(99,102,241,0.55);
+      color: #c7c9ff;
+    }
+
+    .expand-row { gap: 6px; padding: 0 2px; }
+    .expand-btn {
+      flex: 1 1 0;
+      padding: 9px 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s, color 0.2s;
+      white-space: nowrap;
+      position: relative;
+    }
+    .expand-btn:hover { background: var(--surface-hover); }
+    .expand-btn:active { transform: scale(0.94); }
+    .expand-btn.open {
+      background: rgba(99,102,241,0.2);
+      border-color: rgba(99,102,241,0.55);
+      color: #c7c9ff;
+    }
+    .expand-btn .expand-icon { font-size: 12px; }
+    .expand-btn .expand-value {
+      font-variant-numeric: tabular-nums;
+      color: #c7c9ff;
+    }
+    .expand-btn .expand-dot {
+      position: absolute;
+      top: 4px;
+      right: 5px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      display: none;
+    }
+    .expand-btn.has-value .expand-dot { display: block; }
+
+    .expand-btn.swap-quick {
+      flex: 0 0 42px;
+      padding: 9px 6px;
+      font-size: 14px;
+    }
+    .expand-btn.swap-quick.active {
+      background: rgba(16,185,129,0.2);
+      border-color: rgba(16,185,129,0.55);
+      color: var(--green);
+    }
+    .expand-btn.swap-quick svg { width: 14px; height: 14px; }
+
+    .swap-full-btn {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      transition: transform 0.15s, background 0.2s, border-color 0.2s;
+    }
+    .swap-full-btn:hover { background: var(--surface-hover); }
+    .swap-full-btn:active { transform: scale(0.97); }
+    .swap-full-btn.active {
+      background: rgba(16,185,129,0.18);
+      border-color: rgba(16,185,129,0.5);
+      color: var(--green);
+    }
+    .swap-full-btn svg { width: 14px; height: 14px; }
+
+    .expand-panel {
+      display: none;
+      padding-top: 2px;
+      animation: panelIn 0.18s ease;
+    }
+    .expand-panel.open { display: block; }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .ticker-row { gap: 6px; }
+    .ticker-input {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      font-family: inherit;
+    }
+    .ticker-input:focus {
+      border-color: rgba(99,102,241,0.6);
+      background: rgba(255,255,255,0.1);
+    }
+    .ticker-input::placeholder { color: var(--muted); }
+
+    .ticker-btn {
+      flex: 0 0 auto;
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.12s, background 0.2s;
+    }
+    .ticker-btn:hover { background: var(--surface-hover); }
+    .ticker-btn:active { transform: scale(0.9); }
+
+    .ticker-overlay {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      overflow: hidden;
+      z-index: 15;
+      pointer-events: none;
+      display: none;
+    }
+    .ticker-overlay.show { display: block; }
+    .ticker-track {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .ticker-item {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      white-space: nowrap;
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      will-change: transform;
+      font-family: -apple-system, system-ui, sans-serif;
+    }
+
+    .ticker-speed-row { padding-top: 6px; gap: 8px; }
+    .ticker-speed-icon { font-size: 15px; flex: 0 0 auto; user-select: none; line-height: 1; }
+    .ticker-speed-range {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.12);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    .ticker-speed-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 8px rgba(99,102,241,0.7);
+      margin-top: -5px;
+    }
+    .ticker-speed-range::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      cursor: pointer;
+      border: none;
+    }
+    .ticker-speed-value {
+      flex: 0 0 auto;
+      font-size: 10px;
+      font-weight: 800;
+      color: #c7c9ff;
+      font-variant-numeric: tabular-nums;
+      min-width: 34px;
+      text-align: center;
+      padding: 3px 6px;
+      border-radius: 6px;
+      background: rgba(99,102,241,0.18);
+      border: 1px solid rgba(99,102,241,0.35);
+    }
+
+    .record-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #ff3366, #e60045);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.15s, background 0.25s, box-shadow 0.25s;
+      box-shadow: 0 4px 20px rgba(255,51,102,0.35);
+      margin-top: 2px;
+    }
+    .record-btn:active { transform: scale(0.97); }
+    .record-btn:disabled { opacity: 0.5; pointer-events: none; }
+    .record-btn .rec-indicator {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      transition: border-radius 0.25s;
+      box-shadow: 0 0 8px rgba(255,255,255,0.6);
+    }
+    .record-btn.recording {
+      background: linear-gradient(135deg, #2a2a2e, #1a1a1e);
+      animation: recPulse 1.5s infinite;
+    }
+    .record-btn.recording .rec-indicator { border-radius: 3px; }
+
+    @keyframes recPulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(239,68,68,0.3); }
+      50%      { box-shadow: 0 4px 24px rgba(239,68,68,0.7); }
+    }
+
+    input[type="file"] { display: none; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      padding-top: calc(16px + var(--safe-top));
+      padding-bottom: calc(16px + var(--safe-bottom));
+    }
+    .modal.show { display: flex; }
+
+    .modal-card {
+      width: 100%;
+      max-width: 420px;
+      background: #16161a;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      padding: 18px 20px;
+      font-size: 16px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header button {
+      background: var(--surface);
+      border: none;
+      color: var(--muted);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .modal-header button:hover { background: var(--surface-hover); }
+    .modal-header button svg { width: 16px; height: 16px; }
+
+    .modal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+    .modal-body video {
+      width: 100%;
+      border-radius: 14px;
+      background: #000;
+      max-height: 55vh;
+    }
+    .modal-info {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .modal-actions { display: flex; gap: 8px; flex-direction: column; }
+    .modal-actions .modal-btn {
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.15s, opacity 0.2s;
+    }
+    .modal-actions .modal-btn:active { transform: scale(0.97); }
+    .modal-actions .modal-btn svg { width: 18px; height: 18px; }
+    .modal-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+    }
+    .modal-btn.secondary { background: var(--surface); border: 1px solid var(--border); }
+
+    .bg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .bg-option {
+      aspect-ratio: 16 / 10;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.12);
+      background: #1a1a1e;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    .bg-option:hover { transform: translateY(-1px); }
+    .bg-option.active {
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.25);
+    }
+    .bg-option.off-bg { background: #131316; color: var(--muted); }
+    .bg-option.blur-bg { background: linear-gradient(135deg, #4b5563, #1f2937); }
+
+    .bg-upload-label {
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px dashed rgba(255,255,255,0.25);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 0.2s;
+    }
+    .bg-upload-label:hover { background: var(--surface-hover); }
+    .bg-upload-label svg { width: 18px; height: 18px; }
+
+    .toast {
+      position: fixed;
+      bottom: calc(240px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(30,30,35,0.98);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 200;
+      max-width: 85%;
+      text-align: center;
+      backdrop-filter: blur(20px);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: rgba(239,68,68,0.95); }
+    .toast.success { background: rgba(16,185,129,0.95); }
+
+    .loader {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 50;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .loader.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    .screen-live.floating {
+      position: absolute !important;
+      flex: none !important;
+      min-height: 0;
+      min-width: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.75), 0 0 0 2px rgba(255,255,255,0.25);
+      z-index: 40;
+      cursor: grab;
+      transition: box-shadow 0.2s;
+      touch-action: none;
+      background: #0d0d0f;
+    }
+    .screen-live.floating.grabbing {
+      cursor: grabbing;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.85), 0 0 0 2px rgba(99,102,241,0.65);
+    }
+    .screen-live.floating video,
+    .screen-live.floating .live-canvas { border-radius: 16px; }
+    .screen-live.floating .badge.live {
+      top: 6px; left: 6px; padding: 3px 7px; font-size: 8px; border-radius: 999px;
+    }
+    .screen-live.floating .badge.live .dot { width: 5px; height: 5px; }
+    .screen-live.floating .placeholder { font-size: 10px; padding: 8px; gap: 4px; }
+    .screen-live.floating .placeholder svg { width: 24px; height: 24px; }
+    .screen-live.floating .pan-hint,
+    .screen-live.floating .screen-tools { display: none !important; }
+
+    .float-pin-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.15s, background 0.2s;
+    }
+    .float-pin-btn svg { width: 12px; height: 12px; }
+    .float-pin-btn:active { transform: scale(0.9); }
+    .screen-live.floating .float-pin-btn { display: flex; }
+
+    .float-resize {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 22px;
+      height: 22px;
+      cursor: nwse-resize;
+      display: none;
+      z-index: 10;
+      touch-action: none;
+    }
+    .float-resize::before {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid rgba(255,255,255,0.75);
+      border-bottom: 2px solid rgba(255,255,255,0.75);
+      border-radius: 0 0 3px 0;
+    }
+    .screen-live.floating .float-resize { display: block; }
+
+    @media (max-height: 700px) {
+      .control-panel { padding: 8px 12px calc(8px + var(--safe-bottom)); gap: 8px; }
+      .circle-btn { width: 38px; height: 38px; }
+      .circle-btn.primary { width: 46px; height: 46px; }
+      .pill { padding: 7px 10px; font-size: 10px; }
+      .record-btn { padding: 12px; font-size: 13px; }
+      .split-btn { padding: 6px 2px; font-size: 9px; }
+      .expand-btn { padding: 8px 3px; font-size: 9px; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- MENUBAR -->
-<div class="menubar">
-  <div class="logo">OBS Pro</div>
+<div class="app">
+  <div class="phone-frame mode-9-16" id="phoneFrame">
+    <div class="video-area" id="videoArea">
 
-  <div class="menu-item">File
-    <div class="dropdown">
-      <div class="dropdown-item" data-action="screenshot">Take Screenshot <span class="dd-shortcut">Ctrl+S</span></div>
-      <div class="dropdown-item" data-action="record">Start/Stop Recording <span class="dd-shortcut">Ctrl+R</span></div>
-      <div class="dd-sep"></div>
-      <div class="dropdown-item" data-action="settings">Settings...</div>
-      <div class="dd-sep"></div>
-      <div class="dropdown-item" data-action="exit">Exit</div>
-    </div>
-  </div>
+      <div class="screen screen-live" id="liveScreen">
+        <span class="badge live" id="liveBadge" style="display:none">
+          <span class="dot"></span>
+          <span id="liveBadgeText">LIVE</span>
+        </span>
+        <video id="liveVideo" autoplay playsinline muted></video>
+        <canvas class="live-canvas" id="liveCanvas"></canvas>
+        <div class="placeholder" id="livePlaceholder">
+          <svg viewBox="0 0 24 24">
+            <path d="M23 7l-7 5 7 5V7z"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <span>Kamera belum aktif</span>
+        </div>
 
-  <div class="menu-item">Edit
-    <div class="dropdown">
-      <div class="dropdown-item" data-action="props">Source Properties <span class="dd-shortcut">Dbl-click</span></div>
-      <div class="dropdown-item" data-action="remove-source">Remove Source <span class="dd-shortcut">Del</span></div>
-      <div class="dd-sep"></div>
-      <div class="dropdown-item" data-action="audio-props">Advanced Audio Properties</div>
-    </div>
-  </div>
+        <div class="pan-hint" id="liveHint">✋ Geser · cubit untuk zoom</div>
 
-  <div class="menu-item">View
-    <div class="dropdown">
-      <div class="dropdown-item" data-action="fullscreen">Fullscreen Preview</div>
-      <div class="dropdown-item" data-action="toggle-stats">Toggle Stats</div>
-      <div class="dd-sep"></div>
-      <div class="dropdown-item" data-action="toggle-docks">Show/Hide Docks</div>
-    </div>
-  </div>
+        <div class="screen-tools hidden" id="liveTools">
+          <div class="tool-panel" data-panel>
+            <div class="pos-grid" data-grid></div>
+            <div class="tool-row">
+              <button type="button" data-zoom="-" title="Zoom out">−</button>
+              <span class="zoom-label" data-zoom-label>1.0×</span>
+              <button type="button" data-zoom="+" title="Zoom in">+</button>
+              <button type="button" data-reset title="Reset tampilan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                  <polyline points="3 4 3 10 9 10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button class="tool-toggle" type="button" data-toggle title="Atur posisi & zoom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="5 9 2 12 5 15"/>
+              <polyline points="9 5 12 2 15 5"/>
+              <polyline points="15 19 12 22 9 19"/>
+              <polyline points="19 9 22 12 19 15"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <line x1="12" y1="2" x2="12" y2="22"/>
+            </svg>
+          </button>
+        </div>
 
-  <div class="menu-item">Tools
-    <div class="dropdown">
-      <div class="dropdown-item" data-action="autoconfig">Auto-Configuration Wizard</div>
-      <div class="dropdown-item" data-action="test-audio">Test Audio Devices</div>
-    </div>
-  </div>
+        <button class="float-pin-btn" id="btnFloatPin" type="button" title="Kembalikan ke split">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+        <div class="float-resize" id="floatResize"></div>
+      </div>
 
-  <div class="menu-item">Help
-    <div class="dropdown">
-      <div class="dropdown-item" data-action="about">About OBS Pro Web</div>
-      <div class="dropdown-item" data-action="shortcuts">Keyboard Shortcuts</div>
-    </div>
-  </div>
-</div>
+      <div class="divider" id="divider" title="Geser untuk atur ukuran LIVE / UPLOAD">
+        <span class="split-pct" id="splitPct">40% / 60%</span>
+      </div>
 
-<!-- MAIN -->
-<div class="main">
+      <div class="screen screen-upload" id="uploadScreen">
+        <span class="badge upload" id="uploadBadge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span id="uploadBadgeText">UPLOAD</span>
+        </span>
+        <video id="uploadVideo" playsinline preload="metadata" autoplay></video>
+        <div class="placeholder" id="uploadPlaceholder">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Upload video dari galeri HP<br>atau klik "Layar" untuk rekam layar</span>
+        </div>
 
-  <!-- LEFT SIDEBAR -->
-  <div class="sidebar">
-    <div class="dock scenes-dock">
-      <div class="dock-header"><span>Scenes</span>
-        <div class="actions">
-          <button title="Add Scene" onclick="addScene()">+</button>
-          <button title="Remove Scene" onclick="removeScene()">−</button>
+        <div class="pan-hint" id="uploadHint">✋ Geser · cubit untuk zoom</div>
+
+        <div class="screen-tools hidden" id="uploadTools">
+          <div class="tool-panel" data-panel>
+            <div class="pos-grid" data-grid></div>
+            <div class="tool-row">
+              <button type="button" data-zoom="-" title="Zoom out">−</button>
+              <span class="zoom-label" data-zoom-label>1.0×</span>
+              <button type="button" data-zoom="+" title="Zoom in">+</button>
+              <button type="button" data-reset title="Reset tampilan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                  <polyline points="3 4 3 10 9 10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button class="tool-toggle" type="button" data-toggle title="Atur posisi & zoom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="5 9 2 12 5 15"/>
+              <polyline points="9 5 12 2 15 5"/>
+              <polyline points="15 19 12 22 9 19"/>
+              <polyline points="19 9 22 12 19 15"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <line x1="12" y1="2" x2="12" y2="22"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="video-progress" id="videoProgress">
+          <div class="video-progress-fill" id="videoProgressFill"></div>
         </div>
       </div>
-      <div class="dock-body" id="scene-list"></div>
-    </div>
 
-    <div class="dock sources-dock">
-      <div class="dock-header"><span>Sources</span>
-        <div class="actions">
-          <button title="Add Source" onclick="openAddSource()">+</button>
-          <button title="Remove Source" onclick="removeSource()">−</button>
+      <div class="ticker-overlay" id="tickerOverlay">
+        <div class="ticker-track" id="tickerTrack">
+          <span class="ticker-item"></span>
+          <span class="ticker-item"></span>
         </div>
       </div>
-      <div class="dock-body" id="source-list"></div>
-    </div>
-  </div>
 
-  <!-- CENTER -->
-  <div class="center">
-    <div class="preview-toolbar">
-      <button class="tb-btn" onclick="screenshot()" title="Screenshot">📷</button>
-      <button class="tb-btn" onclick="fullscreenPreview()" title="Fullscreen">⛶</button>
-      <button class="tb-btn" id="studioBtn" onclick="toggleStudioMode()" title="Studio Mode">🎬 Studio</button>
-      <div class="spacer"></div>
-      <span class="tb-info" id="res-info">1280 x 720</span>
-      <span class="tb-info" id="fps-info">-- fps</span>
     </div>
 
-    <div class="preview-area" id="preview-area">
-      <div class="preview-pane">
-        <span class="preview-label off" id="previewLabel">Preview</span>
-        <canvas id="previewCanvas" width="1280" height="720"></canvas>
+    <div class="rec-badge" id="recBadge">
+      <span class="rec-dot"></span>
+      <span id="recTimer">00:00</span>
+    </div>
+
+    <div class="control-panel">
+
+      <div class="ctrl-row">
+        <button class="circle-btn" id="btnBack" title="Mundur 5 detik">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button class="circle-btn primary" id="btnPlayPause" title="Play/Pause">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="circle-btn" id="btnNext" title="Maju 5 detik">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+        <button class="circle-btn" id="btnStop" title="Stop video">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+        </button>
       </div>
-      <div class="preview-pane" id="programPane" style="display:none;">
-        <span class="preview-label live" id="programLabel">🔴 Live</span>
-        <canvas id="programCanvas" width="1280" height="720"></canvas>
+
+      <div class="ctrl-row">
+        <button class="pill" id="btnStartCam">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 7l-7 5 7 5V7z"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          Kamera
+        </button>
+        <button class="pill" id="btnScreen" title="Rekam layar (screen share)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          Layar
+        </button>
+        <button class="pill icon-only hidden" id="btnSwitchCam" title="Ganti kamera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+        </button>
+        <button class="pill" id="btnMic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+          Mic
+        </button>
+        <button class="pill" id="btnBg" title="Ganti background LIVE">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+          </svg>
+          BG
+        </button>
+        <button class="pill" id="btnUpload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload
+        </button>
+        <button class="pill" id="btnQuality">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+            <line x1="1" y1="14" x2="7" y2="14"/>
+            <line x1="9" y1="8" x2="15" y2="8"/>
+            <line x1="17" y1="16" x2="23" y2="16"/>
+          </svg>
+          <span id="qualityLabel">HD</span>
+        </button>
       </div>
-    </div>
 
-    <div class="controls">
-      <button class="btn btn-stream" id="streamBtn" onclick="toggleStream()">▶ Start Streaming</button>
-      <button class="btn btn-record" id="recordBtn" onclick="toggleRecord()">⏺ Start Recording</button>
-      <button class="btn btn-sec" id="studioToggleBtn" onclick="toggleStudioMode()">🎬 Studio Mode</button>
-      <button class="btn btn-sec" onclick="toggleTransition()" id="transitionBtn" style="display:none;">⚡ Transition</button>
-      <button class="btn btn-sec" onclick="openSettings()">⚙ Settings</button>
-    </div>
-  </div>
+      <div class="ctrl-row expand-row">
+        <button class="expand-btn" data-expand="split" id="expandSplitBtn" type="button">
+          <span class="expand-icon">📐</span>
+          <span>Split</span>
+          <span class="expand-value" id="expandSplitLabel">40%</span>
+          <span class="expand-dot"></span>
+        </button>
+        <button class="expand-btn" data-expand="aspect" id="expandAspectBtn" type="button">
+          <span class="expand-icon">📱</span>
+          <span>Rasio</span>
+          <span class="expand-value" id="expandAspectLabel">9:16</span>
+          <span class="expand-dot"></span>
+        </button>
+        <button class="expand-btn" data-expand="float" id="expandFloatBtn" type="button">
+          <span class="expand-icon">📌</span>
+          <span>Float</span>
+          <span class="expand-value" id="expandFloatLabel"></span>
+          <span class="expand-dot"></span>
+        </button>
+        <button class="expand-btn" data-expand="ticker" id="expandTickerBtn" type="button">
+          <span class="expand-icon">📝</span>
+          <span>Teks</span>
+          <span class="expand-value" id="expandTickerLabel"></span>
+          <span class="expand-dot"></span>
+        </button>
+        <button class="expand-btn swap-quick" id="btnSwapScreens" type="button" title="Tukar posisi LIVE ↔ UPLOAD">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 4 12 9 17 4"/>
+            <polyline points="7 20 12 15 17 20"/>
+            <line x1="12" y1="9" x2="12" y2="15"/>
+          </svg>
+        </button>
+      </div>
 
-  <!-- RIGHT SIDEBAR -->
-  <div class="sidebar">
-    <div class="dock mixer-dock">
-      <div class="dock-header"><span>Audio Mixer</span>
-        <div class="actions">
-          <button title="Add Audio" onclick="openAddSource('audio')">+</button>
+      <div class="expand-panel" data-panel-for="split">
+        <div class="ctrl-row split-row">
+          <span class="split-label">SPLIT</span>
+          <button class="split-btn" data-split="0">0%</button>
+          <button class="split-btn" data-split="0.3">30%</button>
+          <button class="split-btn" data-split="0.5">50%</button>
+          <button class="split-btn" data-split="0.7">70%</button>
+          <button class="split-btn" data-split="1">100%</button>
+        </div>
+        <div class="ctrl-row" style="padding-top: 6px;">
+          <button class="swap-full-btn" id="btnSwapFull" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            <span id="swapFullText">Tukar Posisi LIVE ↔ UPLOAD</span>
+          </button>
         </div>
       </div>
-      <div class="dock-body" id="audio-list"></div>
+
+      <div class="expand-panel" data-panel-for="aspect">
+        <div class="ctrl-row split-row">
+          <span class="split-label">RASIO</span>
+          <button class="split-btn" data-aspect="asli">ASLI</button>
+          <button class="split-btn" data-aspect="16:9">16:9</button>
+          <button class="split-btn active" data-aspect="9:16">9:16</button>
+        </div>
+      </div>
+
+      <div class="expand-panel" data-panel-for="float">
+        <div class="ctrl-row split-row">
+          <span class="split-label">UKURAN</span>
+          <button class="split-btn" data-float-size="0.20">S</button>
+          <button class="split-btn active" data-float-size="0.30">M</button>
+          <button class="split-btn" data-float-size="0.40">L</button>
+          <button class="split-btn" data-float-size="0.50">XL</button>
+        </div>
+        <div class="ctrl-row split-row" style="padding-top: 6px;">
+          <span class="split-label">POSISI</span>
+          <button class="split-btn" data-float-pos="tl" title="Kiri atas">↖</button>
+          <button class="split-btn" data-float-pos="tr" title="Kanan atas">↗</button>
+          <button class="split-btn" data-float-pos="center" title="Tengah">⊙</button>
+          <button class="split-btn" data-float-pos="bl" title="Kiri bawah">↙</button>
+          <button class="split-btn" data-float-pos="br" title="Kanan bawah">↘</button>
+        </div>
+        <div class="ctrl-row" style="padding-top: 6px;">
+          <button class="swap-full-btn" id="btnToggleFloat" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+            </svg>
+            <span id="floatToggleText">Aktifkan Mode Mengambang</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="expand-panel" data-panel-for="ticker">
+        <div class="ctrl-row ticker-row">
+          <input type="text" id="tickerInput" class="ticker-input" placeholder="Teks berjalan di bawah..." maxlength="200">
+          <button class="ticker-btn" id="tickerSizeDown" title="Perkecil teks">A−</button>
+          <button class="ticker-btn" id="tickerSizeUp" title="Perbesar teks">A+</button>
+          <button class="pill icon-only" id="tickerToggle" title="Tampilkan ticker">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="ctrl-row ticker-row ticker-speed-row">
+          <span class="ticker-speed-icon" title="Lambat">🐢</span>
+          <input type="range" id="tickerSpeedRange" class="ticker-speed-range"
+                 min="30" max="500" step="10" value="100" title="Atur kecepatan teks">
+          <span class="ticker-speed-icon" title="Cepat">🐇</span>
+          <span class="ticker-speed-value" id="tickerSpeedValue">100</span>
+        </div>
+      </div>
+
+      <button class="record-btn" id="btnRecord">
+        <span class="rec-indicator"></span>
+        <span class="rec-text">Mulai Rekam</span>
+      </button>
+
     </div>
 
-    <div class="dock trans-dock">
-      <div class="dock-header"><span>Scene Transitions</span></div>
-      <div class="dock-body" id="trans-list"></div>
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span id="loaderText">Memproses...</span>
+    </div>
+
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="video/*" />
+
+<div class="modal" id="bgModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span>🎨 Ganti Background</span>
+      <button id="btnCloseBgModal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="bg-grid" id="bgGrid">
+        <button class="bg-option off-bg" data-bg="off">🚫 Nonaktif</button>
+        <button class="bg-option blur-bg" data-bg="blur">💨 Blur</button>
+        <button class="bg-option" data-bg="gradient1" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">Gradient</button>
+        <button class="bg-option" data-bg="gradient2" style="background:linear-gradient(135deg,#f97316,#ec4899)">Sunset</button>
+        <button class="bg-option" data-bg="gradient3" style="background:linear-gradient(135deg,#10b981,#06b6d4)">Ocean</button>
+        <button class="bg-option" data-bg="gradient4" style="background:linear-gradient(135deg,#1f2937,#111827)">Dark</button>
+      </div>
+      <label class="bg-upload-label">
+        <input type="file" id="bgImageInput" accept="image/*" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Upload Gambar Background
+      </label>
+      <div class="modal-info" id="bgInfo">Ganti latar belakang video LIVE — orang tetap terlihat, background disamarkan.</div>
     </div>
   </div>
 </div>
 
-<!-- STATUSBAR -->
-<div class="statusbar">
-  <div class="status-left">
-    <span><span class="status-dot" id="st-dot"></span><span id="st-text">Ready</span></span>
-    <span>CPU: <span id="st-cpu">0%</span></span>
-    <span>Res: <span id="st-res">1280x720</span></span>
-  </div>
-  <div class="status-right">
-    <span id="st-timer-wrap" style="display:none;"><span class="status-dot" id="st-timer-dot"></span><span id="st-timer">00:00:00</span></span>
-    <span>FPS: <span id="st-fps">--</span></span>
-    <span>Dropped: <span id="st-dropped">0</span></span>
-  </div>
-</div>
-
-<!-- MODALS -->
-<div class="modal-overlay" id="modal-settings">
-  <div class="modal">
-    <div class="modal-h"><span>Settings</span><button onclick="closeModal('modal-settings')">✕</button></div>
-    <div class="modal-b">
-      <label>Base Resolution</label>
-      <select id="set-res">
-        <option value="1280x720">1280 x 720</option>
-        <option value="1920x1080">1920 x 1080</option>
-        <option value="854x480">854 x 480</option>
-      </select>
-      <label>FPS</label>
-      <select id="set-fps"><option>30</option><option>60</option><option>24</option></select>
-      <label>Default Transition</label>
-      <select id="set-trans"><option value="fade">Fade (300ms)</option><option value="slide">Slide (400ms)</option><option value="cut">Cut (0ms)</option></select>
+<div class="modal" id="previewModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span>✅ Hasil Rekaman</span>
+      <button id="btnClosePreview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
     </div>
-    <div class="modal-f">
-      <button class="btn btn-sec" onclick="closeModal('modal-settings')">Cancel</button>
-      <button class="btn btn-stream" onclick="applySettings()">Apply</button>
+    <div class="modal-body">
+      <video id="previewVideo" controls playsinline></video>
+      <div class="modal-info" id="previewInfo"></div>
+      <div class="modal-actions">
+        <button class="modal-btn primary" id="btnSaveGallery">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Simpan ke Galeri
+        </button>
+        <button class="modal-btn secondary" id="btnDownload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Unduh File
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-add-source">
-  <div class="modal">
-    <div class="modal-h"><span>Add Source</span><button onclick="closeModal('modal-add-source')">✕</button></div>
-    <div class="modal-b">
-      <label>Source Type</label>
-      <select id="new-src-type">
-        <option value="color">Color Source</option>
-        <option value="text">Text Source</option>
-        <option value="image">Image Source</option>
-        <option value="media">Video File</option>
-        <option value="webcam">Video Capture Device (Webcam)</option>
-        <option value="screen">Display Capture (Screen)</option>
-        <option value="audio">Audio Input Capture (Mic)</option>
-      </select>
-      <label>Source Name</label>
-      <input type="text" id="new-src-name" placeholder="e.g., My Webcam">
-      <label>Preset</label>
-      <select id="new-src-preset">
-        <option value="default">Center (640x360)</option>
-        <option value="full">Full Screen</option>
-        <option value="topleft">Top Left (320x180)</option>
-        <option value="bottomright">Bottom Right (320x180)</option>
-      </select>
-    </div>
-    <div class="modal-f">
-      <button class="btn btn-sec" onclick="closeModal('modal-add-source')">Cancel</button>
-      <button class="btn btn-stream" onclick="confirmAddSource()">Add Source</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-props">
-  <div class="modal">
-    <div class="modal-h"><span id="props-title">Source Properties</span><button onclick="closeModal('modal-props')">✕</button></div>
-    <div class="modal-b" id="props-body"></div>
-    <div class="modal-f">
-      <button class="btn btn-sec" onclick="closeModal('modal-props')">Cancel</button>
-      <button class="btn btn-stream" onclick="applyProps()">Apply</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-info">
-  <div class="modal">
-    <div class="modal-h"><span id="info-title">Info</span><button onclick="closeModal('modal-info')">✕</button></div>
-    <div class="modal-b" id="info-body"></div>
-    <div class="modal-f">
-      <button class="btn btn-stream" onclick="closeModal('modal-info')">OK</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast-container"></div>
-<div id="ctx-menu"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-/* =====================================================
-   STATE
-===================================================== */
-const uid = () => Math.random().toString(36).slice(2, 9);
+/* ============================================================
+   KONFIGURASI
+   ============================================================ */
+const QUALITY_PRESETS = {
+  '480':  { w: 540,  bitrate: 2_000_000, label: 'SD'  },
+  '720':  { w: 720,  bitrate: 4_000_000, label: 'HD'  },
+  '1080': { w: 1080, bitrate: 8_000_000, label: 'FHD' }
+};
+const QUALITY_ORDER = ['480', '720', '1080'];
+const SEEK_STEP = 5;
+const DEFAULT_SPLIT = 0.40;
+const MIN_SPLIT = 0.0;
+const MAX_SPLIT = 1.0;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 6;
+const AUTO_STOP_ON_UPLOAD_END = true;
+const LOOP_UPLOAD_PREVIEW = true;
 
-const state = {
-  scenes: [],
-  activeSceneId: null,
-  stagingSceneId: null,
-  selectedSourceId: null,
-  studioMode: false,
-  streaming: false,
-  recording: false,
-  liveStart: 0,
-  recordStart: 0,
-  transition: { type: 'fade', duration: 300, anim: null },
-  settings: { width: 1280, height: 720, fps: 30 },
-  audioSources: [],
-  selectedTransType: 'fade',
-  showStats: true,
-  measuredFps: 0,
-  droppedFrames: 0
+const BG_GRADIENTS = {
+  gradient1: ['#6366f1', '#8b5cf6'],
+  gradient2: ['#f97316', '#ec4899'],
+  gradient3: ['#10b981', '#06b6d4'],
+  gradient4: ['#1f2937', '#111827'],
 };
 
-let recorder = null, recordChunks = [];
-let lastFrameTimes = [];
-
-/* =====================================================
-   INIT
-===================================================== */
-function init() {
-  const s1 = { id: uid(), name: 'Scene 1', sources: [] };
-  state.scenes.push(s1);
-  state.activeSceneId = s1.id;
-  state.stagingSceneId = s1.id;
-
-  // Default sources on scene 1
-  const colorSrc = makeSource('color', 'Red Background');
-  colorSrc.x = 0; colorSrc.y = 0; colorSrc.w = 1280; colorSrc.h = 720;
-  colorSrc.color = '#222244';
-  s1.sources.push(colorSrc);
-
-  const textSrc = makeSource('text', 'Welcome Text');
-  textSrc.x = 340; textSrc.y = 300; textSrc.w = 600; textSrc.h = 120;
-  textSrc.text = 'OBS Pro Web';
-  textSrc.fontSize = 64;
-  textSrc.color = '#ffffff';
-  s1.sources.push(textSrc);
-
-  // Default audio channels
-  addAudioChannel('Desktop Audio', null);
-  addAudioChannel('Mic/Aux', null);
-
-  renderAll();
-  requestAnimationFrame(renderLoop);
-  requestAnimationFrame(meterLoop);
-  setInterval(updateStats, 500);
-  setInterval(updateTimers, 1000);
-
-  window.addEventListener('resize', fitCanvases);
-  fitCanvases();
-  toast('OBS Pro Web siap digunakan!', 'success');
-}
-
-/* =====================================================
-   HELPERS
-===================================================== */
-function makeSource(type, name) {
-  return {
-    id: uid(), type, name,
-    x: 100, y: 100, w: 640, h: 360,
-    visible: true, locked: false,
-    color: '#ff4444', text: 'Text', fontSize: 48,
-    image: null, video: null, stream: null,
-    simulated: null
-  };
-}
-
-function getActiveScene() {
-  return state.scenes.find(s => s.id === state.activeSceneId);
-}
-function getStagingScene() {
-  return state.scenes.find(s => s.id === state.stagingSceneId);
-}
-function getEditScene() {
-  return state.studioMode ? getStagingScene() : getActiveScene();
-}
-function getSelectedSource() {
-  const sc = getEditScene();
-  return sc ? sc.sources.find(s => s.id === state.selectedSourceId) : null;
-}
-
-function toast(msg, type = 'info') {
-  const t = document.createElement('div');
-  t.className = 'toast ' + type;
-  t.textContent = msg;
-  document.getElementById('toast-container').appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-
-function showInfo(title, html) {
-  document.getElementById('info-title').textContent = title;
-  document.getElementById('info-body').innerHTML = html;
-  openModal('modal-info');
-}
-
-/* =====================================================
-   SOURCE CREATION
-===================================================== */
-async function createSourceAsync(type, name, preset) {
-  const src = makeSource(type, name);
-
-  // Preset placement
-  if (preset === 'full') { src.x = 0; src.y = 0; src.w = state.settings.width; src.h = state.settings.height; }
-  else if (preset === 'topleft') { src.x = 20; src.y = 20; src.w = 320; src.h = 180; }
-  else if (preset === 'bottomright') { src.x = state.settings.width - 340; src.y = state.settings.height - 200; src.w = 320; src.h = 180; }
-  else { src.x = (state.settings.width - 640) / 2; src.y = (state.settings.height - 360) / 2; src.w = 640; src.h = 360; }
-
-  if (type === 'color') src.color = '#ff4444';
-
-  if (type === 'text') {
-    src.text = 'Hello OBS';
-    src.fontSize = 48;
-    src.color = '#ffffff';
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  stream: null, facingMode: 'user',
+  screenOnUpload: false,
+  _prevUpload: null,
+  _screenTrack: null,
+  micStream: null, micEnabled: false,
+  uploadReady: false, isRecording: false,
+  audioCtx: null, micSource: null, uploadSource: null,
+  mediaRecorder: null, recordedChunks: [], recDest: null,
+  recStartTime: 0, timerInterval: null, drawRAF: null,
+  quality: '720',
+  aspectMode: '9:16',
+  splitRatio: DEFAULT_SPLIT,
+  swapped: false,
+  views: {
+    live:   { zoom: 1, panX: 0.5, panY: 0.5 },
+    upload: { zoom: 1, panX: 0.5, panY: 0.5 }
+  },
+  previewBlob: null, previewUrl: null, previewMime: '',
+  bg: { mode: 'off', image: null },
+  ticker: {
+    text: '', size: 24, enabled: false, speed: 100,
+    color: '#ffffff', startTime: Date.now()
+  },
+  floating: {
+    enabled: false,
+    x: 0.62, y: 0.06, w: 0.32, aspect: 9 / 16,
+    _px: 0, _py: 0, _pw: 0, _ph: 0
   }
+};
 
-  if (type === 'image') {
-    const file = await pickFile('image/*');
-    if (!file) return null;
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    await new Promise(r => img.onload = r);
-    src.image = img;
-    // Preserve aspect
-    src.h = Math.round(src.w * (img.height / img.width));
+/* ============================================================
+   ELEMENTS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const liveVideo         = $('liveVideo');
+const uploadVideo       = $('uploadVideo');
+const liveScreen        = $('liveScreen');
+const uploadScreen      = $('uploadScreen');
+const videoArea         = $('videoArea');
+const phoneFrame        = $('phoneFrame');
+const livePlaceholder   = $('livePlaceholder');
+const uploadPlaceholder = $('uploadPlaceholder');
+const btnStartCam       = $('btnStartCam');
+const btnScreen         = $('btnScreen');
+const btnSwitchCam      = $('btnSwitchCam');
+const btnMic            = $('btnMic');
+const btnBg             = $('btnBg');
+const btnUpload         = $('btnUpload');
+const btnQuality        = $('btnQuality');
+const btnRecord         = $('btnRecord');
+const fileInput         = $('fileInput');
+const recBadge          = $('recBadge');
+const recTimerEl        = $('recTimer');
+const loader            = $('loader');
+const loaderText        = $('loaderText');
+const toast             = $('toast');
+const previewModal      = $('previewModal');
+const previewVideo      = $('previewVideo');
+const previewInfo       = $('previewInfo');
+const btnClosePreview   = $('btnClosePreview');
+const btnSaveGallery    = $('btnSaveGallery');
+const btnDownload       = $('btnDownload');
+const qualityLabel      = $('qualityLabel');
+const recText           = btnRecord.querySelector('.rec-text');
+const splitPct          = $('splitPct');
+const divider           = $('divider');
+const bgModal           = $('bgModal');
+const btnCloseBgModal   = $('btnCloseBgModal');
+const bgImageInput      = $('bgImageInput');
+const bgInfoEl          = $('bgInfo');
+const liveBadge         = $('liveBadge');
+const liveBadgeText     = $('liveBadgeText');
+const uploadBadge       = $('uploadBadge');
+const uploadBadgeText   = $('uploadBadgeText');
+
+const btnPlayPause      = $('btnPlayPause');
+const btnBack           = $('btnBack');
+const btnNext           = $('btnNext');
+const btnStop           = $('btnStop');
+const videoProgress     = $('videoProgress');
+const videoProgressFill = $('videoProgressFill');
+
+const tickerOverlay     = $('tickerOverlay');
+const tickerTrack       = $('tickerTrack');
+const tickerInput       = $('tickerInput');
+const tickerSizeDown    = $('tickerSizeDown');
+const tickerSizeUp      = $('tickerSizeUp');
+const tickerToggle      = $('tickerToggle');
+const tickerSpeedRange  = $('tickerSpeedRange');
+const tickerSpeedValue  = $('tickerSpeedValue');
+
+const expandSplitBtn    = $('expandSplitBtn');
+const expandAspectBtn   = $('expandAspectBtn');
+const expandFloatBtn    = $('expandFloatBtn');
+const expandTickerBtn   = $('expandTickerBtn');
+const expandSplitLabel  = $('expandSplitLabel');
+const expandAspectLabel = $('expandAspectLabel');
+const expandFloatLabel  = $('expandFloatLabel');
+const expandTickerLabel = $('expandTickerLabel');
+
+const btnSwapScreens    = $('btnSwapScreens');
+const btnSwapFull       = $('btnSwapFull');
+const swapFullText      = $('swapFullText');
+
+const btnToggleFloat    = $('btnToggleFloat');
+const floatToggleText   = $('floatToggleText');
+const btnFloatPin       = $('btnFloatPin');
+const floatResizeEl     = $('floatResize');
+
+const RECORD_LOCKED_BTNS = [btnStartCam, btnScreen, btnSwitchCam, btnMic, btnUpload, btnQuality, btnBg, btnSwapScreens, btnSwapFull];
+const RECORD_ACTIVE_BTNS = [btnPlayPause, btnBack, btnNext, btnStop];
+
+const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+const ICON_TICKER_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+const ICON_TICKER_OFF = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const clamp01 = v => Math.min(1, Math.max(0, v));
+
+/* ============================================================
+   CANVAS OVERLAY
+   ============================================================ */
+const liveCanvas = $('liveCanvas');
+const liveCanvasCtx = liveCanvas.getContext('2d', { alpha: true, desynchronized: true });
+
+/* ============================================================
+   CONTROLLER
+   ============================================================ */
+const VIEW_CTRL = [
+  {
+    key: 'live', screen: liveScreen, video: liveVideo,
+    tools: $('liveTools'), hint: $('liveHint'),
+    isReady: () => !!state.stream && liveVideo.videoWidth > 0
+  },
+  {
+    key: 'upload', screen: uploadScreen, video: uploadVideo,
+    tools: $('uploadTools'), hint: $('uploadHint'),
+    isReady: () => (state.uploadReady || state.screenOnUpload) && uploadVideo.videoWidth > 0
   }
+];
+const ctrlByKey = Object.fromEntries(VIEW_CTRL.map(c => [c.key, c]));
 
-  if (type === 'media') {
-    const file = await pickFile('video/*');
-    if (!file) return null;
-    const vid = document.createElement('video');
-    vid.src = URL.createObjectURL(file);
-    vid.loop = true; vid.muted = true; vid.playsInline = true;
-    vid.play().catch(()=>{});
-    await new Promise(r => vid.onloadedmetadata = r);
-    src.video = vid;
-    src.h = Math.round(src.w * (vid.videoHeight / vid.videoWidth));
-  }
-
-  if (type === 'webcam' || type === 'screen') {
-    try {
-      const stream = type === 'webcam'
-        ? await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      const vid = document.createElement('video');
-      vid.srcObject = stream;
-      vid.muted = true; vid.autoplay = true; vid.playsInline = true;
-      await vid.play();
-      src.video = vid;
-      src.stream = stream;
-      toast(`${type === 'webcam' ? 'Webcam' : 'Screen'} capture aktif`, 'success');
-    } catch (err) {
-      // Fallback: simulated animated source
-      src.simulated = type;
-      toast(`Izin ditolak / tidak tersedia. Menggunakan simulasi.`, 'error');
-    }
-  }
-
-  if (type === 'audio') {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      addAudioChannel(name, stream);
-      toast('Mikrofon terhubung', 'success');
-    } catch (err) {
-      addAudioChannel(name, null);
-      toast('Mic tidak tersedia, menggunakan simulasi', 'error');
-    }
-    return null; // Audio sources don't appear on canvas
-  }
-
-  return src;
+/* ============================================================
+   ORIENTASI & ASPECT
+   ============================================================ */
+function isLandscapeMode() {
+  if (state.aspectMode === '16:9') return true;
+  if (state.aspectMode === '9:16') return false;
+  return videoArea.clientWidth > videoArea.clientHeight;
 }
 
-function pickFile(accept) {
-  return new Promise(resolve => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = accept;
-    input.onchange = () => resolve(input.files[0] || null);
-    input.oncancel = () => resolve(null);
-    input.click();
+function updateDividerOrientation() {
+  const landscape = isLandscapeMode();
+  divider.classList.toggle('vert', landscape);
+  videoArea.style.flexDirection = landscape ? 'row' : 'column';
+}
+
+function setAspectMode(mode) {
+  if (state.isRecording) { showToast('Stop rekaman dulu untuk ganti rasio', 'error'); return; }
+  state.aspectMode = mode;
+  phoneFrame.classList.remove('mode-9-16', 'mode-16-9', 'mode-asli');
+  phoneFrame.classList.add('mode-' + mode.replace(':', '-'));
+  document.querySelectorAll('[data-aspect]').forEach(b => {
+    b.classList.toggle('active', b.dataset.aspect === mode);
   });
-}
-
-/* =====================================================
-   RENDER SOURCES TO CANVAS
-===================================================== */
-function drawSource(ctx, s, time) {
-  if (!s.visible) return;
-  try {
-    if (s.type === 'color' || s.simulated) {
-      // Animated for simulated
-      if (s.simulated) {
-        const hue = (time / 20) % 360;
-        ctx.fillStyle = s.simulated === 'webcam'
-          ? `hsl(210,50%,${30 + Math.sin(time/300)*10}%)`
-          : `hsl(${hue},60%,40%)`;
-        ctx.fillRect(s.x, s.y, s.w, s.h);
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(s.simulated === 'webcam' ? '📷 Webcam (Simulasi)' : '🖥 Screen (Simulasi)',
-          s.x + s.w/2, s.y + s.h/2);
-      } else {
-        ctx.fillStyle = s.color;
-        ctx.fillRect(s.x, s.y, s.w, s.h);
-      }
-    }
-    else if (s.type === 'text') {
-      ctx.fillStyle = s.color || '#fff';
-      ctx.font = `bold ${s.fontSize || 48}px 'Segoe UI', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(s.text || 'Text', s.x + s.w/2, s.y + s.h/2);
-    }
-    else if (s.type === 'image' && s.image) {
-      ctx.drawImage(s.image, s.x, s.y, s.w, s.h);
-    }
-    else if ((s.type === 'media' || s.type === 'webcam' || s.type === 'screen') && s.video) {
-      if (s.video.readyState >= 2 && s.video.videoWidth > 0) {
-        ctx.drawImage(s.video, s.x, s.y, s.w, s.h);
-      } else {
-        ctx.fillStyle = '#222';
-        ctx.fillRect(s.x, s.y, s.w, s.h);
-      }
-    }
-  } catch(e) { /* silent */ }
-}
-
-function renderScene(ctx, scene, alpha = 1, offsetX = 0) {
-  if (!scene) return;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(offsetX, 0);
-  const now = performance.now();
-  scene.sources.forEach(s => drawSource(ctx, s, now));
-  ctx.restore();
-}
-
-function drawSelection(ctx, s) {
-  if (!s) return;
-  ctx.save();
-  ctx.strokeStyle = '#00bfff';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([5, 5]);
-  ctx.strokeRect(s.x, s.y, s.w, s.h);
-  ctx.setLineDash([]);
-  // Resize handle (bottom-right)
-  ctx.fillStyle = '#00bfff';
-  ctx.fillRect(s.x + s.w - 8, s.y + s.h - 8, 12, 12);
-  // Label
-  ctx.fillStyle = 'rgba(0,0,0,.8)';
-  ctx.fillRect(s.x, s.y - 20, ctx.measureText(s.name).width + 60, 20);
-  ctx.fillStyle = '#00bfff';
-  ctx.font = '12px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(` ${s.name}  ${Math.round(s.w)}x${Math.round(s.h)}`, s.x, s.y - 10);
-  ctx.restore();
-}
-
-function renderLoop() {
-  const now = performance.now();
-  // FPS calc
-  lastFrameTimes.push(now);
-  lastFrameTimes = lastFrameTimes.filter(t => now - t < 1000);
-  state.measuredFps = lastFrameTimes.length;
-
-  // === Preview Canvas ===
-  const previewCanvas = document.getElementById('previewCanvas');
-  const pCtx = previewCanvas.getContext('2d');
-  pCtx.fillStyle = '#000';
-  pCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-
-  const previewScene = state.studioMode ? getStagingScene() : getActiveScene();
-
-  // Transition in normal mode
-  if (!state.studioMode && state.transition.anim) {
-    const a = state.transition.anim;
-    const elapsed = now - a.start;
-    const p = Math.min(1, elapsed / a.duration);
-    if (p >= 1) {
-      state.transition.anim = null;
-      renderScene(pCtx, getActiveScene());
+  requestAnimationFrame(() => {
+    updateDividerOrientation();
+    applyQuality(state.quality);
+    applyAllViews();
+    updateTickerDOM();
+    if (state.floating.enabled) updateFloatingPosition();
+    if (mode === '16:9' && window.innerHeight > window.innerWidth) {
+      setTimeout(() => showToast('📱 Putar HP ke landscape untuk preview lebih lega'), 400);
     } else {
-      const fromScene = state.scenes.find(s => s.id === a.fromId);
-      const toScene = state.scenes.find(s => s.id === a.toId);
-      if (a.type === 'fade') {
-        renderScene(pCtx, fromScene, 1);
-        renderScene(pCtx, toScene, p);
-      } else if (a.type === 'slide') {
-        const w = previewCanvas.width;
-        renderScene(pCtx, fromScene, 1, -w * p);
-        renderScene(pCtx, toScene, 1, w * (1 - p));
-      }
+      const labels = { asli: 'ASLI', '16:9': '16:9 (Landscape)', '9:16': '9:16 (Portrait)' };
+      showToast('Rasio: ' + (labels[mode] || mode));
     }
-  } else {
-    renderScene(pCtx, previewScene);
+  });
+  updateExpandLabels();
+}
+
+/* ============================================================
+   LABELS
+   ============================================================ */
+function updateExpandLabels() {
+  if (expandSplitLabel) {
+    const pct = Math.round(state.splitRatio * 100);
+    expandSplitLabel.textContent = state.swapped ? `↕${pct}%` : `${pct}%`;
+    expandSplitBtn.classList.toggle('has-value', state.swapped || pct !== 40);
   }
-
-  // Draw selection in edit scene
-  if (state.selectedSourceId) {
-    const selected = getSelectedSource();
-    if (selected) drawSelection(pCtx, selected);
+  if (expandAspectLabel) {
+    expandAspectLabel.textContent = state.aspectMode;
+    expandAspectBtn.classList.toggle('has-value', state.aspectMode !== '9:16');
   }
+  if (expandFloatLabel) {
+    expandFloatLabel.textContent = state.floating.enabled ? 'ON' : '';
+    expandFloatBtn.classList.toggle('has-value', state.floating.enabled);
+  }
+  if (expandTickerLabel) {
+    const active = state.ticker.enabled && state.ticker.text;
+    expandTickerLabel.textContent = active ? 'ON' : '';
+    expandTickerBtn.classList.toggle('has-value', !!active);
+  }
+  updateSwapBtns();
+  updateFloatUI();
+}
 
-  // === Program Canvas (studio mode) ===
-  if (state.studioMode) {
-    const progCanvas = document.getElementById('programCanvas');
-    const gCtx = progCanvas.getContext('2d');
-    gCtx.fillStyle = '#000';
-    gCtx.fillRect(0, 0, progCanvas.width, progCanvas.height);
+function updateSwapBtns() {
+  if (btnSwapScreens) {
+    btnSwapScreens.classList.toggle('active', state.swapped);
+    btnSwapScreens.title = state.swapped
+      ? 'Kembalikan: LIVE di atas, UPLOAD di bawah'
+      : 'Tukar: UPLOAD di atas, LIVE di bawah';
+  }
+  if (btnSwapFull) btnSwapFull.classList.toggle('active', state.swapped);
+  if (swapFullText) {
+    swapFullText.textContent = state.swapped
+      ? 'Kembalikan Posisi Semula'
+      : 'Tukar Posisi LIVE ↔ UPLOAD';
+  }
+}
 
-    if (state.transition.anim) {
-      const a = state.transition.anim;
-      const elapsed = now - a.start;
-      const p = Math.min(1, elapsed / a.duration);
-      if (p >= 1) {
-        state.transition.anim = null;
-        renderScene(gCtx, getActiveScene());
-      } else {
-        const fromScene = state.scenes.find(s => s.id === a.fromId);
-        const toScene = state.scenes.find(s => s.id === a.toId);
-        if (a.type === 'fade') {
-          renderScene(gCtx, fromScene, 1);
-          renderScene(gCtx, toScene, p);
-        } else if (a.type === 'slide') {
-          const w = progCanvas.width;
-          renderScene(gCtx, fromScene, 1, -w * p);
-          renderScene(gCtx, toScene, 1, w * (1 - p));
-        }
-      }
-    } else {
-      renderScene(gCtx, getActiveScene());
+function updateFloatUI() {
+  if (floatToggleText) {
+    floatToggleText.textContent = state.floating.enabled
+      ? 'Kembalikan ke Split'
+      : 'Aktifkan Mode Mengambang';
+  }
+  if (btnToggleFloat) btnToggleFloat.classList.toggle('active', state.floating.enabled);
+}
+
+/* ============================================================
+   ACCORDION
+   ============================================================ */
+function closeAllExpand() {
+  document.querySelectorAll('.expand-panel').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.expand-btn').forEach(b => b.classList.remove('open'));
+}
+
+document.querySelectorAll('.expand-btn').forEach(btn => {
+  if (!btn.dataset.expand) return;
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.expand;
+    const panel = document.querySelector(`.expand-panel[data-panel-for="${key}"]`);
+    if (!panel) return;
+    const wasOpen = panel.classList.contains('open');
+    closeAllExpand();
+    if (!wasOpen) {
+      panel.classList.add('open');
+      btn.classList.add('open');
+      if (key === 'ticker') setTimeout(() => tickerInput.focus(), 60);
+    }
+  });
+});
+
+document.querySelectorAll('.expand-panel[data-panel-for="split"] [data-split]').forEach(b => {
+  b.addEventListener('click', () => setTimeout(closeAllExpand, 120));
+});
+document.querySelectorAll('.expand-panel[data-panel-for="aspect"] [data-aspect]').forEach(b => {
+  b.addEventListener('click', () => setTimeout(closeAllExpand, 120));
+});
+
+/* ============================================================
+   SWAP
+   ============================================================ */
+function swapScreens() {
+  if (state.isRecording) { showToast('Stop rekaman dulu untuk tukar posisi', 'error'); return; }
+  if (state.floating.enabled) { showToast('Nonaktifkan mode mengambang dulu', 'error'); return; }
+  state.swapped = !state.swapped;
+  const firstScreen = state.swapped ? uploadScreen : liveScreen;
+  const secondScreen = state.swapped ? liveScreen : uploadScreen;
+  firstScreen.style.order = '1';
+  divider.style.order = '2';
+  secondScreen.style.order = '3';
+  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
+  firstScreen.style.flex = `${r} 1 0`;
+  secondScreen.style.flex = `${1 - r} 1 0`;
+  updateSplitPct(); updateSplitPresets(); updateExpandLabels();
+  requestAnimationFrame(applyAllViews);
+  showToast(state.swapped
+    ? '🔄 Ditukar: UPLOAD di atas, LIVE di bawah'
+    : '🔄 Dikembalikan: LIVE di atas, UPLOAD di bawah', 'success');
+}
+if (btnSwapScreens) btnSwapScreens.addEventListener('click', swapScreens);
+if (btnSwapFull) btnSwapFull.addEventListener('click', swapScreens);
+
+/* ============================================================
+   FLOATING LIVE
+   ============================================================ */
+function toggleFloating(force) {
+  if (state.isRecording) { showToast('Stop rekaman dulu untuk ubah mode mengambang', 'error'); return; }
+  const next = typeof force === 'boolean' ? force : !state.floating.enabled;
+  state.floating.enabled = next;
+  if (next) {
+    if (state.swapped) {
+      state.swapped = false;
+      liveScreen.style.order = '';
+      uploadScreen.style.order = '';
+      liveScreen.style.flex = '';
+      uploadScreen.style.flex = '';
+    }
+    if (liveVideo.videoWidth && liveVideo.videoHeight) {
+      state.floating.aspect = liveVideo.videoWidth / liveVideo.videoHeight;
     }
   }
-
-  requestAnimationFrame(renderLoop);
+  applyFloatingLayout();
+  updateExpandLabels();
+  updateFloatingSizePresets();
+  if (next) showToast('📌 Live mengambang — geser bebas, tarik sudut untuk ukuran', 'success');
+  else showToast('Live kembali ke mode split');
 }
 
-/* =====================================================
-   METER / AUDIO
-===================================================== */
-function addAudioChannel(name, stream) {
-  const ch = { id: uid(), name, stream, muted: false, volume: 100, level: 0, analyser: null };
-  if (stream) {
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      const actx = new AC();
-      const src = actx.createMediaStreamSource(stream);
-      const analyser = actx.createAnalyser();
-      analyser.fftSize = 128;
-      src.connect(analyser);
-      ch.analyser = analyser;
-      ch.actx = actx;
-    } catch(e) {}
-  }
-  state.audioSources.push(ch);
-  renderAudioChannels();
-  return ch;
-}
-
-function meterLoop() {
-  state.audioSources.forEach(ch => {
-    if (ch.analyser) {
-      const data = new Uint8Array(ch.analyser.frequencyBinCount);
-      ch.analyser.getByteFrequencyData(data);
-      let sum = 0;
-      for (let i = 0; i < data.length; i++) sum += data[i];
-      const avg = sum / data.length;
-      ch.level = ch.muted ? 0 : Math.min(100, avg * 1.5 * (ch.volume / 100));
-    } else {
-      // Simulated
-      ch.level = ch.muted ? 0
-        : Math.max(0, Math.min(100, (30 + Math.random() * 45) * (ch.volume / 100)));
-    }
-    const el = document.getElementById('meter-' + ch.id);
-    if (el) el.style.width = ch.level + '%';
-  });
-  requestAnimationFrame(meterLoop);
-}
-
-/* =====================================================
-   RENDER LISTS
-===================================================== */
-function renderAll() {
-  renderScenes();
-  renderSources();
-  renderAudioChannels();
-  renderTransitions();
-}
-
-function renderScenes() {
-  const list = document.getElementById('scene-list');
-  list.innerHTML = '';
-  state.scenes.forEach(sc => {
-    const isActive = sc.id === state.activeSceneId;
-    const isStaging = sc.id === state.stagingSceneId;
-    const div = document.createElement('div');
-    div.className = 'scene-item' + (isActive && !state.studioMode ? ' active' : '') + (isStaging && state.studioMode ? ' active' : '');
-    div.innerHTML = `<span class="icon"></span>${sc.name}`;
-    div.onclick = () => switchScene(sc.id);
-    div.ondblclick = () => renameScene(sc.id);
-    list.appendChild(div);
-  });
-}
-
-function renderSources() {
-  const list = document.getElementById('source-list');
-  list.innerHTML = '';
-  const sc = getEditScene();
-  if (!sc) return;
-  // Reverse order (top = front)
-  [...sc.sources].reverse().forEach(src => {
-    const div = document.createElement('div');
-    div.className = 'source-item' +
-      (src.id === state.selectedSourceId ? ' active' : '') +
-      (!src.visible ? ' hidden-src' : '') +
-      (src.locked ? ' locked-src' : '');
-    div.innerHTML = `
-      <span class="icon"></span>
-      <span>${src.name}</span>
-      <button class="vis" title="Toggle Visibility">${src.visible ? '👁' : '🚫'}</button>
-    `;
-    div.onclick = (e) => {
-      if (e.target.classList.contains('vis')) return;
-      state.selectedSourceId = src.id;
-      renderSources();
-    };
-    div.querySelector('.vis').onclick = (e) => {
-      e.stopPropagation();
-      src.visible = !src.visible;
-      renderSources();
-    };
-    div.ondblclick = () => openProperties(src.id);
-    div.oncontextmenu = (e) => { e.preventDefault(); showSourceContext(e, src.id); };
-    list.appendChild(div);
-  });
-}
-
-function renderAudioChannels() {
-  const list = document.getElementById('audio-list');
-  list.innerHTML = '';
-  state.audioSources.forEach(ch => {
-    const div = document.createElement('div');
-    div.className = 'audio-ch';
-    div.innerHTML = `
-      <span class="name" title="${ch.name}">${ch.name}</span>
-      <input type="range" class="audio-slider" min="0" max="100" value="${ch.volume}">
-      <div class="audio-meter"><div class="audio-meter-fill" id="meter-${ch.id}"></div></div>
-      <button class="audio-btn ${ch.muted ? 'muted' : ''}">${ch.muted ? '🔇' : '🔊'}</button>
-      <button class="audio-btn" title="Remove">✕</button>
-    `;
-    const slider = div.querySelector('input');
-    slider.oninput = () => { ch.volume = +slider.value; };
-    div.querySelectorAll('.audio-btn')[0].onclick = (e) => {
-      ch.muted = !ch.muted;
-      e.target.textContent = ch.muted ? '🔇' : '🔊';
-      e.target.classList.toggle('muted', ch.muted);
-    };
-    div.querySelectorAll('.audio-btn')[1].onclick = () => {
-      if (ch.stream) ch.stream.getTracks().forEach(t => t.stop());
-      state.audioSources = state.audioSources.filter(x => x.id !== ch.id);
-      renderAudioChannels();
-    };
-    list.appendChild(div);
-  });
-}
-
-function renderTransitions() {
-  const types = [
-    { id: 'fade', name: 'Fade', dur: 300 },
-    { id: 'cut', name: 'Cut', dur: 0 },
-    { id: 'slide', name: 'Slide', dur: 400 }
-  ];
-  const list = document.getElementById('trans-list');
-  list.innerHTML = '';
-  types.forEach(t => {
-    const div = document.createElement('div');
-    div.className = 'trans-item' + (t.id === state.selectedTransType ? ' active' : '');
-    div.innerHTML = `${t.name}<span class="trans-dur">${t.dur}ms</span>`;
-    div.onclick = () => {
-      state.selectedTransType = t.id;
-      state.transition.type = t.id;
-      state.transition.duration = t.dur;
-      renderTransitions();
-    };
-    list.appendChild(div);
-  });
-}
-
-/* =====================================================
-   SCENE MANAGEMENT
-===================================================== */
-function addScene() {
-  const name = prompt('Scene name:', `Scene ${state.scenes.length + 1}`);
-  if (!name) return;
-  if (state.scenes.some(s => s.name === name)) { toast('Nama scene sudah ada', 'error'); return; }
-  const sc = { id: uid(), name, sources: [] };
-  state.scenes.push(sc);
-  if (state.studioMode) state.stagingSceneId = sc.id;
-  else state.activeSceneId = sc.id;
-  renderScenes(); renderSources();
-  toast(`Scene "${name}" ditambahkan`, 'success');
-}
-
-function removeScene() {
-  if (state.scenes.length <= 1) { toast('Tidak bisa hapus scene terakhir', 'error'); return; }
-  const targetId = state.studioMode ? state.stagingSceneId : state.activeSceneId;
-  const idx = state.scenes.findIndex(s => s.id === targetId);
-  if (!confirm(`Hapus scene "${state.scenes[idx].name}"?`)) return;
-  state.scenes.splice(idx, 1);
-  const newId = state.scenes[Math.max(0, idx - 1)].id;
-  if (state.studioMode) state.stagingSceneId = newId;
-  else state.activeSceneId = newId;
-  renderScenes(); renderSources();
-  toast('Scene dihapus', 'success');
-}
-
-function renameScene(id) {
-  const sc = state.scenes.find(s => s.id === id);
-  if (!sc) return;
-  const name = prompt('Nama baru:', sc.name);
-  if (name && name !== sc.name) { sc.name = name; renderScenes(); }
-}
-
-function switchScene(id) {
-  if (state.studioMode) {
-    state.stagingSceneId = id;
-    renderScenes(); renderSources();
-  } else {
-    // Animate transition
-    const fromId = state.activeSceneId;
-    if (fromId === id) return;
-    state.activeSceneId = id;
-    state.stagingSceneId = id;
-    state.selectedSourceId = null;
-    if (state.transition.type !== 'cut') {
-      state.transition.anim = {
-        fromId, toId: id,
-        type: state.transition.type,
-        duration: state.transition.duration,
-        start: performance.now()
-      };
-    }
-    renderScenes(); renderSources();
-  }
-}
-
-function toggleTransition() {
-  if (!state.studioMode) return;
-  const fromId = state.activeSceneId;
-  if (fromId === state.stagingSceneId) return;
-  state.activeSceneId = state.stagingSceneId;
-  if (state.transition.type !== 'cut') {
-    state.transition.anim = {
-      fromId, toId: state.activeSceneId,
-      type: state.transition.type,
-      duration: state.transition.duration,
-      start: performance.now()
-    };
-  }
-  renderScenes();
-  toast('Transition complete', 'success');
-}
-
-/* =====================================================
-   SOURCE MANAGEMENT
-===================================================== */
-function openAddSource(presetType) {
-  if (presetType === 'audio') {
-    document.getElementById('new-src-type').value = 'audio';
-  }
-  document.getElementById('new-src-name').value = '';
-  openModal('modal-add-source');
-}
-
-async function confirmAddSource() {
-  const type = document.getElementById('new-src-type').value;
-  const name = document.getElementById('new-src-name').value.trim() ||
-    (type.charAt(0).toUpperCase() + type.slice(1) + ' ' + (getEditScene().sources.length + 1));
-  const preset = document.getElementById('new-src-preset').value;
-  closeModal('modal-add-source');
-
-  try {
-    const src = await createSourceAsync(type, name, preset);
-    if (src) {
-      getEditScene().sources.push(src);
-      state.selectedSourceId = src.id;
-      renderSources();
-      toast(`Source "${name}" ditambahkan`, 'success');
-    }
-  } catch(e) {
-    toast('Gagal menambahkan source: ' + e.message, 'error');
-  }
-}
-
-function removeSource() {
-  const sc = getEditScene();
-  if (!sc) return;
-  if (!state.selectedSourceId) { toast('Pilih source dulu', 'error'); return; }
-  const idx = sc.sources.findIndex(s => s.id === state.selectedSourceId);
-  if (idx < 0) return;
-  const src = sc.sources[idx];
-  if (src.stream) src.stream.getTracks().forEach(t => t.stop());
-  sc.sources.splice(idx, 1);
-  state.selectedSourceId = null;
-  renderSources();
-  toast('Source dihapus', 'success');
-}
-
-function moveSource(dir) {
-  const sc = getEditScene();
-  if (!sc || !state.selectedSourceId) return;
-  const idx = sc.sources.findIndex(s => s.id === state.selectedSourceId);
-  if (idx < 0) return;
-  if (dir === 'up' && idx < sc.sources.length - 1) {
-    [sc.sources[idx], sc.sources[idx + 1]] = [sc.sources[idx + 1], sc.sources[idx]];
-  } else if (dir === 'down' && idx > 0) {
-    [sc.sources[idx], sc.sources[idx - 1]] = [sc.sources[idx - 1], sc.sources[idx]];
-  }
-  renderSources();
-}
-
-/* =====================================================
-   PROPERTIES DIALOG
-===================================================== */
-let propsEditingId = null;
-
-function openProperties(sourceId) {
-  const sc = getEditScene();
-  const src = sc.sources.find(s => s.id === sourceId);
-  if (!src) return;
-  propsEditingId = sourceId;
-
-  document.getElementById('props-title').textContent = 'Properties: ' + src.name;
-  const body = document.getElementById('props-body');
-  let html = `
-    <label>Name</label>
-    <input type="text" id="p-name" value="${escapeHtml(src.name)}">
-    <label>Position & Size</label>
-    <div class="row">
-      <input type="number" id="p-x" value="${src.x}" placeholder="X">
-      <input type="number" id="p-y" value="${src.y}" placeholder="Y">
-    </div>
-    <div class="row" style="margin-top:6px;">
-      <input type="number" id="p-w" value="${src.w}" placeholder="W">
-      <input type="number" id="p-h" value="${src.h}" placeholder="H">
-    </div>
-  `;
-
-  if (src.type === 'color') {
-    html += `
-      <label>Color</label>
-      <input type="color" id="p-color" value="${src.color || '#ff4444'}">
-    `;
-  }
-  if (src.type === 'text') {
-    html += `
-      <label>Text</label>
-      <textarea id="p-text" rows="3">${escapeHtml(src.text || '')}</textarea>
-      <label>Font Size</label>
-      <input type="number" id="p-font" value="${src.fontSize || 48}">
-      <label>Color</label>
-      <input type="color" id="p-color" value="${src.color || '#ffffff'}">
-    `;
-  }
-
-  html += `
-    <label style="margin-top:14px;">
-      <input type="checkbox" id="p-locked" ${src.locked ? 'checked' : ''} style="width:auto;margin-right:6px;">
-      Lock source position
-    </label>
-  `;
-  body.innerHTML = html;
-  openModal('modal-props');
-}
-
-function applyProps() {
-  const sc = getEditScene();
-  const src = sc.sources.find(s => s.id === propsEditingId);
-  if (!src) { closeModal('modal-props'); return; }
-
-  src.name = document.getElementById('p-name').value;
-  src.x = +document.getElementById('p-x').value;
-  src.y = +document.getElementById('p-y').value;
-  src.w = +document.getElementById('p-w').value;
-  src.h = +document.getElementById('p-h').value;
-  src.locked = document.getElementById('p-locked').checked;
-
-  const c = document.getElementById('p-color');
-  if (c) src.color = c.value;
-  const t = document.getElementById('p-text');
-  if (t) src.text = t.value;
-  const f = document.getElementById('p-font');
-  if (f) src.fontSize = +f.value;
-
-  renderSources();
-  closeModal('modal-props');
-  toast('Properties diperbarui', 'success');
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-/* =====================================================
-   CANVAS INTERACTION (drag, resize, select)
-===================================================== */
-let dragState = null;
-
-function canvasCoords(e, canvas) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
-}
-
-function sourceAt(x, y) {
-  const sc = getEditScene();
-  if (!sc) return null;
-  for (let i = sc.sources.length - 1; i >= 0; i--) {
-    const s = sc.sources[i];
-    if (!s.visible) continue;
-    if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) return s;
-  }
-  return null;
-}
-
-function onHandle(s, x, y) {
-  return x >= s.x + s.w - 10 && x <= s.x + s.w + 4 && y >= s.y + s.h - 10 && y <= s.y + s.h + 4;
-}
-
-document.getElementById('previewCanvas').addEventListener('mousedown', e => {
-  const canvas = e.target;
-  const { x, y } = canvasCoords(e, canvas);
-  const sel = getSelectedSource();
-
-  if (sel && !sel.locked && onHandle(sel, x, y)) {
-    dragState = { type: 'resize', src: sel, sx: x, sy: y, ow: sel.w, oh: sel.h };
+function applyFloatingLayout() {
+  const f = state.floating;
+  if (!f.enabled) {
+    liveScreen.classList.remove('floating');
+    liveScreen.style.position = '';
+    liveScreen.style.left = '';
+    liveScreen.style.top = '';
+    liveScreen.style.width = '';
+    liveScreen.style.height = '';
+    divider.style.display = '';
+    applySplitToLayout();
+    requestAnimationFrame(() => {
+      applyView(ctrlByKey.live);
+      applyView(ctrlByKey.upload);
+    });
     return;
   }
-  const hit = sourceAt(x, y);
-  if (hit && !hit.locked) {
-    state.selectedSourceId = hit.id;
-    dragState = { type: 'move', src: hit, sx: x, sy: y, ox: hit.x, oy: hit.y };
-    renderSources();
-  } else if (hit) {
-    state.selectedSourceId = hit.id;
-    renderSources();
-  } else {
-    state.selectedSourceId = null;
-    renderSources();
-  }
-});
-
-window.addEventListener('mousemove', e => {
-  if (!dragState) return;
-  const canvas = document.getElementById('previewCanvas');
-  const { x, y } = canvasCoords(e, canvas);
-  const dx = x - dragState.sx, dy = y - dragState.sy;
-  if (dragState.type === 'move') {
-    dragState.src.x = Math.round(dragState.ox + dx);
-    dragState.src.y = Math.round(dragState.oy + dy);
-  } else {
-    dragState.src.w = Math.max(30, Math.round(dragState.ow + dx));
-    dragState.src.h = Math.max(30, Math.round(dragState.oh + dy));
-  }
-});
-
-window.addEventListener('mouseup', () => { dragState = null; });
-
-document.getElementById('previewCanvas').addEventListener('dblclick', e => {
-  const { x, y } = canvasCoords(e, e.target);
-  const hit = sourceAt(x, y);
-  if (hit) openProperties(hit.id);
-});
-
-/* =====================================================
-   STREAMING & RECORDING
-===================================================== */
-function toggleStream() {
-  const btn = document.getElementById('streamBtn');
-  if (!state.streaming) {
-    state.streaming = true;
-    state.liveStart = Date.now();
-    btn.textContent = '⏹ Stop Streaming';
-    btn.classList.add('active');
-    document.getElementById('st-dot').className = 'status-dot live';
-    document.getElementById('st-text').textContent = 'LIVE';
-    document.getElementById('st-timer-wrap').style.display = 'inline';
-    document.getElementById('st-timer-dot').className = 'status-dot live';
-    document.getElementById('previewLabel').className = 'preview-label live';
-    document.getElementById('previewLabel').textContent = '🔴 LIVE';
-    toast('🔴 LIVE! (Simulasi streaming - preview aktif)', 'success');
-  } else {
-    state.streaming = false;
-    btn.textContent = '▶ Start Streaming';
-    btn.classList.remove('active');
-    document.getElementById('st-dot').className = 'status-dot';
-    document.getElementById('st-text').textContent = 'Ready';
-    document.getElementById('st-timer-wrap').style.display = 'none';
-    document.getElementById('previewLabel').className = 'preview-label off';
-    document.getElementById('previewLabel').textContent = 'Preview';
-    toast('Streaming dihentikan');
-  }
+  liveScreen.classList.add('floating');
+  divider.style.display = 'none';
+  uploadScreen.style.order = '1';
+  uploadScreen.style.flex = '1 1 0';
+  liveScreen.style.order = '2';
+  liveScreen.style.flex = 'none';
+  liveScreen.style.position = 'absolute';
+  updateFloatingPosition();
+  requestAnimationFrame(() => {
+    applyView(ctrlByKey.live);
+    applyView(ctrlByKey.upload);
+  });
 }
 
-function toggleRecord() {
-  if (!state.recording) startRecording();
-  else stopRecording();
+function updateFloatingPosition() {
+  const f = state.floating;
+  if (!f.enabled) return;
+  const aw = videoArea.clientWidth;
+  const ah = videoArea.clientHeight;
+  if (!aw || !ah) return;
+  if (liveVideo.videoWidth && liveVideo.videoHeight) {
+    f.aspect = liveVideo.videoWidth / liveVideo.videoHeight;
+  }
+  let w = f.w * aw;
+  let h = w / f.aspect;
+  if (h > ah * 0.92) { h = ah * 0.92; w = h * f.aspect; }
+  if (w > aw * 0.85) { w = aw * 0.85; h = w / f.aspect; }
+  const maxX = Math.max(0, aw - w);
+  const maxY = Math.max(0, ah - h);
+  let x = f.x * aw;
+  let y = f.y * ah;
+  x = Math.max(0, Math.min(maxX, x));
+  y = Math.max(0, Math.min(maxY, y));
+  f._px = x; f._py = y; f._pw = w; f._ph = h;
+  liveScreen.style.left = x + 'px';
+  liveScreen.style.top = y + 'px';
+  liveScreen.style.width = w + 'px';
+  liveScreen.style.height = h + 'px';
+  applyView(ctrlByKey.live);
 }
 
-function startRecording() {
+let floatDrag = null;
+let floatResizeState = null;
+
+liveScreen.addEventListener('pointerdown', (e) => {
+  if (!state.floating.enabled) return;
+  if (state.isRecording) return;
+  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+  if (e.target.closest('#btnFloatPin')) return;
+  const aw = videoArea.clientWidth;
+  const ah = videoArea.clientHeight;
+
+  if (e.target.closest('#floatResize') || e.target.closest('.float-resize')) {
+    const f = state.floating;
+    floatResizeState = {
+      pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
+      startPX: f._px, startPY: f._py, startPW: f._pw, startPH: f._ph, aspect: f.aspect
+    };
+    try { liveScreen.setPointerCapture(e.pointerId); } catch(_) {}
+    e.preventDefault(); e.stopPropagation();
+    return;
+  }
+  const f = state.floating;
+  floatDrag = {
+    pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
+    startPX: f._px, startPY: f._py
+  };
+  try { liveScreen.setPointerCapture(e.pointerId); } catch(_) {}
+  liveScreen.classList.add('grabbing');
+  e.preventDefault(); e.stopPropagation();
+});
+
+liveScreen.addEventListener('pointermove', (e) => {
+  const aw = videoArea.clientWidth;
+  const ah = videoArea.clientHeight;
+  const f = state.floating;
+
+  if (floatDrag && e.pointerId === floatDrag.pointerId) {
+    const dx = e.clientX - floatDrag.startX;
+    const dy = e.clientY - floatDrag.startY;
+    let x = floatDrag.startPX + dx;
+    let y = floatDrag.startPY + dy;
+    x = Math.max(0, Math.min(aw - f._pw, x));
+    y = Math.max(0, Math.min(ah - f._ph, y));
+    f._px = x; f._py = y;
+    f.x = x / aw; f.y = y / ah;
+    liveScreen.style.left = x + 'px';
+    liveScreen.style.top = y + 'px';
+    e.preventDefault();
+    return;
+  }
+  if (floatResizeState && e.pointerId === floatResizeState.pointerId) {
+    const dx = e.clientX - floatResizeState.startX;
+    const dy = e.clientY - floatResizeState.startY;
+    let deltaW = Math.abs(dx) >= Math.abs(dy) ? dx : dy * floatResizeState.aspect;
+    let newW = floatResizeState.startPW + deltaW;
+    const minW = Math.min(80, aw * 0.2);
+    const maxW = aw * 0.8;
+    newW = Math.max(minW, Math.min(maxW, newW));
+    let newH = newW / floatResizeState.aspect;
+    if (floatResizeState.startPY + newH > ah) {
+      newH = ah - floatResizeState.startPY;
+      newW = newH * floatResizeState.aspect;
+    }
+    if (newW < minW) { newW = minW; newH = newW / floatResizeState.aspect; }
+    let x = floatResizeState.startPX;
+    let y = floatResizeState.startPY;
+    if (x + newW > aw) x = aw - newW;
+    if (y + newH > ah) y = ah - newH;
+    x = Math.max(0, x); y = Math.max(0, y);
+    f._px = x; f._py = y; f._pw = newW; f._ph = newH;
+    f.w = newW / aw; f.x = x / aw; f.y = y / ah;
+    liveScreen.style.left = x + 'px';
+    liveScreen.style.top = y + 'px';
+    liveScreen.style.width = newW + 'px';
+    liveScreen.style.height = newH + 'px';
+    applyView(ctrlByKey.live);
+    e.preventDefault();
+  }
+});
+
+function endFloatDrag(e) {
+  if (floatDrag && e.pointerId === floatDrag.pointerId) {
+    floatDrag = null;
+    liveScreen.classList.remove('grabbing');
+    try { liveScreen.releasePointerCapture(e.pointerId); } catch(_) {}
+    updateFloatingSizePresets();
+  }
+  if (floatResizeState && e.pointerId === floatResizeState.pointerId) {
+    floatResizeState = null;
+    try { liveScreen.releasePointerCapture(e.pointerId); } catch(_) {}
+    updateFloatingSizePresets();
+  }
+}
+liveScreen.addEventListener('pointerup', endFloatDrag);
+liveScreen.addEventListener('pointercancel', endFloatDrag);
+liveScreen.addEventListener('lostpointercapture', endFloatDrag);
+
+btnFloatPin.addEventListener('click', (e) => { e.stopPropagation(); toggleFloating(false); });
+btnToggleFloat.addEventListener('click', () => toggleFloating());
+
+document.querySelectorAll('[data-float-size]').forEach(b => {
+  b.addEventListener('click', () => {
+    const size = parseFloat(b.dataset.floatSize);
+    state.floating.w = size;
+    updateFloatingSizePresets();
+    if (state.floating.enabled) updateFloatingPosition();
+    setTimeout(closeAllExpand, 200);
+    showToast(`📌 Ukuran float: ${Math.round(size * 100)}%`);
+  });
+});
+
+function updateFloatingSizePresets() {
+  document.querySelectorAll('[data-float-size]').forEach(b => {
+    const v = parseFloat(b.dataset.floatSize);
+    b.classList.toggle('active', Math.abs(v - state.floating.w) < 0.04);
+  });
+}
+
+document.querySelectorAll('[data-float-pos]').forEach(b => {
+  b.addEventListener('click', () => {
+    const f = state.floating;
+    const aw = videoArea.clientWidth;
+    const ah = videoArea.clientHeight;
+    if (!aw || !ah) return;
+    const pw = f._pw || (f.w * aw);
+    const ph = f._ph || (pw / f.aspect);
+    const margin = Math.min(aw, ah) * 0.03;
+    let x, y;
+    switch (b.dataset.floatPos) {
+      case 'tl': x = margin; y = margin; break;
+      case 'tr': x = aw - pw - margin; y = margin; break;
+      case 'bl': x = margin; y = ah - ph - margin; break;
+      case 'br': x = aw - pw - margin; y = ah - ph - margin; break;
+      case 'center': default: x = (aw - pw) / 2; y = (ah - ph) / 2; break;
+    }
+    x = Math.max(0, Math.min(aw - pw, x));
+    y = Math.max(0, Math.min(ah - ph, y));
+    f.x = x / aw; f.y = y / ah;
+    f._px = x; f._py = y;
+    if (state.floating.enabled) {
+      liveScreen.style.left = x + 'px';
+      liveScreen.style.top = y + 'px';
+    }
+    setTimeout(closeAllExpand, 200);
+    showToast('📌 Posisi float diatur');
+  });
+});
+
+/* ============================================================
+   GEOMETRI COVER
+   ============================================================ */
+function getFitInfo(videoEl, screenEl) {
+  const vw = videoEl.videoWidth || videoEl.width || 0;
+  const vh = videoEl.videoHeight || videoEl.height || 0;
+  const cw = screenEl.clientWidth;
+  const ch = screenEl.clientHeight;
+  if (!vw || !vh || !cw || !ch) return null;
+  const s0 = Math.max(cw / vw, ch / vh);
+  return { vw, vh, cw, ch, s0 };
+}
+
+function applyView(ctrl) {
+  const vs = state.views[ctrl.key];
+  const info = getFitInfo(ctrl.video, ctrl.screen);
+  if (!info) return;
+  const { vw, vh, cw, ch, s0 } = info;
+  const z = clamp(vs.zoom, MIN_ZOOM, MAX_ZOOM);
+  const W = vw * s0 * z;
+  const H = vh * s0 * z;
+  const left = -vs.panX * (W - cw);
+  const top  = -vs.panY * (H - ch);
+  ctrl.video.style.width  = W.toFixed(2) + 'px';
+  ctrl.video.style.height = H.toFixed(2) + 'px';
+  ctrl.video.style.left   = left.toFixed(2) + 'px';
+  ctrl.video.style.top    = top.toFixed(2) + 'px';
+  if (ctrl.key === 'live') {
+    liveCanvas.style.width  = W.toFixed(2) + 'px';
+    liveCanvas.style.height = H.toFixed(2) + 'px';
+    liveCanvas.style.left   = left.toFixed(2) + 'px';
+    liveCanvas.style.top    = top.toFixed(2) + 'px';
+  }
+  if (ctrl.zoomLabel) ctrl.zoomLabel.textContent = z.toFixed(1) + '×';
+}
+
+function applyAllViews() { VIEW_CTRL.forEach(applyView); }
+
+function resetView(ctrl, silent = false) {
+  const vs = state.views[ctrl.key];
+  vs.zoom = 1; vs.panX = 0.5; vs.panY = 0.5;
+  applyView(ctrl);
+  updateGridActive(ctrl);
+  if (!silent) showToast('↺ Tampilan direset ke tengah');
+}
+
+/* ============================================================
+   TOOLS
+   ============================================================ */
+function updateGridActive(ctrl) {
+  if (!ctrl.tools) return;
+  const vs = state.views[ctrl.key];
+  ctrl.tools.querySelectorAll('[data-grid] button').forEach(b => {
+    const px = parseFloat(b.dataset.px);
+    const py = parseFloat(b.dataset.py);
+    b.classList.toggle('active',
+      Math.abs(px - vs.panX) < 0.02 && Math.abs(py - vs.panY) < 0.02);
+  });
+}
+
+function initTools(ctrl) {
+  if (!ctrl.tools) return;
+  const panel  = ctrl.tools.querySelector('[data-panel]');
+  const grid   = ctrl.tools.querySelector('[data-grid]');
+  const toggle = ctrl.tools.querySelector('[data-toggle]');
+  ctrl.zoomLabel = ctrl.tools.querySelector('[data-zoom-label]');
+
+  [0, 0.5, 1].forEach(py => {
+    [0, 0.5, 1].forEach(px => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.px = px; b.dataset.py = py;
+      b.title = `Posisi ${Math.round(px * 100)}% / ${Math.round(py * 100)}%`;
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const vs = state.views[ctrl.key];
+        vs.panX = px; vs.panY = py;
+        applyView(ctrl);
+        updateGridActive(ctrl);
+      });
+      grid.appendChild(b);
+    });
+  });
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!panel.classList.contains('open')) return;
+    if (ctrl.tools.contains(e.target)) return;
+    panel.classList.remove('open');
+    toggle.classList.remove('open');
+  }, { passive: true });
+
+  ctrl.tools.querySelectorAll('[data-zoom]').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const vs = state.views[ctrl.key];
+      const f = b.dataset.zoom === '+' ? 1.25 : 0.8;
+      vs.zoom = clamp(vs.zoom * f, MIN_ZOOM, MAX_ZOOM);
+      applyView(ctrl);
+    });
+  });
+
+  ctrl.tools.querySelector('[data-reset]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetView(ctrl);
+  });
+
+  updateGridActive(ctrl);
+}
+
+/* ============================================================
+   GESTURE
+   ============================================================ */
+function showHint(ctrl) {
+  if (!ctrl.hint) return;
+  ctrl.hint.classList.add('show');
+  clearTimeout(ctrl._hintTimer);
+  ctrl._hintTimer = setTimeout(() => ctrl.hint.classList.remove('show'), 3400);
+}
+function hideHint(ctrl) {
+  if (!ctrl.hint) return;
+  clearTimeout(ctrl._hintTimer);
+  ctrl.hint.classList.remove('show');
+}
+
+function setupGestures(ctrl) {
+  const el = ctrl.video;
+  const pts = new Map();
+  let gesture = null;
+  let lastTap = 0;
+
+  el.addEventListener('pointerdown', (e) => {
+    if (state.floating.enabled) return;
+    if (!ctrl.isReady()) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    if (pts.size === 1) {
+      const vs = state.views[ctrl.key];
+      gesture = {
+        type: 'pan', startX: e.clientX, startY: e.clientY,
+        baseX: vs.panX, baseY: vs.panY,
+        time: Date.now(), moved: false
+      };
+    } else if (pts.size === 2) {
+      const arr = [...pts.values()];
+      const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+      gesture = { type: 'pinch', startDist: Math.max(1, d), baseZoom: state.views[ctrl.key].zoom };
+    }
+    el.classList.add('grabbing');
+    hideHint(ctrl);
+    e.preventDefault();
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId) || !gesture) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const vs = state.views[ctrl.key];
+    if (gesture.type === 'pan' && pts.size === 1) {
+      const dx = e.clientX - gesture.startX;
+      const dy = e.clientY - gesture.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) gesture.moved = true;
+      const info = getFitInfo(el, ctrl.screen);
+      if (!info) return;
+      const W = info.vw * info.s0 * vs.zoom;
+      const H = info.vh * info.s0 * vs.zoom;
+      const maxX = W - info.cw;
+      const maxY = H - info.ch;
+      if (maxX > 0.5) vs.panX = clamp01(gesture.baseX - dx / maxX);
+      if (maxY > 0.5) vs.panY = clamp01(gesture.baseY - dy / maxY);
+      applyView(ctrl);
+      updateGridActive(ctrl);
+    } else if (gesture.type === 'pinch' && pts.size === 2) {
+      const arr = [...pts.values()];
+      const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+      vs.zoom = clamp(gesture.baseZoom * (d / gesture.startDist), MIN_ZOOM, MAX_ZOOM);
+      applyView(ctrl);
+    }
+    e.preventDefault();
+  });
+
+  const endPointer = (e) => {
+    if (!pts.has(e.pointerId)) return;
+    const wasPan = gesture && gesture.type === 'pan';
+    const moved  = gesture && gesture.moved;
+    const time   = gesture && gesture.time;
+    pts.delete(e.pointerId);
+    try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (pts.size === 0) { gesture = null; el.classList.remove('grabbing'); }
+    if (wasPan && !moved && Date.now() - time < 300) {
+      const now = Date.now();
+      if (now - lastTap < 320) { resetView(ctrl); lastTap = 0; }
+      else lastTap = now;
+    }
+  };
+
+  el.addEventListener('pointerup', endPointer);
+  el.addEventListener('pointercancel', endPointer);
+  el.addEventListener('lostpointercapture', endPointer);
+
+  el.addEventListener('wheel', (e) => {
+    if (state.floating.enabled) return;
+    if (!ctrl.isReady()) return;
+    e.preventDefault();
+    const vs = state.views[ctrl.key];
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    vs.zoom = clamp(vs.zoom * factor, MIN_ZOOM, MAX_ZOOM);
+    applyView(ctrl);
+  }, { passive: false });
+}
+
+VIEW_CTRL.forEach(ctrl => {
+  initTools(ctrl);
+  setupGestures(ctrl);
+});
+
+liveVideo.addEventListener('loadedmetadata', () => {
+  if (liveVideo.videoWidth && liveVideo.videoHeight) {
+    liveCanvas.width = liveVideo.videoWidth;
+    liveCanvas.height = liveVideo.videoHeight;
+    state.floating.aspect = liveVideo.videoWidth / liveVideo.videoHeight;
+    if (state.floating.enabled) updateFloatingPosition();
+  }
+  applyView(ctrlByKey.live);
+});
+uploadVideo.addEventListener('loadedmetadata', () => applyView(ctrlByKey.upload));
+
+/* ============================================================
+   BACKGROUND REPLACEMENT
+   ============================================================ */
+let selfieSeg = null;
+let segLoopRunning = false;
+let segReady = false;
+
+async function loadSelfieSegmentation() {
+  if (selfieSeg) return true;
   try {
-    const canvas = document.getElementById('previewCanvas');
-    const stream = canvas.captureStream(state.settings.fps);
-    // Add audio tracks
-    state.audioSources.forEach(ch => {
-      if (ch.stream && !ch.muted) {
-        ch.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    if (typeof SelfieSegmentation === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/selfie_segmentation.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Gagal load SelfieSegmentation'));
+        document.head.appendChild(s);
+      });
+    }
+    if (typeof SelfieSegmentation === 'undefined') throw new Error('SelfieSegmentation tidak tersedia');
+    selfieSeg = new SelfieSegmentation({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/${file}`
+    });
+    selfieSeg.setOptions({ modelSelection: 1, selfieMode: false });
+    selfieSeg.onResults(onSegResults);
+    segReady = true;
+    return true;
+  } catch (e) {
+    console.error('Selfie segmentation error:', e);
+    return false;
+  }
+}
+
+function onSegResults(results) {
+  const w = liveCanvas.width, h = liveCanvas.height;
+  if (!w || !h) return;
+  const ctx = liveCanvasCtx;
+  ctx.save();
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(results.segmentationMask, 0, 0, w, h);
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.drawImage(results.image, 0, 0, w, h);
+  ctx.globalCompositeOperation = 'destination-atop';
+  drawBgToCtx(ctx, w, h);
+  ctx.restore();
+}
+
+let _blurCanvas = null;
+function drawBgToCtx(ctx, w, h) {
+  const bg = state.bg;
+  if (bg.mode === 'off') { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); return; }
+  if (bg.mode === 'blur') {
+    if (!_blurCanvas) _blurCanvas = document.createElement('canvas');
+    if (_blurCanvas.width !== w || _blurCanvas.height !== h) {
+      _blurCanvas.width = w; _blurCanvas.height = h;
+    }
+    const bx = _blurCanvas.getContext('2d');
+    bx.filter = 'blur(22px)';
+    try { bx.drawImage(liveVideo, -w * 0.05, -h * 0.05, w * 1.1, h * 1.1); } catch(_) {}
+    bx.filter = 'none';
+    ctx.drawImage(_blurCanvas, 0, 0, w, h);
+    return;
+  }
+  if (bg.mode === 'image' && bg.image) {
+    const iw = bg.image.width, ih = bg.image.height;
+    const s = Math.max(w / iw, h / ih);
+    const dw = iw * s, dh = ih * s;
+    ctx.drawImage(bg.image, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    return;
+  }
+  if (BG_GRADIENTS[bg.mode]) {
+    const [c1, c2] = BG_GRADIENTS[bg.mode];
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    return;
+  }
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+}
+
+function startSegLoop() {
+  if (segLoopRunning) return;
+  segLoopRunning = true;
+  const tick = async () => {
+    if (!segLoopRunning) return;
+    if (selfieSeg && liveVideo.readyState >= 2 && state.bg.mode !== 'off') {
+      try { await selfieSeg.send({ image: liveVideo }); } catch (_) {}
+    }
+    if (segLoopRunning) requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function stopSegLoop() { segLoopRunning = false; }
+
+async function setBgMode(mode) {
+  state.bg.mode = mode;
+  updateBgBtnState();
+  if (mode === 'off') {
+    stopSegLoop();
+    liveCanvas.style.display = 'none';
+    showToast('Background dinonaktifkan');
+    return;
+  }
+  if (!state.stream || !liveVideo.videoWidth) {
+    showToast('Aktifkan kamera dulu', 'error');
+    state.bg.mode = 'off';
+    updateBgBtnState();
+    return;
+  }
+  liveCanvas.style.display = 'block';
+  if (liveCanvas.width !== liveVideo.videoWidth) {
+    liveCanvas.width = liveVideo.videoWidth;
+    liveCanvas.height = liveVideo.videoHeight;
+  }
+  applyView(ctrlByKey.live);
+  if (!segReady) {
+    showLoader('Memuat model background...');
+    const ok = await loadSelfieSegmentation();
+    hideLoader();
+    if (!ok) {
+      showToast('Gagal memuat model background. Periksa koneksi internet.', 'error');
+      state.bg.mode = 'off';
+      liveCanvas.style.display = 'none';
+      updateBgBtnState();
+      return;
+    }
+  }
+  startSegLoop();
+  showToast('✨ Background aktif', 'success');
+}
+
+function updateBgBtnState() {
+  const active = state.bg.mode !== 'off';
+  btnBg.classList.toggle('bg-active', active);
+  document.querySelectorAll('.bg-option').forEach(b => {
+    b.classList.toggle('active', b.dataset.bg === state.bg.mode);
+  });
+  if (bgInfoEl) {
+    bgInfoEl.textContent = active
+      ? '✅ Background replacement aktif — orang terlihat, latar disamarkan'
+      : 'Ganti latar belakang video LIVE — orang tetap terlihat, background disamarkan.';
+  }
+}
+
+btnBg.addEventListener('click', () => {
+  if (state.isRecording) { showToast('Stop rekaman dulu untuk ganti background', 'error'); return; }
+  bgModal.classList.add('show');
+  updateBgBtnState();
+});
+btnCloseBgModal.addEventListener('click', () => bgModal.classList.remove('show'));
+bgModal.addEventListener('click', (e) => {
+  if (e.target === bgModal) bgModal.classList.remove('show');
+});
+
+document.querySelectorAll('.bg-option').forEach(b => {
+  b.addEventListener('click', () => {
+    const mode = b.dataset.bg;
+    if (mode === 'off') setBgMode('off');
+    else setBgMode(mode);
+  });
+});
+
+bgImageInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('File harus berupa gambar', 'error'); return; }
+  const img = new Image();
+  img.onload = () => { state.bg.image = img; setBgMode('image'); };
+  img.onerror = () => showToast('Gagal memuat gambar', 'error');
+  img.src = URL.createObjectURL(file);
+});
+
+/* ============================================================
+   CANVAS OUTPUT
+   ============================================================ */
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+function applyQuality(q) {
+  const p = QUALITY_PRESETS[q];
+  state.quality = q;
+  qualityLabel.textContent = p.label;
+  const mode = state.aspectMode;
+  const aw = videoArea.clientWidth || 1;
+  const ah = videoArea.clientHeight || 1;
+  if (mode === '9:16') {
+    canvas.width = p.w;
+    canvas.height = Math.round((p.w * 16 / 9) / 2) * 2;
+  } else if (mode === '16:9') {
+    canvas.height = p.w;
+    canvas.width = Math.round((p.w * 16 / 9) / 2) * 2;
+  } else {
+    const ratio = ah / aw;
+    if (ratio >= 1) {
+      canvas.width = p.w;
+      canvas.height = Math.max(2, Math.round((p.w * ratio) / 2) * 2);
+    } else {
+      canvas.height = p.w;
+      canvas.width = Math.max(2, Math.round((p.w / ratio) / 2) * 2);
+    }
+  }
+}
+
+/* ============================================================
+   SPLIT
+   ============================================================ */
+function applySplitToLayout() {
+  if (state.floating.enabled) {
+    updateSplitPct(); updateSplitPresets(); updateExpandLabels();
+    return;
+  }
+  const r = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, state.splitRatio));
+  state.splitRatio = r;
+  const firstScreen  = state.swapped ? uploadScreen : liveScreen;
+  const secondScreen = state.swapped ? liveScreen : uploadScreen;
+  firstScreen.style.order  = '1';
+  divider.style.order      = '2';
+  secondScreen.style.order = '3';
+  firstScreen.style.flex   = `${r} 1 0`;
+  secondScreen.style.flex  = `${1 - r} 1 0`;
+  updateSplitPct();
+  updateSplitPresets();
+  updateExpandLabels();
+  requestAnimationFrame(applyAllViews);
+}
+
+function updateSplitPct() {
+  const first = Math.round(state.splitRatio * 100);
+  splitPct.textContent = `${first}% / ${100 - first}%`;
+}
+
+function updateSplitPresets() {
+  document.querySelectorAll('.split-btn[data-split]').forEach(b => {
+    const v = parseFloat(b.dataset.split);
+    b.classList.toggle('active', Math.abs(v - state.splitRatio) < 0.012);
+  });
+}
+
+let splitDrag = null;
+
+function onDivDown(e) {
+  if (state.floating.enabled) return;
+  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+  const landscape = isLandscapeMode();
+  const total = landscape ? videoArea.clientWidth : videoArea.clientHeight;
+  if (total <= 0) return;
+  splitDrag = {
+    pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
+    startSplit: state.splitRatio, total, landscape
+  };
+  try { divider.setPointerCapture(e.pointerId); } catch (_) {}
+  divider.classList.add('dragging');
+  updateSplitPct();
+  e.preventDefault();
+}
+
+function onDivMove(e) {
+  if (!splitDrag || e.pointerId !== splitDrag.pointerId) return;
+  const delta = splitDrag.landscape
+    ? (e.clientX - splitDrag.startX)
+    : (e.clientY - splitDrag.startY);
+  const newSplit = splitDrag.startSplit + delta / splitDrag.total;
+  state.splitRatio = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, newSplit));
+  applySplitToLayout();
+  e.preventDefault();
+}
+
+function onDivUp(e) {
+  if (!splitDrag) return;
+  if (e && e.pointerId !== undefined && e.pointerId !== splitDrag.pointerId) return;
+  try { divider.releasePointerCapture(splitDrag.pointerId); } catch (_) {}
+  splitDrag = null;
+  divider.classList.remove('dragging');
+}
+
+divider.addEventListener('pointerdown', onDivDown);
+divider.addEventListener('pointermove', onDivMove);
+divider.addEventListener('pointerup', onDivUp);
+divider.addEventListener('pointercancel', onDivUp);
+divider.addEventListener('lostpointercapture', onDivUp);
+
+let divLastTap = 0;
+divider.addEventListener('pointerup', () => {
+  if (state.floating.enabled) return;
+  const now = Date.now();
+  if (now - divLastTap < 300) {
+    state.splitRatio = 0.5;
+    applySplitToLayout();
+    showToast('⚖️ Split direset 50% / 50%');
+    divLastTap = 0;
+  } else divLastTap = now;
+});
+
+document.querySelectorAll('[data-split]').forEach(b => {
+  b.addEventListener('click', () => {
+    state.splitRatio = parseFloat(b.dataset.split);
+    applySplitToLayout();
+    const live = Math.round(state.splitRatio * 100);
+    showToast(`📐 Split ${live}% / ${100 - live}%`);
+  });
+});
+
+document.querySelectorAll('[data-aspect]').forEach(b => {
+  b.addEventListener('click', () => setAspectMode(b.dataset.aspect));
+});
+
+/* ============================================================
+   DRAW KE CANVAS
+   ============================================================ */
+function roundRectPath(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+function drawVideoCover(source, viewState, dx, dy, dw, dh) {
+  if (dw <= 0 || dh <= 0) return;
+  const vw = source.videoWidth || source.width || 0;
+  const vh = source.videoHeight || source.height || 0;
+  if (!vw || !vh) { ctx.fillStyle = '#0d0d0f'; ctx.fillRect(dx, dy, dw, dh); return; }
+  const s0 = Math.max(dw / vw, dh / vh);
+  const z  = clamp(viewState.zoom, MIN_ZOOM, MAX_ZOOM);
+  const sw = dw / (s0 * z);
+  const sh = dh / (s0 * z);
+  const sx = viewState.panX * (vw - sw);
+  const sy = viewState.panY * (vh - sh);
+  try { ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh); } catch (e) {}
+}
+
+function drawTickerOnCanvas(W, H) {
+  if (!state.ticker.enabled || !state.ticker.text) return;
+  const refDim = Math.min(W, H);
+  const fontSize = Math.max(8, Math.round(state.ticker.size * (refDim / 720)));
+  const barPad = Math.round(fontSize * 0.4);
+  const barH = fontSize + barPad * 2;
+  const barY = H - barH;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, barY, W, barH);
+  ctx.save();
+  ctx.font = `800 ${fontSize}px -apple-system, system-ui, sans-serif`;
+  ctx.fillStyle = state.ticker.color;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  const textW = ctx.measureText(state.ticker.text).width;
+  if (textW <= 0) { ctx.restore(); return; }
+  const gap = fontSize * 2;
+  const tG = textW + gap;
+  const speed = state.ticker.speed * (refDim / 720);
+  const elapsed = (Date.now() - state.ticker.startTime) / 1000;
+  const x0 = -((elapsed * speed) % tG);
+  let x = x0;
+  while (x < W) {
+    if (x + textW > 0) ctx.fillText(state.ticker.text, x, barY + barH / 2);
+    x += tG;
+  }
+  ctx.restore();
+}
+
+function drawSplitLayout(W, H) {
+  const landscape = isLandscapeMode();
+  const liveSource = (state.bg.mode !== 'off' && liveCanvas.width > 0)
+    ? liveCanvas : liveVideo;
+  const firstSource = state.swapped ? uploadVideo  : liveSource;
+  const firstView   = state.swapped ? state.views.upload : state.views.live;
+  const secondSource= state.swapped ? liveSource   : uploadVideo;
+  const secondView  = state.swapped ? state.views.live   : state.views.upload;
+
+  if (landscape) {
+    const splitX = Math.max(1, Math.min(W - 1, Math.round(W * state.splitRatio)));
+    drawVideoCover(firstSource,  firstView,  0,        0, splitX,     H);
+    drawVideoCover(secondSource, secondView, splitX,   0, W - splitX, H);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(splitX - 1, 0, 2, H);
+  } else {
+    const splitY = Math.max(1, Math.min(H - 1, Math.round(H * state.splitRatio)));
+    drawVideoCover(firstSource,  firstView,  0, 0,      W, splitY);
+    drawVideoCover(secondSource, secondView, 0, splitY, W, H - splitY);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(0, splitY - 1, W, 2);
+  }
+}
+
+function drawFloatingLayout(W, H) {
+  drawVideoCover(uploadVideo, state.views.upload, 0, 0, W, H);
+  const f = state.floating;
+  const aw = videoArea.clientWidth || 1;
+  const ah = videoArea.clientHeight || 1;
+  const liveSource = (state.bg.mode !== 'off' && liveCanvas.width > 0)
+    ? liveCanvas : liveVideo;
+  const fx = (f._px / aw) * W;
+  const fy = (f._py / ah) * H;
+  let fw = (f._pw / aw) * W;
+  let fh = fw / f.aspect;
+  if (fy + fh > H) { fh = H - fy; fw = fh * f.aspect; }
+  if (fx + fw > W) { fw = W - fx; fh = fw / f.aspect; }
+  if (fw > 4 && fh > 4) {
+    const radius = Math.min(fw, fh) * 0.08;
+    ctx.save();
+    roundRectPath(ctx, fx, fy, fw, fh, radius);
+    ctx.clip();
+    drawVideoCover(liveSource, state.views.live, fx, fy, fw, fh);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = Math.max(2, Math.round(W / 400));
+    roundRectPath(ctx, fx, fy, fw, fh, radius);
+    ctx.stroke();
+  }
+}
+
+function startDrawLoop() {
+  if (state.drawRAF) return;
+  const tick = () => {
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    if (state.floating.enabled) drawFloatingLayout(W, H);
+    else drawSplitLayout(W, H);
+    drawTickerOnCanvas(W, H);
+    state.drawRAF = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function stopDrawLoop() {
+  if (state.drawRAF) cancelAnimationFrame(state.drawRAF);
+  state.drawRAF = null;
+}
+
+/* ============================================================
+   TICKER DOM
+   ============================================================ */
+let tickerRAFId = null;
+
+function updateTickerDOM() {
+  if (!state.ticker.enabled || !state.ticker.text) {
+    tickerOverlay.classList.remove('show');
+    document.documentElement.style.setProperty('--ticker-offset', '0px');
+    return;
+  }
+  tickerOverlay.classList.add('show');
+  const aw = videoArea.clientWidth || 1;
+  const ah = videoArea.clientHeight || 1;
+  const refDim = Math.min(aw, ah);
+  const fontSize = Math.max(8, Math.round(state.ticker.size * (refDim / 720)));
+  const barH = fontSize + Math.round(fontSize * 0.8);
+  tickerOverlay.style.height = barH + 'px';
+  tickerOverlay.style.fontSize = fontSize + 'px';
+  document.documentElement.style.setProperty('--ticker-offset', barH + 'px');
+  const items = tickerTrack.querySelectorAll('.ticker-item');
+  items.forEach(el => el.textContent = state.ticker.text);
+  if (!items.length) return;
+  const textW = items[0].offsetWidth;
+  if (textW <= 0) return;
+  const gap = fontSize * 2;
+  const tG = textW + gap;
+  const speed = state.ticker.speed * (refDim / 720);
+  const elapsed = (Date.now() - state.ticker.startTime) / 1000;
+  const x0 = -((elapsed * speed) % tG);
+  const needed = Math.ceil(aw / tG) + 2;
+  while (tickerTrack.children.length < needed) {
+    const el = document.createElement('span');
+    el.className = 'ticker-item';
+    el.textContent = state.ticker.text;
+    tickerTrack.appendChild(el);
+  }
+  const allItems = tickerTrack.querySelectorAll('.ticker-item');
+  for (let i = 0; i < allItems.length; i++) {
+    allItems[i].style.transform = `translate(${x0 + i * tG}px, -50%)`;
+  }
+}
+
+function startTickerDOMLoop() {
+  if (tickerRAFId) return;
+  const tick = () => { updateTickerDOM(); tickerRAFId = requestAnimationFrame(tick); };
+  tick();
+}
+
+function stopTickerDOMLoop() {
+  if (tickerRAFId) cancelAnimationFrame(tickerRAFId);
+  tickerRAFId = null;
+}
+
+function setTickerEnabled(on) {
+  state.ticker.enabled = on;
+  state.ticker.startTime = Date.now();
+  tickerToggle.classList.toggle('active', on);
+  tickerToggle.innerHTML = on ? ICON_TICKER_OFF : ICON_TICKER_ON;
+  updateTickerDOM();
+  if (on) { startTickerDOMLoop(); showToast('📝 Ticker aktif', 'success'); }
+  else { stopTickerDOMLoop(); showToast('Ticker dimatikan'); }
+  updateExpandLabels();
+}
+
+tickerInput.addEventListener('input', (e) => {
+  state.ticker.text = e.target.value.trim();
+  state.ticker.startTime = Date.now();
+  if (state.ticker.text && !state.ticker.enabled) setTickerEnabled(true);
+  else {
+    updateTickerDOM();
+    if (state.ticker.enabled) startTickerDOMLoop();
+    updateExpandLabels();
+  }
+});
+
+tickerSizeDown.addEventListener('click', () => {
+  state.ticker.size = Math.max(10, state.ticker.size - 2);
+  updateTickerDOM();
+  showToast(`Ukuran teks: ${state.ticker.size}`);
+});
+
+tickerSizeUp.addEventListener('click', () => {
+  state.ticker.size = Math.min(80, state.ticker.size + 2);
+  updateTickerDOM();
+  showToast(`Ukuran teks: ${state.ticker.size}`);
+});
+
+tickerToggle.addEventListener('click', () => {
+  if (!state.ticker.text) {
+    showToast('Masukkan teks berjalan dulu', 'error');
+    tickerInput.focus();
+    return;
+  }
+  setTickerEnabled(!state.ticker.enabled);
+});
+
+tickerSpeedRange.addEventListener('input', (e) => {
+  const speed = parseInt(e.target.value, 10);
+  state.ticker.speed = speed;
+  tickerSpeedValue.textContent = speed;
+  state.ticker.startTime = Date.now();
+  updateTickerDOM();
+  if (state.ticker.enabled) startTickerDOMLoop();
+});
+
+tickerSpeedRange.value = state.ticker.speed;
+tickerSpeedValue.textContent = state.ticker.speed;
+
+/* ============================================================
+   TOAST & LOADER
+   ============================================================ */
+let toastTimeout;
+function showToast(msg, type = '') {
+  clearTimeout(toastTimeout);
+  toast.textContent = msg;
+  toast.className = 'toast show ' + type;
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+function showLoader(text = 'Memproses...') {
+  loaderText.textContent = text;
+  loader.classList.add('show');
+}
+function hideLoader() { loader.classList.remove('show'); }
+
+/* ============================================================
+   BADGE HELPERS
+   ============================================================ */
+function setUploadBadge(text, isScreen) {
+  if (uploadBadgeText) uploadBadgeText.textContent = text;
+  if (uploadBadge) uploadBadge.classList.toggle('screen', !!isScreen);
+}
+
+function updateLiveBadgeVisibility() {
+  if (liveBadge) liveBadge.style.display = state.stream ? '' : 'none';
+}
+
+/* ============================================================
+   PLAYBACK
+   ============================================================ */
+function updatePlayPauseIcon() {
+  btnPlayPause.innerHTML = uploadVideo.paused ? ICON_PLAY : ICON_PAUSE;
+}
+
+function updateProgressBar() {
+  const dur = uploadVideo.duration;
+  if (!dur || !isFinite(dur)) { videoProgressFill.style.width = '0%'; return; }
+  videoProgressFill.style.width = (uploadVideo.currentTime / dur * 100) + '%';
+}
+
+async function togglePlayPause() {
+  if (state.screenOnUpload) { showToast('Mode rekam layar aktif — playback tidak tersedia', 'error'); return; }
+  if (!state.uploadReady) { showToast('Upload video dulu', 'error'); return; }
+  ensureAudioCtx();
+  if (uploadVideo.paused) {
+    if (uploadVideo.ended) uploadVideo.currentTime = 0;
+    uploadVideo.muted = false;
+    try { await uploadVideo.play(); }
+    catch (err) { showToast('Gagal play: ' + err.message, 'error'); }
+  } else uploadVideo.pause();
+}
+
+function seekBack() {
+  if (state.screenOnUpload) { showToast('Mode rekam layar aktif', 'error'); return; }
+  if (!state.uploadReady) return;
+  uploadVideo.currentTime = Math.max(0, uploadVideo.currentTime - SEEK_STEP);
+  updateProgressBar();
+  showToast(`⏪ -${SEEK_STEP}s`);
+}
+
+function seekNext() {
+  if (state.screenOnUpload) { showToast('Mode rekam layar aktif', 'error'); return; }
+  if (!state.uploadReady) return;
+  const dur = uploadVideo.duration || 0;
+  uploadVideo.currentTime = Math.min(dur, uploadVideo.currentTime + SEEK_STEP);
+  updateProgressBar();
+  showToast(`⏩ +${SEEK_STEP}s`);
+}
+
+function stopVideo() {
+  if (state.screenOnUpload) { showToast('Mode rekam layar aktif', 'error'); return; }
+  if (!state.uploadReady) return;
+  uploadVideo.pause();
+  uploadVideo.currentTime = 0;
+  updatePlayPauseIcon();
+  updateProgressBar();
+  showToast('⏹ Video direset');
+}
+
+btnPlayPause.addEventListener('click', togglePlayPause);
+btnBack.addEventListener('click', seekBack);
+btnNext.addEventListener('click', seekNext);
+btnStop.addEventListener('click', stopVideo);
+uploadVideo.addEventListener('play',  updatePlayPauseIcon);
+uploadVideo.addEventListener('pause', updatePlayPauseIcon);
+uploadVideo.addEventListener('timeupdate', updateProgressBar);
+uploadVideo.addEventListener('loadedmetadata', updateProgressBar);
+
+uploadVideo.addEventListener('ended', () => {
+  if (state.screenOnUpload) return;
+  updatePlayPauseIcon();
+  updateProgressBar();
+  if (AUTO_STOP_ON_UPLOAD_END && state.isRecording) {
+    stopRecording();
+    showToast('⏹ Video upload selesai — rekaman otomatis berhenti', 'success');
+    return;
+  }
+  if (LOOP_UPLOAD_PREVIEW) {
+    uploadVideo.currentTime = 0;
+    uploadVideo.play().catch(() => {
+      uploadVideo.muted = true;
+      uploadVideo.play().catch(() => {});
+    });
+  }
+});
+
+videoProgress.addEventListener('click', (e) => {
+  if (state.screenOnUpload) return;
+  if (!state.uploadReady) return;
+  const rect = videoProgress.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  if (uploadVideo.duration && isFinite(uploadVideo.duration)) {
+    uploadVideo.currentTime = pct * uploadVideo.duration;
+    updateProgressBar();
+  }
+});
+
+/* ============================================================
+   KAMERA
+   ============================================================ */
+async function startCamera(silent = false) {
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Browser tidak mendukung kamera.');
+    const camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: state.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+    state.stream = camStream;
+    liveVideo.srcObject = state.stream;
+    livePlaceholder.classList.add('hidden');
+    btnSwitchCam.classList.remove('hidden');
+    btnStartCam.classList.add('active');
+    updateLiveBadgeVisibility();
+    const c = ctrlByKey.live;
+    if (c.tools) c.tools.classList.remove('hidden');
+    resetView(c, true);
+    showHint(c);
+    liveVideo.addEventListener('loadedmetadata', () => {
+      if (liveVideo.videoWidth) {
+        liveCanvas.width = liveVideo.videoWidth;
+        liveCanvas.height = liveVideo.videoHeight;
+        state.floating.aspect = liveVideo.videoWidth / liveVideo.videoHeight;
+        if (state.floating.enabled) updateFloatingPosition();
       }
+    }, { once: true });
+    if (state.bg.mode !== 'off' && segReady) {
+      liveCanvas.style.display = 'block';
+      startSegLoop();
+    }
+    if (!silent) showToast('Kamera aktif', 'success');
+    return true;
+  } catch (err) {
+    if (!silent) showToast('Kamera gagal: ' + err.message, 'error');
+    return false;
+  }
+}
+
+/* ============================================================
+   REKAM LAYAR — FIXED: play() agar tampil
+   ============================================================ */
+async function startScreenCapture(silent = false) {
+  try {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      showToast('Browser tidak mendukung rekam layar', 'error');
+      return false;
+    }
+
+    let screenStream = null;
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30 },
+        audio: true
+      });
+    } catch (eAudio) {
+      if (eAudio.name === 'NotAllowedError') throw eAudio;
+      screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30 },
+        audio: false
+      });
+    }
+
+    if (!state.screenOnUpload) {
+      state._prevUpload = {
+        src: uploadVideo.src || null,
+        ready: state.uploadReady,
+        paused: uploadVideo.paused,
+        time: uploadVideo.currentTime || 0
+      };
+      if (state.uploadReady) {
+        try { uploadVideo.pause(); } catch(e) {}
+      }
+    }
+
+    if (state._screenTrack) {
+      state._screenTrack.removeEventListener('ended', onScreenShareEnded);
+      try { state._screenTrack.stop(); } catch(e) {}
+      state._screenTrack = null;
+    }
+
+    state._screenTrack = screenStream.getVideoTracks()[0] || null;
+    state.screenOnUpload = true;
+
+    /* ===== FIX: pasang stream layar & PASTIKAN tampil ===== */
+    try { uploadVideo.pause(); } catch(e) {}
+    try { uploadVideo.srcObject = null; } catch(e) {}
+    if (uploadVideo.hasAttribute('src')) {
+      uploadVideo.removeAttribute('src');
+    }
+    try { uploadVideo.srcObject = screenStream; } catch(e) {}
+
+    // Paksa play() — jika tidak, browser tidak menampilkan frame apa pun
+    uploadVideo.muted = false;
+    const playPromise = uploadVideo.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch((err) => {
+        console.warn('Screen play() gagal, retry muted:', err);
+        uploadVideo.muted = true;
+        uploadVideo.play().catch(() => {
+          console.error('Screen play() tetap gagal');
+        });
+      });
+    }
+
+    uploadPlaceholder.classList.add('hidden');
+    setUploadBadge('SCREEN', true);
+    state.uploadReady = false;
+
+    // Auto-adjust split jika upload terlalu kecil
+    if (state.splitRatio >= 0.95) {
+      state.splitRatio = 0.5;
+      applySplitToLayout();
+    }
+    // Force applyView setelah split
+    requestAnimationFrame(applyAllViews);
+
+    // Listener ended
+    if (state._screenTrack) {
+      state._screenTrack.addEventListener('ended', onScreenShareEnded);
+    }
+
+    // Audio routing
+    ensureAudioCtx();
+    if (state.audioCtx && !state.uploadSource) {
+      try {
+        state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
+        state.uploadSource.connect(state.audioCtx.destination);
+      } catch (e) { console.warn('Audio routing screen gagal:', e); }
+    }
+
+    // Tools upload
+    const c = ctrlByKey.upload;
+    if (c.tools) c.tools.classList.remove('hidden');
+    resetView(c, true);
+    showHint(c);
+
+    // Pastikan applyView dipanggil lagi setelah metadata
+    const applyAfterMeta = () => {
+      applyView(ctrlByKey.upload);
+      updateProgressBar();
+    };
+    uploadVideo.addEventListener('loadedmetadata', applyAfterMeta, { once: true });
+    if (uploadVideo.videoWidth > 0) applyAfterMeta();
+
+    const hasAudio = screenStream.getAudioTracks().length > 0;
+    if (!silent) {
+      showToast(hasAudio
+        ? '🎬 Rekam layar aktif di UPLOAD (dengan audio tab)'
+        : '🎬 Rekam layar aktif di UPLOAD',
+        'success');
+    }
+    return true;
+
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      if (!silent) showToast('Izin rekam layar ditolak', 'error');
+    } else if (err.name === 'NotSupportedError') {
+      if (!silent) showToast('Browser tidak mendukung rekam layar', 'error');
+    } else {
+      if (!silent) showToast('Rekam layar gagal: ' + err.message, 'error');
+    }
+    return false;
+  }
+}
+
+function onScreenShareEnded() {
+  if (!state.screenOnUpload) return;
+  state._screenTrack = null;
+  state.screenOnUpload = false;
+
+  try { uploadVideo.pause(); } catch(e) {}
+  try { uploadVideo.srcObject = null; } catch(e) {}
+
+  const prev = state._prevUpload;
+  state._prevUpload = null;
+
+  if (prev && prev.src) {
+    uploadVideo.src = prev.src;
+    uploadVideo.load();
+    state.uploadReady = prev.ready;
+    setUploadBadge('UPLOAD', false);
+    uploadPlaceholder.classList.toggle('hidden', !!prev.ready);
+
+    uploadVideo.addEventListener('loadedmetadata', () => {
+      try {
+        if (prev.time > 0) uploadVideo.currentTime = prev.time;
+        if (!prev.paused) uploadVideo.play().catch(() => {
+          uploadVideo.muted = true;
+          uploadVideo.play().catch(() => {});
+        });
+      } catch(e) {}
+      applyView(ctrlByKey.upload);
+    }, { once: true });
+
+    const c = ctrlByKey.upload;
+    if (c.tools) c.tools.classList.toggle('hidden', !prev.ready);
+    showToast('⏹ Berbagi layar berhenti — video upload dikembalikan');
+  } else {
+    state.uploadReady = false;
+    setUploadBadge('UPLOAD', false);
+    uploadPlaceholder.classList.remove('hidden');
+    const c = ctrlByKey.upload;
+    if (c.tools) c.tools.classList.add('hidden');
+    showToast('⏹ Berbagi layar dihentikan');
+  }
+
+  if (state.isRecording && !state.uploadReady && !state.stream) {
+    stopRecording();
+    showToast('⏹ Rekaman dihentikan karena tidak ada sumber', 'error');
+  }
+}
+
+function waitForVideoDim(video, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const check = () => {
+      if (video.videoWidth > 0) return resolve(true);
+      if (Date.now() - start > timeoutMs) return resolve(false);
+      setTimeout(check, 50);
+    };
+    check();
+  });
+}
+
+/* ============================================================
+   MIC
+   ============================================================ */
+async function toggleMic() {
+  if (state.micEnabled) {
+    if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
+    if (state.micSource) { try { state.micSource.disconnect(); } catch(e){} state.micSource = null; }
+    state.micStream = null;
+    state.micEnabled = false;
+    btnMic.classList.remove('active');
+    showToast('Mic dimatikan');
+    return;
+  }
+  try {
+    const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+    state.micStream = ms;
+    ensureAudioCtx();
+    state.micSource = state.audioCtx.createMediaStreamSource(ms);
+    state.micEnabled = true;
+    btnMic.classList.add('active');
+    showToast('Mic aktif — suara kamu akan direkam', 'success');
+  } catch (err) {
+    showToast('Mic gagal: ' + err.message, 'error');
+  }
+}
+
+/* ============================================================
+   AUDIO
+   ============================================================ */
+function ensureAudioCtx() {
+  if (!state.audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    state.audioCtx = new AC();
+  }
+  if (state.audioCtx.state === 'suspended') {
+    state.audioCtx.resume().catch(() => {});
+  }
+  return state.audioCtx;
+}
+
+['click', 'touchstart', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    if (state.audioCtx && state.audioCtx.state === 'suspended') {
+      state.audioCtx.resume().catch(() => {});
+    }
+  }, { passive: true });
+});
+
+/* ============================================================
+   UPLOAD VIDEO
+   ============================================================ */
+btnUpload.addEventListener('click', () => {
+  if (state.screenOnUpload) { showToast('Hentikan rekam layar dulu sebelum upload', 'error'); return; }
+  fileInput.value = '';
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', async (e) => {
+  if (state.screenOnUpload) {
+    showToast('Hentikan rekam layar dulu sebelum upload', 'error');
+    e.target.value = '';
+    return;
+  }
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('video/')) { showToast('File harus berupa video', 'error'); return; }
+
+  showLoader('Memuat video...');
+  try {
+    const url = URL.createObjectURL(file);
+    try { uploadVideo.srcObject = null; } catch(e) {}
+    uploadVideo.src = url;
+    uploadVideo.load();
+
+    await new Promise((resolve, reject) => {
+      const done = () => { uploadVideo.onloadedmetadata = null; uploadVideo.onerror = null; resolve(); };
+      const fail = () => { uploadVideo.onloadedmetadata = null; uploadVideo.onerror = null; reject(new Error('Gagal memuat video')); };
+      uploadVideo.onloadedmetadata = done;
+      uploadVideo.onerror = fail;
+      setTimeout(() => { if (!state.uploadReady && uploadVideo.readyState < 1) fail(); }, 15000);
     });
 
-    let mime = 'video/webm;codecs=vp9,opus';
-    if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
-    if (!MediaRecorder.isTypeSupported(mime)) mime = '';
+    uploadPlaceholder.classList.add('hidden');
+    state.uploadReady = true;
+    setUploadBadge('UPLOAD', false);
 
-    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-    recordChunks = [];
-    recorder.ondataavailable = e => { if (e.data.size) recordChunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(recordChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `obs-recording-${Date.now()}.webm`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      toast('✅ Recording tersimpan!', 'success');
-    };
-    recorder.start(1000);
+    const c = ctrlByKey.upload;
+    resetView(c, true);
+    if (c.tools) c.tools.classList.remove('hidden');
 
-    state.recording = true;
-    state.recordStart = Date.now();
-    const btn = document.getElementById('recordBtn');
-    btn.textContent = '⏹ Stop Recording';
-    btn.classList.add('active');
-    document.getElementById('st-timer-wrap').style.display = 'inline';
-    document.getElementById('st-timer-dot').className = 'status-dot rec';
-    document.getElementById('st-text').textContent = 'Recording';
-    document.getElementById('st-dot').className = 'status-dot rec';
-    toast('⏺ Recording dimulai', 'success');
+    ensureAudioCtx();
+    try {
+      if (!state.uploadSource) {
+        state.uploadSource = state.audioCtx.createMediaElementSource(uploadVideo);
+        state.uploadSource.connect(state.audioCtx.destination);
+      }
+    } catch (e) { console.warn('Audio routing gagal:', e); }
+
+    try {
+      uploadVideo.muted = false;
+      await uploadVideo.play();
+      showToast('Video dimuat — geser / cubit untuk atur', 'success');
+    } catch (autoplayErr) {
+      uploadVideo.muted = true;
+      try { await uploadVideo.play(); } catch(e) {}
+      showToast('Video dimuat — ketuk ▶ untuk audio', '');
+    }
+
+    showHint(c);
+    updatePlayPauseIcon();
+    updateProgressBar();
   } catch (err) {
-    toast('Gagal mulai recording: ' + err.message, 'error');
+    showToast('Gagal: ' + err.message, 'error');
+  } finally {
+    hideLoader();
+  }
+});
+
+/* ============================================================
+   REKAM
+   ============================================================ */
+async function startRecording() {
+  if (state.isRecording) return;
+
+  if (!state.stream && !state.screenOnUpload) {
+    await startCamera(true);
+  }
+
+  if (!state.stream && !state.uploadReady && !state.screenOnUpload) {
+    showToast('Aktifkan kamera / rekam layar / upload video dulu', 'error');
+    return;
+  }
+
+  if (!('MediaRecorder' in window)) { showToast('Browser tidak mendukung perekaman', 'error'); return; }
+  if (typeof canvas.captureStream !== 'function') { showToast('Browser tidak mendukung captureStream', 'error'); return; }
+
+  ensureAudioCtx();
+
+  if (state.uploadReady && !state.screenOnUpload && uploadVideo.paused) {
+    if (uploadVideo.ended) uploadVideo.currentTime = 0;
+    try {
+      uploadVideo.muted = false;
+      await uploadVideo.play();
+    } catch (e) {
+      uploadVideo.muted = true;
+      try { await uploadVideo.play(); } catch (e2) {}
+    }
+  }
+
+  if (state.stream) await waitForVideoDim(liveVideo, 1500);
+  if (state.uploadReady || state.screenOnUpload) await waitForVideoDim(uploadVideo, 1500);
+
+  if (state.bg.mode !== 'off' && liveVideo.videoWidth) {
+    if (liveCanvas.width !== liveVideo.videoWidth) {
+      liveCanvas.width = liveVideo.videoWidth;
+      liveCanvas.height = liveVideo.videoHeight;
+    }
+    startSegLoop();
+  }
+
+  applyQuality(state.quality);
+
+  const videoStream = canvas.captureStream(30);
+  const tracks = [...videoStream.getVideoTracks()];
+
+  if (state.audioCtx) {
+    const recDest = state.audioCtx.createMediaStreamDestination();
+    let hasAudio = false;
+    if (state.micSource)    { state.micSource.connect(recDest);    hasAudio = true; }
+    if (state.uploadSource) { state.uploadSource.connect(recDest); hasAudio = true; }
+    if (hasAudio) {
+      tracks.push(...recDest.stream.getAudioTracks());
+      state.recDest = recDest;
+    }
+  }
+
+  const combinedStream = new MediaStream(tracks);
+
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
+  ];
+  let mimeType = '';
+  for (const m of candidates) if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
+  if (!mimeType) { showToast('Format rekaman tidak didukung', 'error'); return; }
+
+  const p = QUALITY_PRESETS[state.quality];
+
+  try {
+    state.recordedChunks = [];
+    state.mediaRecorder = new MediaRecorder(combinedStream, {
+      mimeType,
+      videoBitsPerSecond: p.bitrate,
+      audioBitsPerSecond: 128_000
+    });
+    state.previewMime = mimeType;
+
+    state.mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) state.recordedChunks.push(e.data);
+    };
+
+    state.mediaRecorder.onstop = async () => {
+      stopDrawLoop();
+      if (state.recDest) {
+        try {
+          if (state.micSource)    state.micSource.disconnect(state.recDest);
+          if (state.uploadSource) state.uploadSource.disconnect(state.recDest);
+        } catch(e) {}
+        state.recDest = null;
+      }
+      const baseType = mimeType.split(';')[0];
+      const blob = new Blob(state.recordedChunks, { type: baseType });
+      state.recordedChunks = [];
+      if (blob.size < 1000) { showToast('Rekaman kosong / terlalu pendek', 'error'); return; }
+      showPreview(blob);
+    };
+
+    state.ticker.startTime = Date.now();
+    startDrawLoop();
+    state.mediaRecorder.start(1000);
+
+    state.isRecording = true;
+    state.recStartTime = Date.now();
+    recBadge.classList.add('show');
+    btnRecord.classList.add('recording');
+    recText.textContent = 'Stop Rekam';
+    state.timerInterval = setInterval(updateRecTimer, 500);
+    updateRecTimer();
+
+    RECORD_LOCKED_BTNS.forEach(b => b.disabled = true);
+    RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
+    showToast('🔴 Merekam', 'success');
+  } catch (err) {
+    showToast('Rekam gagal: ' + err.message, 'error');
   }
 }
 
 function stopRecording() {
-  if (recorder && recorder.state !== 'inactive') {
-    recorder.stop();
+  if (!state.isRecording) return;
+  state.isRecording = false;
+  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+    try { state.mediaRecorder.stop(); } catch(e) {}
   }
-  state.recording = false;
-  const btn = document.getElementById('recordBtn');
-  btn.textContent = '⏺ Start Recording';
-  btn.classList.remove('active');
-  document.getElementById('st-timer-wrap').style.display = state.streaming ? 'inline' : 'none';
-  document.getElementById('st-timer-dot').className = 'status-dot live';
-  document.getElementById('st-text').textContent = state.streaming ? 'LIVE' : 'Ready';
-  document.getElementById('st-dot').className = state.streaming ? 'status-dot live' : 'status-dot';
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerInterval = null;
+  recBadge.classList.remove('show');
+  btnRecord.classList.remove('recording');
+  recText.textContent = 'Mulai Rekam';
+  RECORD_LOCKED_BTNS.forEach(b => b.disabled = false);
+  RECORD_ACTIVE_BTNS.forEach(b => b.disabled = false);
 }
 
-function screenshot() {
-  const canvas = document.getElementById('previewCanvas');
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `obs-screenshot-${Date.now()}.png`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    toast('📷 Screenshot tersimpan', 'success');
-  });
+function updateRecTimer() {
+  const sec = Math.floor((Date.now() - state.recStartTime) / 1000);
+  const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+  const ss = String(sec % 60).padStart(2, '0');
+  recTimerEl.textContent = `${mm}:${ss}`;
 }
 
-/* =====================================================
-   STUDIO MODE & UI
-===================================================== */
-function toggleStudioMode() {
-  state.studioMode = !state.studioMode;
-  state.transition.anim = null;
-  const progPane = document.getElementById('programPane');
-  const transitionBtn = document.getElementById('transitionBtn');
-  const studioBtn1 = document.getElementById('studioToggleBtn');
-  const studioBtn2 = document.getElementById('studioBtn');
-  if (state.studioMode) {
-    progPane.style.display = 'flex';
-    transitionBtn.style.display = 'inline-block';
-    studioBtn1.classList.add('active');
-    studioBtn2.classList.add('active');
-    state.stagingSceneId = state.activeSceneId;
-    document.getElementById('programLabel').textContent = '🔴 Live';
-  } else {
-    progPane.style.display = 'none';
-    transitionBtn.style.display = 'none';
-    studioBtn1.classList.remove('active');
-    studioBtn2.classList.remove('active');
-    state.stagingSceneId = state.activeSceneId;
-  }
-  renderScenes();
-  renderSources();
-  toast(state.studioMode ? 'Studio Mode ON' : 'Studio Mode OFF');
+/* ============================================================
+   PREVIEW
+   ============================================================ */
+function showPreview(blob) {
+  if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+  const url = URL.createObjectURL(blob);
+  state.previewBlob = blob;
+  state.previewUrl = url;
+  previewVideo.src = url;
+  previewInfo.textContent = `Ukuran: ${formatBytes(blob.size)} · Format: ${blob.type}`;
+  previewModal.classList.add('show');
+  setTimeout(() => previewVideo.play().catch(() => {}), 100);
 }
 
-function fullscreenPreview() {
-  const el = document.getElementById('preview-area');
-  if (document.fullscreenElement) document.exitFullscreen();
-  else el.requestFullscreen().catch(() => toast('Fullscreen tidak didukung', 'error'));
+function closePreview() {
+  previewModal.classList.remove('show');
+  previewVideo.pause();
+  previewVideo.src = '';
+  if (state.previewUrl) { URL.revokeObjectURL(state.previewUrl); state.previewUrl = null; }
+  state.previewBlob = null;
 }
 
-function fitCanvases() {
-  const dpr = window.devicePixelRatio || 1;
-  const c1 = document.getElementById('previewCanvas');
-  const c2 = document.getElementById('programCanvas');
-  [c1, c2].forEach(c => {
-    c.width = state.settings.width;
-    c.height = state.settings.height;
-  });
-  document.getElementById('res-info').textContent = `${state.settings.width} x ${state.settings.height}`;
-  document.getElementById('st-res').textContent = `${state.settings.width}x${state.settings.height}`;
-}
-
-/* =====================================================
-   SETTINGS
-===================================================== */
-function openSettings() {
-  document.getElementById('set-res').value = `${state.settings.width}x${state.settings.height}`;
-  document.getElementById('set-fps').value = state.settings.fps;
-  document.getElementById('set-trans').value = state.transition.type;
-  openModal('modal-settings');
-}
-
-function applySettings() {
-  const [w, h] = document.getElementById('set-res').value.split('x').map(Number);
-  state.settings.width = w;
-  state.settings.height = h;
-  state.settings.fps = +document.getElementById('set-fps').value;
-  state.transition.type = document.getElementById('set-trans').value;
-  state.selectedTransType = state.transition.type;
-  fitCanvases();
-  renderTransitions();
-  closeModal('modal-settings');
-  toast(`Settings applied: ${w}x${h} @ ${state.settings.fps}fps`, 'success');
-}
-
-/* =====================================================
-   STATS & TIMERS
-===================================================== */
-function updateStats() {
-  document.getElementById('fps-info').textContent = state.measuredFps + ' fps';
-  document.getElementById('st-fps').textContent = state.measuredFps;
-  document.getElementById('st-cpu').textContent = Math.min(99, 5 + state.scenes.length * 2 + state.audioSources.length * 3) + '%';
-  document.getElementById('st-dropped').textContent = state.droppedFrames;
-}
-
-function updateTimers() {
-  const ref = state.recording ? state.recordStart : (state.streaming ? state.liveStart : 0);
-  if (!ref) return;
-  const sec = Math.floor((Date.now() - ref) / 1000);
-  const h = String(Math.floor(sec / 3600)).padStart(2, '0');
-  const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
-  const s = String(sec % 60).padStart(2, '0');
-  document.getElementById('st-timer').textContent = `${h}:${m}:${s}`;
-}
-
-/* =====================================================
-   CONTEXT MENU
-===================================================== */
-const ctxMenu = document.getElementById('ctx-menu');
-function showSourceContext(e, sourceId) {
-  state.selectedSourceId = sourceId;
-  const sc = getEditScene();
-  const src = sc.sources.find(s => s.id === sourceId);
-  ctxMenu.innerHTML = `
-    <div class="ctx-item" onclick="openProperties('${sourceId}');hideCtx()">Properties</div>
-    <div class="ctx-item" onclick="toggleVis('${sourceId}');hideCtx()">${src.visible ? 'Hide' : 'Show'}</div>
-    <div class="ctx-item" onclick="toggleLock('${sourceId}');hideCtx()">${src.locked ? 'Unlock' : 'Lock'}</div>
-    <div class="ctx-item" onclick="moveSource('up');hideCtx()">Move Up</div>
-    <div class="ctx-item" onclick="moveSource('down');hideCtx()">Move Down</div>
-    <div class="dd-sep"></div>
-    <div class="ctx-item" onclick="removeSource();hideCtx()">Remove</div>
-  `;
-  ctxMenu.style.left = e.clientX + 'px';
-  ctxMenu.style.top = e.clientY + 'px';
-  ctxMenu.classList.add('open');
-}
-function hideCtx() { ctxMenu.classList.remove('open'); }
-document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) hideCtx(); });
-
-function toggleVis(id) {
-  const src = getEditScene().sources.find(s => s.id === id);
-  if (src) { src.visible = !src.visible; renderSources(); }
-}
-function toggleLock(id) {
-  const src = getEditScene().sources.find(s => s.id === id);
-  if (src) { src.locked = !src.locked; renderSources(); }
-}
-
-/* =====================================================
-   MENU ACTIONS
-===================================================== */
-document.querySelectorAll('[data-action]').forEach(el => {
-  el.addEventListener('click', () => {
-    const a = el.dataset.action;
-    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-    switch (a) {
-      case 'screenshot': screenshot(); break;
-      case 'record': toggleRecord(); break;
-      case 'settings': openSettings(); break;
-      case 'exit': if (confirm('Keluar dari OBS Pro Web?')) { window.close(); location.reload(); } break;
-      case 'props': if (state.selectedSourceId) openProperties(state.selectedSourceId); else toast('Pilih source dulu', 'error'); break;
-      case 'remove-source': removeSource(); break;
-      case 'audio-props': showInfo('Advanced Audio Properties', '<p>Fitur ini tersedia di versi native OBS. Di Web demo, gunakan Audio Mixer di sebelah kanan untuk mengatur volume dan mute.</p>'); break;
-      case 'fullscreen': fullscreenPreview(); break;
-      case 'toggle-stats': state.showStats = !state.showStats; document.querySelector('.statusbar').style.display = state.showStats ? 'flex' : 'none'; break;
-      case 'toggle-docks': document.querySelectorAll('.sidebar').forEach(el => el.style.display = el.style.display === 'none' ? 'flex' : 'none'); break;
-      case 'autoconfig': showInfo('Auto-Configuration Wizard', '<p>✅ Deteksi perangkat selesai.</p><p>Rekomendasi: Resolusi 1280x720 @ 30fps, bitrate 3500 Kbps.</p><p>Klik Apply di Settings untuk menerapkan.</p>'); break;
-      case 'test-audio': showInfo('Test Audio', '🔊 Anda dapat menambahkan audio input via <b>Sources → + → Audio Input Capture</b>. Volume dapat diatur di Audio Mixer.'); break;
-      case 'about': showInfo('About OBS Pro Web', `<p><b>OBS Pro Web Clone</b> v2.0</p><p>Fitur:<br>• Canvas preview live<br>• Webcam & screen capture<br>• Recording ke file .webm<br>• Screenshot PNG<br>• Audio meter realtime<br>• Scene transition fade/slide/cut<br>• Studio mode</p>`); break;
-      case 'shortcuts': showInfo('Keyboard Shortcuts', `<p><b>Ctrl + R</b> — Start/Stop Recording<br><b>Ctrl + S</b> — Screenshot<br><b>Del</b> — Hapus source terpilih<br><b>Esc</b> — Tutup modal/menu<br><b>Dbl-click source</b> — Properties</p>`); break;
+async function saveToGallery() {
+  if (!state.previewBlob) return;
+  const baseType = state.previewMime.split(';')[0];
+  const ext = baseType.includes('mp4') ? 'mp4' : 'webm';
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const file = new File([state.previewBlob], `split-${stamp}.${ext}`, { type: baseType });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Split Screen Video' });
+      showToast('Tersimpan ke galeri', 'success');
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') { showToast('Dibatalkan'); return; }
     }
+  }
+  downloadFile();
+}
+
+function downloadFile() {
+  if (!state.previewBlob) return;
+  const baseType = state.previewMime.split(';')[0];
+  const ext = baseType.includes('mp4') ? 'mp4' : 'webm';
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const url = URL.createObjectURL(state.previewBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `split-${stamp}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  showToast('File diunduh ke Downloads', 'success');
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+/* ============================================================
+   EVENT UTAMA
+   ============================================================ */
+btnStartCam.addEventListener('click', () => startCamera());
+btnScreen.addEventListener('click', () => startScreenCapture());
+btnSwitchCam.addEventListener('click', () => {
+  state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
+  startCamera();
+});
+btnMic.addEventListener('click', toggleMic);
+btnQuality.addEventListener('click', () => {
+  const i = QUALITY_ORDER.indexOf(state.quality);
+  const next = QUALITY_ORDER[(i + 1) % QUALITY_ORDER.length];
+  applyQuality(next);
+  showToast('Kualitas: ' + QUALITY_PRESETS[next].label);
+});
+btnRecord.addEventListener('click', () => {
+  if (state.isRecording) stopRecording();
+  else startRecording();
+});
+btnClosePreview.addEventListener('click', closePreview);
+btnSaveGallery.addEventListener('click', saveToGallery);
+btnDownload.addEventListener('click', downloadFile);
+
+/* ============================================================
+   RESIZE
+   ============================================================ */
+let resizeTimeout;
+function handleResize() {
+  if (state.isRecording) { applyAllViews(); return; }
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if (state.aspectMode === 'asli') updateDividerOrientation();
+    if (state.floating.enabled) updateFloatingPosition();
+    else applySplitToLayout();
+    applyQuality(state.quality);
+    applyAllViews();
+    updateTickerDOM();
+    if (state.ticker.enabled) startTickerDOMLoop();
+  }, 150);
+}
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', handleResize);
+
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => {
+    applyAllViews();
+    if (state.floating.enabled) updateFloatingPosition();
   });
-});
+  ro.observe(liveScreen);
+  ro.observe(uploadScreen);
+}
 
-// Keyboard shortcuts
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-    hideCtx();
+/* ============================================================
+   CLEANUP
+   ============================================================ */
+function cleanup() {
+  if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+  if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
+  if (state._screenTrack) {
+    try { state._screenTrack.removeEventListener('ended', onScreenShareEnded); } catch(e) {}
+    try { state._screenTrack.stop(); } catch(e) {}
+    state._screenTrack = null;
   }
-  if (e.ctrlKey && e.key === 'r') { e.preventDefault(); toggleRecord(); }
-  if (e.ctrlKey && e.key === 's') { e.preventDefault(); screenshot(); }
-  if (e.key === 'Delete' && state.selectedSourceId) {
-    if (!document.activeElement.matches('input,textarea')) removeSource();
-  }
-});
+  state.screenOnUpload = false;
+  if (state.isRecording) stopRecording();
+  stopSegLoop();
+  stopTickerDOMLoop();
+}
+window.addEventListener('pagehide', cleanup);
+window.addEventListener('beforeunload', cleanup);
 
-/* =====================================================
-   START
-===================================================== */
-init();
+/* ============================================================
+   INIT
+   ============================================================ */
+applyQuality('720');
+requestAnimationFrame(() => {
+  updateDividerOrientation();
+  applySplitToLayout();
+  applyQuality(state.quality);
+  applyAllViews();
+  updateTickerDOM();
+  updateExpandLabels();
+  updateFloatingSizePresets();
+  updateLiveBadgeVisibility();
+});
+updatePlayPauseIcon();
+updateBgBtnState();
+console.log('%c📱 Split Screen Recorder v3.1 — rekam layar FIXED',
+  'color:#6366f1;font-weight:bold;font-size:14px');
 </script>
+
 </body>
 </html>
