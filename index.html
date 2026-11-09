@@ -2,139 +2,135 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OBS Pro Web Clone</title>
+<title>OBS Pro Web - Functional</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','Inter',system-ui,sans-serif; user-select:none; }
-:root {
-  --bg-dark:#1e1e1e; --bg-darker:#121212; --bg-panel:#252525;
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; user-select:none; }
+:root{
+  --bg-darker:#0f0f0f; --bg-dark:#1e1e1e; --bg-panel:#252525;
   --bg-hover:#333; --bg-active:#3a3a3a; --border:#3a3a3a;
-  --text-primary:#e0e0e0; --text-secondary:#a0a0a0;
-  --accent:#ff4444; --accent-hover:#ff6666;
-  --success:#2ecc71; --warning:#f1c40f; --danger:#e74c3c;
-  --radius:4px; --shadow:0 2px 8px rgba(0,0,0,0.4);
+  --text:#e0e0e0; --text-dim:#a0a0a0; --accent:#ff4444; --accent-h:#ff6666;
+  --success:#2ecc71; --danger:#e74c3c; --warning:#f1c40f; --radius:4px;
 }
-body { background:var(--bg-darker); color:var(--text-primary); height:100vh; overflow:hidden; display:flex; flex-direction:column; }
-::-webkit-scrollbar { width:8px; height:8px; }
-::-webkit-scrollbar-track { background:var(--bg-darker); }
-::-webkit-scrollbar-thumb { background:#444; border-radius:4px; }
-::-webkit-scrollbar-thumb:hover { background:#555; }
+body{ background:var(--bg-darker); color:var(--text); height:100vh; overflow:hidden;
+  display:flex; flex-direction:column; font-size:13px; }
+::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:#444;border-radius:4px;}
 
 /* MENUBAR */
-.menubar { display:flex; align-items:center; background:var(--bg-dark); border-bottom:1px solid var(--border); padding:0 8px; height:32px; font-size:13px; flex-shrink:0; position:relative; z-index:100; }
-.menubar .logo { font-weight:700; color:var(--accent); margin-right:16px; font-size:14px; letter-spacing:.5px; }
-.menu-item { position:relative; padding:4px 10px; border-radius:var(--radius); cursor:pointer; color:var(--text-secondary); transition:.15s; }
-.menu-item:hover, .menu-item.active { background:var(--bg-active); color:var(--text-primary); }
-.dropdown { display:none; position:absolute; top:100%; left:0; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); min-width:230px; z-index:1000; padding:4px 0; }
-.menu-item.active .dropdown { display:block; }
-.dropdown-item { padding:6px 16px; font-size:13px; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
-.dropdown-item:hover { background:var(--accent); color:#fff; }
-.dropdown-separator { height:1px; background:var(--border); margin:4px 0; }
-.dropdown-item .shortcut { font-size:11px; color:#777; margin-left:20px; }
+.menubar{display:flex;align-items:center;background:var(--bg-dark);border-bottom:1px solid var(--border);height:30px;padding:0 8px;font-size:12px;flex-shrink:0;position:relative;z-index:100;}
+.menubar .logo{font-weight:700;color:var(--accent);margin-right:16px;font-size:13px;}
+.menu-item{position:relative;padding:5px 10px;cursor:pointer;color:var(--text-dim);border-radius:var(--radius);}
+.menu-item:hover{background:var(--bg-hover);color:var(--text);}
+.dropdown{display:none;position:absolute;top:100%;left:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,.5);min-width:220px;z-index:1000;padding:4px 0;}
+.menu-item:hover .dropdown{display:block;}
+.dropdown-item{padding:6px 14px;cursor:pointer;color:var(--text-dim);display:flex;justify-content:space-between;font-size:12px;}
+.dropdown-item:hover{background:var(--accent);color:#fff;}
+.dropdown-item.disabled{opacity:.4;pointer-events:none;}
+.dd-sep{height:1px;background:var(--border);margin:4px 0;}
+.dd-shortcut{color:#666;font-size:11px;}
 
 /* LAYOUT */
-.main-container { display:flex; flex:1; overflow:hidden; }
-.dock { background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-direction:column; overflow:hidden; margin:4px; }
-.dock-header { display:flex; align-items:center; justify-content:space-between; padding:4px 8px; background:var(--bg-dark); border-bottom:1px solid var(--border); font-size:12px; font-weight:600; color:var(--text-secondary); flex-shrink:0; }
-.dock-header .actions { display:flex; gap:4px; }
-.dock-header .actions button { background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:0 4px; border-radius:2px; }
-.dock-header .actions button:hover { color:var(--text-primary); background:var(--bg-hover); }
-.dock-content { flex:1; overflow-y:auto; padding:4px; }
+.main{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:240px;display:flex;flex-direction:column;gap:2px;padding:2px;flex-shrink:0;}
+.dock{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;}
+.dock-header{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg-dark);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-dim);flex-shrink:0;}
+.dock-header .actions{display:flex;gap:2px;}
+.dock-header button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;padding:1px 5px;font-size:14px;border-radius:2px;}
+.dock-header button:hover{background:var(--bg-hover);color:var(--text);}
+.dock-body{flex:1;overflow-y:auto;padding:3px;}
+.scenes-dock{flex:1;min-height:100px;} .sources-dock{flex:1.5;min-height:150px;}
+.mixer-dock{flex:1.5;min-height:180px;} .trans-dock{flex:.7;min-height:80px;}
 
-.sidebar-left { width:260px; display:flex; flex-direction:column; flex-shrink:0; gap:4px; }
-.sidebar-left .dock { margin:0 4px; }
-.scenes-dock { flex:1; }
-.sources-dock { flex:1.5; }
-.sidebar-right { width:280px; display:flex; flex-direction:column; flex-shrink:0; gap:4px; }
-.sidebar-right .dock { margin:0 4px; }
-.mixer-dock { flex:2; }
-.transitions-dock { flex:1; }
+/* CENTER */
+.center{flex:1;display:flex;flex-direction:column;padding:2px;gap:2px;overflow:hidden;}
+.preview-toolbar{display:flex;gap:4px;padding:4px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);flex-shrink:0;align-items:center;}
+.preview-toolbar .spacer{flex:1;}
+.tb-btn{background:transparent;border:1px solid transparent;color:var(--text-dim);padding:3px 8px;border-radius:var(--radius);cursor:pointer;font-size:12px;}
+.tb-btn:hover{background:var(--bg-hover);color:var(--text);border-color:var(--border);}
+.tb-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.tb-info{font-size:11px;color:var(--text-dim);padding:0 6px;}
 
-/* CENTRAL */
-.central-area { flex:1; display:flex; flex-direction:column; margin:4px; gap:4px; }
-.preview-wrap { flex:1; background:#000; border:1px solid var(--border); border-radius:var(--radius); display:flex; position:relative; overflow:hidden; }
-.preview-pane { flex:1; display:flex; align-items:center; justify-content:center; position:relative; border-right:1px solid var(--border); overflow:hidden; }
-.preview-pane:last-child { border-right:none; }
-.preview-pane canvas { max-width:100%; max-height:100%; display:block; object-fit:contain; }
-.preview-label { position:absolute; top:8px; left:8px; background:rgba(0,0,0,.75); padding:2px 8px; border-radius:4px; font-size:11px; color:#fff; z-index:10; pointer-events:none; }
-.preview-label.rec { background:rgba(231,76,60,.9); animation:pulse 1.5s infinite; }
+.preview-area{flex:1;display:flex;gap:2px;min-height:0;}
+.preview-pane{flex:1;background:#000;border:1px solid var(--border);border-radius:var(--radius);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.preview-pane canvas{max-width:100%;max-height:100%;display:block;cursor:crosshair;}
+.preview-label{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.75);padding:2px 8px;border-radius:3px;font-size:10px;color:var(--text-dim);z-index:5;pointer-events:none;}
+.preview-label.live{color:var(--danger);}
+.preview-label.off{color:#666;}
 
-/* CONTROLS */
-.controls-dock { display:flex; align-items:center; justify-content:center; gap:8px; padding:6px 12px; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); flex-shrink:0; }
-.btn { padding:6px 16px; border:none; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; transition:.15s; display:flex; align-items:center; gap:6px; }
-.btn:active { transform:scale(.96); }
-.btn-stream { background:var(--accent); color:#fff; }
-.btn-stream:hover { background:var(--accent-hover); }
-.btn-stream.active { background:var(--danger); animation:pulse 1.5s infinite; }
-.btn-record { background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border); }
-.btn-record:hover { background:var(--bg-active); }
-.btn-record.active { background:var(--danger); color:#fff; border-color:var(--danger); animation:pulse 1.5s infinite; }
-.btn-secondary { background:var(--bg-hover); color:var(--text-secondary); border:1px solid var(--border); }
-.btn-secondary:hover { background:var(--bg-active); color:var(--text-primary); }
-.btn-secondary.active { background:var(--accent); color:#fff; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
-
-/* STATUS */
-.statusbar { display:flex; align-items:center; justify-content:space-between; background:var(--bg-dark); border-top:1px solid var(--border); padding:2px 12px; font-size:11px; color:var(--text-secondary); height:24px; flex-shrink:0; }
-.status-left,.status-right { display:flex; align-items:center; gap:16px; }
-.status-item { display:flex; align-items:center; gap:4px; }
-.status-dot { width:8px; height:8px; border-radius:50%; background:var(--success); }
-.status-dot.offline { background:#555; }
-.status-dot.live { background:var(--danger); animation:pulse 1s infinite; }
+.controls{display:flex;gap:6px;padding:6px 10px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);justify-content:center;flex-shrink:0;}
+.btn{padding:6px 14px;border:none;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s,transform .1s;}
+.btn:active{transform:scale(.96);}
+.btn-stream{background:var(--accent);color:#fff;} .btn-stream:hover{background:var(--accent-h);}
+.btn-stream.active{background:var(--danger);animation:pulse 1.4s infinite;}
+.btn-record{background:var(--bg-hover);color:var(--text);border:1px solid var(--border);}
+.btn-record:hover{background:var(--bg-active);}
+.btn-record.active{background:var(--danger);color:#fff;animation:pulse 1.4s infinite;}
+.btn-sec{background:var(--bg-hover);color:var(--text-dim);border:1px solid var(--border);}
+.btn-sec:hover{background:var(--bg-active);color:var(--text);}
+.btn-sec.active{background:var(--accent);color:#fff;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
 /* ITEMS */
-.scene-item, .source-item { display:flex; align-items:center; padding:6px 8px; border-radius:var(--radius); cursor:pointer; font-size:13px; color:var(--text-secondary); transition:.15s; gap:8px; margin-bottom:2px; }
-.scene-item:hover, .source-item:hover { background:var(--bg-hover); }
-.scene-item.active { background:var(--accent); color:#fff; }
-.source-item.active { background:var(--bg-active); color:var(--text-primary); }
-.source-item.hidden-source { opacity:.5; }
-.source-item .icon { width:16px; height:16px; border-radius:2px; display:inline-block; flex-shrink:0; }
-.source-item .name { flex:1; }
-.source-item .visibility-toggle { background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:0 2px; }
-.source-item .visibility-toggle:hover { color:var(--text-primary); }
-.source-item.drag-over { border-top:2px solid var(--accent); }
+.scene-item,.source-item{display:flex;align-items:center;padding:5px 8px;border-radius:var(--radius);cursor:pointer;color:var(--text-dim);gap:6px;margin-bottom:1px;font-size:12px;}
+.scene-item:hover,.source-item:hover{background:var(--bg-hover);}
+.scene-item.active{background:var(--accent);color:#fff;font-weight:600;}
+.source-item.active{background:var(--bg-active);color:var(--text);}
+.source-item .icon{width:12px;height:12px;border-radius:2px;background:#555;flex-shrink:0;}
+.source-item.hidden-src{opacity:.5;}
+.source-item.locked-src{opacity:.6;}
+.source-item .vis{margin-left:auto;background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:0 2px;}
+.source-item .vis:hover{color:var(--text);}
+.audio-ch{display:flex;align-items:center;gap:5px;padding:3px 4px;border-bottom:1px solid var(--border);font-size:11px;}
+.audio-ch:last-child{border-bottom:none;}
+.audio-ch .name{width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-dim);}
+.audio-slider{flex:1;height:5px;-webkit-appearance:none;background:#3a3a3a;border-radius:3px;cursor:pointer;outline:none;}
+.audio-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--accent);border-radius:50%;cursor:pointer;}
+.audio-meter{width:36px;height:5px;background:#333;border-radius:3px;overflow:hidden;}
+.audio-meter-fill{height:100%;width:0;background:linear-gradient(90deg,var(--success),var(--warning),var(--danger));transition:width .05s;}
+.audio-btn{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;}
+.audio-btn.muted{color:var(--danger);}
+.trans-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--text-dim);}
+.trans-item:hover{background:var(--bg-hover);}
+.trans-item.active{background:var(--bg-active);color:var(--text);}
+.trans-dur{color:#666;font-size:11px;}
 
-.toolbar { display:flex; gap:4px; padding:4px; border-bottom:1px solid var(--border); }
-.toolbar button { background:transparent; border:1px solid transparent; color:var(--text-secondary); padding:2px 8px; border-radius:var(--radius); font-size:12px; cursor:pointer; }
-.toolbar button:hover { background:var(--bg-hover); color:var(--text-primary); border-color:var(--border); }
-
-/* AUDIO */
-.audio-channel { display:flex; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px solid var(--border); }
-.audio-channel:last-child { border-bottom:none; }
-.audio-label { font-size:12px; color:var(--text-secondary); min-width:70px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.audio-slider { flex:1; -webkit-appearance:none; appearance:none; height:6px; background:#444; border-radius:3px; outline:none; cursor:pointer; min-width:60px; }
-.audio-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:14px; height:14px; background:var(--accent); border-radius:50%; cursor:pointer; }
-.audio-slider::-moz-range-thumb { width:14px; height:14px; background:var(--accent); border-radius:50%; cursor:pointer; border:none; }
-.audio-mute { background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:2px; }
-.audio-mute.muted { color:var(--danger); }
-.audio-meter { width:50px; height:8px; background:#222; border-radius:2px; overflow:hidden; display:flex; }
-.audio-meter-fill { height:100%; background:var(--success); transition:width .08s linear; }
-.audio-meter-fill.hot { background:var(--warning); }
-.audio-meter-fill.clip { background:var(--danger); }
-
-/* TRANSITIONS */
-.transition-item { display:flex; align-items:center; justify-content:space-between; padding:6px 8px; font-size:13px; color:var(--text-secondary); cursor:pointer; border-radius:var(--radius); margin-bottom:2px; }
-.transition-item:hover { background:var(--bg-hover); }
-.transition-item.active { background:var(--bg-active); color:var(--text-primary); border-left:3px solid var(--accent); }
-.transition-duration { font-size:11px; color:#777; }
+/* STATUSBAR */
+.statusbar{display:flex;align-items:center;justify-content:space-between;padding:2px 12px;background:var(--bg-dark);border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);height:22px;flex-shrink:0;}
+.status-left,.status-right{display:flex;gap:14px;align-items:center;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#555;display:inline-block;margin-right:4px;}
+.status-dot.live{background:var(--danger);animation:pulse 1.4s infinite;}
+.status-dot.rec{background:var(--warning);animation:pulse 1s infinite;}
+.status-dot.ok{background:var(--success);}
 
 /* MODAL */
-.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:2000; align-items:center; justify-content:center; }
-.modal-overlay.open { display:flex; }
-.modal { background:var(--bg-panel); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); width:500px; max-width:90vw; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
-.modal-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); font-weight:600; font-size:15px; }
-.modal-close { background:transparent; border:none; color:var(--text-secondary); font-size:20px; cursor:pointer; }
-.modal-close:hover { color:var(--text-primary); }
-.modal-body { padding:16px; overflow-y:auto; }
-.modal-body label { display:block; font-size:13px; color:var(--text-secondary); margin-bottom:4px; margin-top:12px; }
-.modal-body label:first-child { margin-top:0; }
-.modal-body input, .modal-body select { width:100%; padding:8px 10px; background:var(--bg-darker); border:1px solid var(--border); border-radius:var(--radius); color:var(--text-primary); font-size:13px; outline:none; }
-.modal-body input:focus, .modal-body select:focus { border-color:var(--accent); }
-.modal-footer { padding:12px 16px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
-.row { display:flex; gap:8px; }
-.row > * { flex:1; }
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.6);width:520px;max-width:92vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px;}
+.modal-h button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;padding:0 4px;}
+.modal-h button:hover{color:var(--text);}
+.modal-b{padding:14px;overflow-y:auto;}
+.modal-b label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;margin-top:10px;}
+.modal-b label:first-child{margin-top:0;}
+.modal-b input[type=text],.modal-b input[type=number],.modal-b select,.modal-b textarea{width:100%;padding:6px 9px;background:var(--bg-darker);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;outline:none;font-family:inherit;}
+.modal-b input:focus,.modal-b select:focus,.modal-b textarea:focus{border-color:var(--accent);}
+.modal-b input[type=color]{width:50px;height:30px;padding:0;border:1px solid var(--border);background:var(--bg-darker);cursor:pointer;}
+.modal-b input[type=range]{width:100%;}
+.row{display:flex;gap:10px;} .row > *{flex:1;}
+.modal-f{padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
 
-.hidden { display:none !important; }
+/* TOAST */
+#toast-container{position:fixed;bottom:40px;right:20px;display:flex;flex-direction:column;gap:6px;z-index:3000;}
+.toast{background:var(--bg-panel);border:1px solid var(--border);border-left:3px solid var(--accent);padding:8px 14px;border-radius:4px;font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,.5);animation:slideIn .2s ease;}
+.toast.success{border-left-color:var(--success);}
+.toast.error{border-left-color:var(--danger);}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* CONTEXT MENU */
+#ctx-menu{display:none;position:fixed;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.6);min-width:180px;padding:4px 0;z-index:4000;}
+#ctx-menu.open{display:block;}
+.ctx-item{padding:5px 14px;cursor:pointer;color:var(--text-dim);font-size:12px;}
+.ctx-item:hover{background:var(--accent);color:#fff;}
+.ctx-item.disabled{opacity:.4;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -142,903 +138,1284 @@ body { background:var(--bg-darker); color:var(--text-primary); height:100vh; ove
 <!-- MENUBAR -->
 <div class="menubar">
   <div class="logo">OBS Pro</div>
-  <div class="menu-item" data-menu="file">File
+
+  <div class="menu-item">File
     <div class="dropdown">
-      <div class="dropdown-item" onclick="showRecordings()">Show Recordings</div>
-      <div class="dropdown-item" onclick="remuxRecordings()">Remux Recordings</div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item" onclick="openSettingsModal()">Settings</div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item" onclick="exitApp()">Exit</div>
+      <div class="dropdown-item" data-action="screenshot">Take Screenshot <span class="dd-shortcut">Ctrl+S</span></div>
+      <div class="dropdown-item" data-action="record">Start/Stop Recording <span class="dd-shortcut">Ctrl+R</span></div>
+      <div class="dd-sep"></div>
+      <div class="dropdown-item" data-action="settings">Settings...</div>
+      <div class="dd-sep"></div>
+      <div class="dropdown-item" data-action="exit">Exit</div>
     </div>
   </div>
-  <div class="menu-item" data-menu="edit">Edit
+
+  <div class="menu-item">Edit
     <div class="dropdown">
-      <div class="dropdown-item" onclick="copySource()">Copy</div>
-      <div class="dropdown-item" onclick="duplicateSource()">Duplicate</div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item" onclick="moveSource('up')">Move Source Up</div>
-      <div class="dropdown-item" onclick="moveSource('down')">Move Source Down</div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item" onclick="openSettingsModal()">Advanced Audio Properties</div>
+      <div class="dropdown-item" data-action="props">Source Properties <span class="dd-shortcut">Dbl-click</span></div>
+      <div class="dropdown-item" data-action="remove-source">Remove Source <span class="dd-shortcut">Del</span></div>
+      <div class="dd-sep"></div>
+      <div class="dropdown-item" data-action="audio-props">Advanced Audio Properties</div>
     </div>
   </div>
-  <div class="menu-item" data-menu="view">View
+
+  <div class="menu-item">View
     <div class="dropdown">
-      <div class="dropdown-item" onclick="resetLayout()">Reset Layout</div>
-      <div class="dropdown-item" onclick="toggleStats()">Stats</div>
-      <div class="dropdown-item" onclick="toggleStudioMode()">Studio Mode</div>
+      <div class="dropdown-item" data-action="fullscreen">Fullscreen Preview</div>
+      <div class="dropdown-item" data-action="toggle-stats">Toggle Stats</div>
+      <div class="dd-sep"></div>
+      <div class="dropdown-item" data-action="toggle-docks">Show/Hide Docks</div>
     </div>
   </div>
-  <div class="menu-item" data-menu="docks">Docks
+
+  <div class="menu-item">Tools
     <div class="dropdown">
-      <div class="dropdown-item" onclick="resetLayout()">Reset Docks</div>
-      <div class="dropdown-item" onclick="toggleDock('scenes')">Toggle Scenes</div>
-      <div class="dropdown-item" onclick="toggleDock('sources')">Toggle Sources</div>
-      <div class="dropdown-item" onclick="toggleDock('mixer')">Toggle Audio Mixer</div>
+      <div class="dropdown-item" data-action="autoconfig">Auto-Configuration Wizard</div>
+      <div class="dropdown-item" data-action="test-audio">Test Audio Devices</div>
     </div>
   </div>
-  <div class="menu-item" data-menu="profile">Profile
+
+  <div class="menu-item">Help
     <div class="dropdown">
-      <div class="dropdown-item" onclick="alert('Profile baru dibuat: Untitled')">New</div>
-      <div class="dropdown-item" onclick="alert('Profile diduplikasi')">Duplicate</div>
-      <div class="dropdown-item" onclick="openSettingsModal()">Rename</div>
-    </div>
-  </div>
-  <div class="menu-item" data-menu="scenes">Scene Collection
-    <div class="dropdown">
-      <div class="dropdown-item" onclick="alert('Scene Collection baru')">New</div>
-      <div class="dropdown-item" onclick="alert('Scene Collection diduplikasi')">Duplicate</div>
-    </div>
-  </div>
-  <div class="menu-item" data-menu="tools">Tools
-    <div class="dropdown">
-      <div class="dropdown-item" onclick="alert('Auto-Config Wizard: Sistem optimal untuk streaming 1080p60')">Auto-Configuration Wizard</div>
-      <div class="dropdown-item" onclick="alert('Scripts panel')">Scripts</div>
-    </div>
-  </div>
-  <div class="menu-item" data-menu="help">Help
-    <div class="dropdown">
-      <div class="dropdown-item" onclick="alert('OBS Pro Web Clone v1.0\nDibuat dengan HTML/CSS/JS murni')">About</div>
-      <div class="dropdown-item" onclick="alert('Log dibersihkan')">Clear Logs</div>
+      <div class="dropdown-item" data-action="about">About OBS Pro Web</div>
+      <div class="dropdown-item" data-action="shortcuts">Keyboard Shortcuts</div>
     </div>
   </div>
 </div>
 
 <!-- MAIN -->
-<div class="main-container">
-  <!-- LEFT -->
-  <div class="sidebar-left">
-    <div class="dock scenes-dock" id="dock-scenes">
+<div class="main">
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="dock scenes-dock">
       <div class="dock-header"><span>Scenes</span>
         <div class="actions">
           <button title="Add Scene" onclick="addScene()">+</button>
           <button title="Remove Scene" onclick="removeScene()">−</button>
         </div>
       </div>
-      <div class="dock-content" id="scene-list"></div>
+      <div class="dock-body" id="scene-list"></div>
     </div>
-    <div class="dock sources-dock" id="dock-sources">
+
+    <div class="dock sources-dock">
       <div class="dock-header"><span>Sources</span>
         <div class="actions">
-          <button title="Add Source" onclick="openAddSourceModal()">+</button>
+          <button title="Add Source" onclick="openAddSource()">+</button>
           <button title="Remove Source" onclick="removeSource()">−</button>
         </div>
       </div>
-      <div class="toolbar">
-        <button onclick="moveSource('up')">▲</button>
-        <button onclick="moveSource('down')">▼</button>
-        <button onclick="toggleSourceVisibilityActive()">👁</button>
-      </div>
-      <div class="dock-content" id="source-list"></div>
+      <div class="dock-body" id="source-list"></div>
     </div>
   </div>
 
   <!-- CENTER -->
-  <div class="central-area">
-    <div class="preview-wrap" id="preview-wrap">
+  <div class="center">
+    <div class="preview-toolbar">
+      <button class="tb-btn" onclick="screenshot()" title="Screenshot">📷</button>
+      <button class="tb-btn" onclick="fullscreenPreview()" title="Fullscreen">⛶</button>
+      <button class="tb-btn" id="studioBtn" onclick="toggleStudioMode()" title="Studio Mode">🎬 Studio</button>
+      <div class="spacer"></div>
+      <span class="tb-info" id="res-info">1280 x 720</span>
+      <span class="tb-info" id="fps-info">-- fps</span>
+    </div>
+
+    <div class="preview-area" id="preview-area">
       <div class="preview-pane">
-        <span class="preview-label" id="preview-label">Program</span>
-        <canvas id="program-canvas"></canvas>
+        <span class="preview-label off" id="previewLabel">Preview</span>
+        <canvas id="previewCanvas" width="1280" height="720"></canvas>
       </div>
-      <div class="preview-pane hidden" id="preview-pane-2">
-        <span class="preview-label">Preview</span>
-        <canvas id="preview-canvas"></canvas>
+      <div class="preview-pane" id="programPane" style="display:none;">
+        <span class="preview-label live" id="programLabel">🔴 Live</span>
+        <canvas id="programCanvas" width="1280" height="720"></canvas>
       </div>
     </div>
-    <div class="controls-dock">
-      <button class="btn btn-stream" id="btn-stream" onclick="toggleStream()">▶ Start Streaming</button>
-      <button class="btn btn-record" id="btn-record" onclick="toggleRecord()">⏺ Start Recording</button>
-      <button class="btn btn-secondary" id="btn-studio" onclick="toggleStudioMode()">🎬 Studio Mode</button>
-      <button class="btn btn-secondary" onclick="openSettingsModal()">⚙ Settings</button>
-      <button class="btn btn-secondary" onclick="exitApp()">✕ Exit</button>
+
+    <div class="controls">
+      <button class="btn btn-stream" id="streamBtn" onclick="toggleStream()">▶ Start Streaming</button>
+      <button class="btn btn-record" id="recordBtn" onclick="toggleRecord()">⏺ Start Recording</button>
+      <button class="btn btn-sec" id="studioToggleBtn" onclick="toggleStudioMode()">🎬 Studio Mode</button>
+      <button class="btn btn-sec" onclick="toggleTransition()" id="transitionBtn" style="display:none;">⚡ Transition</button>
+      <button class="btn btn-sec" onclick="openSettings()">⚙ Settings</button>
     </div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="sidebar-right">
-    <div class="dock mixer-dock" id="dock-mixer">
+  <!-- RIGHT SIDEBAR -->
+  <div class="sidebar">
+    <div class="dock mixer-dock">
       <div class="dock-header"><span>Audio Mixer</span>
-        <div class="actions"><button onclick="toggleAllMute()">🔇</button></div>
+        <div class="actions">
+          <button title="Add Audio" onclick="openAddSource('audio')">+</button>
+        </div>
       </div>
-      <div class="dock-content" id="audio-mixer"></div>
+      <div class="dock-body" id="audio-list"></div>
     </div>
-    <div class="dock transitions-dock" id="dock-transitions">
+
+    <div class="dock trans-dock">
       <div class="dock-header"><span>Scene Transitions</span></div>
-      <div class="dock-content" id="transition-list"></div>
+      <div class="dock-body" id="trans-list"></div>
     </div>
   </div>
 </div>
 
-<!-- STATUS -->
+<!-- STATUSBAR -->
 <div class="statusbar">
   <div class="status-left">
-    <div class="status-item"><span class="status-dot offline" id="status-indicator"></span><span id="status-text">Offline</span></div>
-    <div class="status-item">CPU: <span id="cpu-usage">8%</span></div>
-    <div class="status-item">FPS: <span id="fps-counter">60</span></div>
-    <div class="status-item">Dropped: <span id="dropped-frames">0</span></div>
+    <span><span class="status-dot" id="st-dot"></span><span id="st-text">Ready</span></span>
+    <span>CPU: <span id="st-cpu">0%</span></span>
+    <span>Res: <span id="st-res">1280x720</span></span>
   </div>
   <div class="status-right">
-    <div class="status-item hidden" id="stream-timer"><span style="color:var(--danger)">● LIVE</span> <span id="live-time">00:00:00</span></div>
-    <div class="status-item hidden" id="record-timer"><span style="color:var(--danger)">● REC</span> <span id="rec-time">00:00:00</span></div>
-    <div class="status-item" id="res-label">1920×1080</div>
-    <div class="status-item" id="bitrate-label">6000 Kbps</div>
+    <span id="st-timer-wrap" style="display:none;"><span class="status-dot" id="st-timer-dot"></span><span id="st-timer">00:00:00</span></span>
+    <span>FPS: <span id="st-fps">--</span></span>
+    <span>Dropped: <span id="st-dropped">0</span></span>
   </div>
 </div>
 
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-settings">
   <div class="modal">
-    <div class="modal-header"><span>Settings</span><button class="modal-close" onclick="closeModal('modal-settings')">✕</button></div>
-    <div class="modal-body">
-      <div class="row">
-        <div><label>Base Resolution</label>
-          <select id="setting-res">
-            <option value="1920x1080">1920×1080</option>
-            <option value="1280x720">1280×720</option>
-            <option value="854x480">854×480</option>
-            <option value="2560x1440">2560×1440</option>
-          </select>
-        </div>
-        <div><label>FPS</label>
-          <select id="setting-fps"><option value="60">60</option><option value="30">30</option><option value="24">24</option></select>
-        </div>
-      </div>
-      <label>Encoder</label>
-      <select id="setting-encoder"><option>x264 (Software)</option><option>NVENC (H.264)</option><option>QuickSync</option></select>
-      <label>Bitrate (Kbps)</label>
-      <input type="number" id="setting-bitrate" value="6000" min="500" max="50000">
-      <label>Audio Sample Rate</label>
-      <select><option>48 kHz</option><option>44.1 kHz</option></select>
+    <div class="modal-h"><span>Settings</span><button onclick="closeModal('modal-settings')">✕</button></div>
+    <div class="modal-b">
+      <label>Base Resolution</label>
+      <select id="set-res">
+        <option value="1280x720">1280 x 720</option>
+        <option value="1920x1080">1920 x 1080</option>
+        <option value="854x480">854 x 480</option>
+      </select>
+      <label>FPS</label>
+      <select id="set-fps"><option>30</option><option>60</option><option>24</option></select>
+      <label>Default Transition</label>
+      <select id="set-trans"><option value="fade">Fade (300ms)</option><option value="slide">Slide (400ms)</option><option value="cut">Cut (0ms)</option></select>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-settings')">Cancel</button>
-      <button class="btn btn-stream" onclick="saveSettings()">Apply</button>
+    <div class="modal-f">
+      <button class="btn btn-sec" onclick="closeModal('modal-settings')">Cancel</button>
+      <button class="btn btn-stream" onclick="applySettings()">Apply</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-add-source">
   <div class="modal">
-    <div class="modal-header"><span>Add Source</span><button class="modal-close" onclick="closeModal('modal-add-source')">✕</button></div>
-    <div class="modal-body">
-      <label>Source Name</label>
-      <input type="text" id="new-source-name" placeholder="e.g., My Webcam">
+    <div class="modal-h"><span>Add Source</span><button onclick="closeModal('modal-add-source')">✕</button></div>
+    <div class="modal-b">
       <label>Source Type</label>
-      <select id="new-source-type">
-        <option value="screen">Display Capture</option>
+      <select id="new-src-type">
+        <option value="color">Color Source</option>
+        <option value="text">Text Source</option>
+        <option value="image">Image Source</option>
+        <option value="media">Video File</option>
         <option value="webcam">Video Capture Device (Webcam)</option>
-        <option value="audio">Audio Input Capture</option>
-        <option value="text">Text (GDI+)</option>
-        <option value="image">Image</option>
+        <option value="screen">Display Capture (Screen)</option>
+        <option value="audio">Audio Input Capture (Mic)</option>
+      </select>
+      <label>Source Name</label>
+      <input type="text" id="new-src-name" placeholder="e.g., My Webcam">
+      <label>Preset</label>
+      <select id="new-src-preset">
+        <option value="default">Center (640x360)</option>
+        <option value="full">Full Screen</option>
+        <option value="topleft">Top Left (320x180)</option>
+        <option value="bottomright">Bottom Right (320x180)</option>
       </select>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-add-source')">Cancel</button>
-      <button class="btn btn-stream" onclick="addSource()">Add</button>
+    <div class="modal-f">
+      <button class="btn btn-sec" onclick="closeModal('modal-add-source')">Cancel</button>
+      <button class="btn btn-stream" onclick="confirmAddSource()">Add Source</button>
     </div>
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-props">
+  <div class="modal">
+    <div class="modal-h"><span id="props-title">Source Properties</span><button onclick="closeModal('modal-props')">✕</button></div>
+    <div class="modal-b" id="props-body"></div>
+    <div class="modal-f">
+      <button class="btn btn-sec" onclick="closeModal('modal-props')">Cancel</button>
+      <button class="btn btn-stream" onclick="applyProps()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-info">
+  <div class="modal">
+    <div class="modal-h"><span id="info-title">Info</span><button onclick="closeModal('modal-info')">✕</button></div>
+    <div class="modal-b" id="info-body"></div>
+    <div class="modal-f">
+      <button class="btn btn-stream" onclick="closeModal('modal-info')">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<div id="ctx-menu"></div>
+
 <script>
-/* ======================== STATE ======================== */
+/* =====================================================
+   STATE
+===================================================== */
+const uid = () => Math.random().toString(36).slice(2, 9);
+
 const state = {
-  streaming:false, recording:false, studioMode:false, statsVisible:true,
-  streamStartTime:null, recordStartTime:null,
-  streamInterval:null, recordInterval:null,
-  currentSceneId:'scene1', previewSceneId:'scene2',
-  activeSourceId:null, dragSourceId:null,
-  transition:'Fade', transitionDuration:300,
-  settings:{ width:1920, height:1080, fps:60, bitrate:6000 },
-  audio:{
-    desktop:{ name:'Desktop Audio', volume:80, muted:false, level:0 },
-    mic:    { name:'Mic/Aux',       volume:65, muted:false, level:0 },
-    game:   { name:'Game Audio',    volume:90, muted:false, level:0 }
-  },
-  scenes:[
-    { id:'scene1', name:'Scene 1', sources:[
-      { id:'src-screen', name:'Screen Capture', type:'screen', visible:true },
-      { id:'src-webcam', name:'Webcam',         type:'webcam', visible:true },
-      { id:'src-text',   name:'Live Badge',     type:'text',   visible:true, text:'LIVE' }
-    ]},
-    { id:'scene2', name:'Scene 2', sources:[
-      { id:'src-screen2', name:'Screen Capture', type:'screen', visible:true },
-      { id:'src-audio2',  name:'Audio Input',    type:'audio',  visible:true }
-    ]}
-  ]
+  scenes: [],
+  activeSceneId: null,
+  stagingSceneId: null,
+  selectedSourceId: null,
+  studioMode: false,
+  streaming: false,
+  recording: false,
+  liveStart: 0,
+  recordStart: 0,
+  transition: { type: 'fade', duration: 300, anim: null },
+  settings: { width: 1280, height: 720, fps: 30 },
+  audioSources: [],
+  selectedTransType: 'fade',
+  showStats: true,
+  measuredFps: 0,
+  droppedFrames: 0
 };
 
-/* ======================== HELPERS ======================== */
-const $ = id => document.getElementById(id);
-const currentScene = () => state.scenes.find(s => s.id === state.currentSceneId);
-const previewScene = () => state.scenes.find(s => s.id === state.previewSceneId);
+let recorder = null, recordChunks = [];
+let lastFrameTimes = [];
 
-/* ======================== MENU ======================== */
-document.querySelectorAll('.menu-item').forEach(m => {
-  m.addEventListener('click', e => {
-    e.stopPropagation();
-    const wasActive = m.classList.contains('active');
-    document.querySelectorAll('.menu-item').forEach(x => x.classList.remove('active'));
-    if (!wasActive) m.classList.add('active');
+/* =====================================================
+   INIT
+===================================================== */
+function init() {
+  const s1 = { id: uid(), name: 'Scene 1', sources: [] };
+  state.scenes.push(s1);
+  state.activeSceneId = s1.id;
+  state.stagingSceneId = s1.id;
+
+  // Default sources on scene 1
+  const colorSrc = makeSource('color', 'Red Background');
+  colorSrc.x = 0; colorSrc.y = 0; colorSrc.w = 1280; colorSrc.h = 720;
+  colorSrc.color = '#222244';
+  s1.sources.push(colorSrc);
+
+  const textSrc = makeSource('text', 'Welcome Text');
+  textSrc.x = 340; textSrc.y = 300; textSrc.w = 600; textSrc.h = 120;
+  textSrc.text = 'OBS Pro Web';
+  textSrc.fontSize = 64;
+  textSrc.color = '#ffffff';
+  s1.sources.push(textSrc);
+
+  // Default audio channels
+  addAudioChannel('Desktop Audio', null);
+  addAudioChannel('Mic/Aux', null);
+
+  renderAll();
+  requestAnimationFrame(renderLoop);
+  requestAnimationFrame(meterLoop);
+  setInterval(updateStats, 500);
+  setInterval(updateTimers, 1000);
+
+  window.addEventListener('resize', fitCanvases);
+  fitCanvases();
+  toast('OBS Pro Web siap digunakan!', 'success');
+}
+
+/* =====================================================
+   HELPERS
+===================================================== */
+function makeSource(type, name) {
+  return {
+    id: uid(), type, name,
+    x: 100, y: 100, w: 640, h: 360,
+    visible: true, locked: false,
+    color: '#ff4444', text: 'Text', fontSize: 48,
+    image: null, video: null, stream: null,
+    simulated: null
+  };
+}
+
+function getActiveScene() {
+  return state.scenes.find(s => s.id === state.activeSceneId);
+}
+function getStagingScene() {
+  return state.scenes.find(s => s.id === state.stagingSceneId);
+}
+function getEditScene() {
+  return state.studioMode ? getStagingScene() : getActiveScene();
+}
+function getSelectedSource() {
+  const sc = getEditScene();
+  return sc ? sc.sources.find(s => s.id === state.selectedSourceId) : null;
+}
+
+function toast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+function showInfo(title, html) {
+  document.getElementById('info-title').textContent = title;
+  document.getElementById('info-body').innerHTML = html;
+  openModal('modal-info');
+}
+
+/* =====================================================
+   SOURCE CREATION
+===================================================== */
+async function createSourceAsync(type, name, preset) {
+  const src = makeSource(type, name);
+
+  // Preset placement
+  if (preset === 'full') { src.x = 0; src.y = 0; src.w = state.settings.width; src.h = state.settings.height; }
+  else if (preset === 'topleft') { src.x = 20; src.y = 20; src.w = 320; src.h = 180; }
+  else if (preset === 'bottomright') { src.x = state.settings.width - 340; src.y = state.settings.height - 200; src.w = 320; src.h = 180; }
+  else { src.x = (state.settings.width - 640) / 2; src.y = (state.settings.height - 360) / 2; src.w = 640; src.h = 360; }
+
+  if (type === 'color') src.color = '#ff4444';
+
+  if (type === 'text') {
+    src.text = 'Hello OBS';
+    src.fontSize = 48;
+    src.color = '#ffffff';
+  }
+
+  if (type === 'image') {
+    const file = await pickFile('image/*');
+    if (!file) return null;
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await new Promise(r => img.onload = r);
+    src.image = img;
+    // Preserve aspect
+    src.h = Math.round(src.w * (img.height / img.width));
+  }
+
+  if (type === 'media') {
+    const file = await pickFile('video/*');
+    if (!file) return null;
+    const vid = document.createElement('video');
+    vid.src = URL.createObjectURL(file);
+    vid.loop = true; vid.muted = true; vid.playsInline = true;
+    vid.play().catch(()=>{});
+    await new Promise(r => vid.onloadedmetadata = r);
+    src.video = vid;
+    src.h = Math.round(src.w * (vid.videoHeight / vid.videoWidth));
+  }
+
+  if (type === 'webcam' || type === 'screen') {
+    try {
+      const stream = type === 'webcam'
+        ? await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const vid = document.createElement('video');
+      vid.srcObject = stream;
+      vid.muted = true; vid.autoplay = true; vid.playsInline = true;
+      await vid.play();
+      src.video = vid;
+      src.stream = stream;
+      toast(`${type === 'webcam' ? 'Webcam' : 'Screen'} capture aktif`, 'success');
+    } catch (err) {
+      // Fallback: simulated animated source
+      src.simulated = type;
+      toast(`Izin ditolak / tidak tersedia. Menggunakan simulasi.`, 'error');
+    }
+  }
+
+  if (type === 'audio') {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      addAudioChannel(name, stream);
+      toast('Mikrofon terhubung', 'success');
+    } catch (err) {
+      addAudioChannel(name, null);
+      toast('Mic tidak tersedia, menggunakan simulasi', 'error');
+    }
+    return null; // Audio sources don't appear on canvas
+  }
+
+  return src;
+}
+
+function pickFile(accept) {
+  return new Promise(resolve => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = () => resolve(input.files[0] || null);
+    input.oncancel = () => resolve(null);
+    input.click();
   });
-});
-document.addEventListener('click', () => document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active')));
-document.querySelectorAll('.dropdown').forEach(d => d.addEventListener('click', e => e.stopPropagation()));
+}
 
-/* ======================== SCENES ======================== */
-function renderScenes() {
-  const list = $('scene-list');
-  list.innerHTML = '';
-  state.scenes.forEach(scene => {
-    const div = document.createElement('div');
-    div.className = 'scene-item' + (scene.id === state.currentSceneId ? ' active' : '');
-    div.dataset.id = scene.id;
-    div.draggable = true;
-    div.innerHTML = `<span class="icon" style="background:linear-gradient(135deg,#ff4444,#ff8844)"></span> ${scene.name}`;
-    div.onclick = () => switchScene(scene.id);
-    div.addEventListener('dragstart', e => { state.dragSourceId = 'scene:'+scene.id; });
-    div.addEventListener('dragover', e => { e.preventDefault(); div.style.borderTop = '2px solid var(--accent)'; });
-    div.addEventListener('dragleave', () => { div.style.borderTop = ''; });
-    div.addEventListener('drop', e => {
-      e.preventDefault(); div.style.borderTop = '';
-      if (state.dragSourceId && state.dragSourceId.startsWith('scene:')) {
-        const fromId = state.dragSourceId.substring(6);
-        reorderScene(fromId, scene.id);
+/* =====================================================
+   RENDER SOURCES TO CANVAS
+===================================================== */
+function drawSource(ctx, s, time) {
+  if (!s.visible) return;
+  try {
+    if (s.type === 'color' || s.simulated) {
+      // Animated for simulated
+      if (s.simulated) {
+        const hue = (time / 20) % 360;
+        ctx.fillStyle = s.simulated === 'webcam'
+          ? `hsl(210,50%,${30 + Math.sin(time/300)*10}%)`
+          : `hsl(${hue},60%,40%)`;
+        ctx.fillRect(s.x, s.y, s.w, s.h);
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(s.simulated === 'webcam' ? '📷 Webcam (Simulasi)' : '🖥 Screen (Simulasi)',
+          s.x + s.w/2, s.y + s.h/2);
+      } else {
+        ctx.fillStyle = s.color;
+        ctx.fillRect(s.x, s.y, s.w, s.h);
       }
-    });
+    }
+    else if (s.type === 'text') {
+      ctx.fillStyle = s.color || '#fff';
+      ctx.font = `bold ${s.fontSize || 48}px 'Segoe UI', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s.text || 'Text', s.x + s.w/2, s.y + s.h/2);
+    }
+    else if (s.type === 'image' && s.image) {
+      ctx.drawImage(s.image, s.x, s.y, s.w, s.h);
+    }
+    else if ((s.type === 'media' || s.type === 'webcam' || s.type === 'screen') && s.video) {
+      if (s.video.readyState >= 2 && s.video.videoWidth > 0) {
+        ctx.drawImage(s.video, s.x, s.y, s.w, s.h);
+      } else {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(s.x, s.y, s.w, s.h);
+      }
+    }
+  } catch(e) { /* silent */ }
+}
+
+function renderScene(ctx, scene, alpha = 1, offsetX = 0) {
+  if (!scene) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(offsetX, 0);
+  const now = performance.now();
+  scene.sources.forEach(s => drawSource(ctx, s, now));
+  ctx.restore();
+}
+
+function drawSelection(ctx, s) {
+  if (!s) return;
+  ctx.save();
+  ctx.strokeStyle = '#00bfff';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]);
+  ctx.strokeRect(s.x, s.y, s.w, s.h);
+  ctx.setLineDash([]);
+  // Resize handle (bottom-right)
+  ctx.fillStyle = '#00bfff';
+  ctx.fillRect(s.x + s.w - 8, s.y + s.h - 8, 12, 12);
+  // Label
+  ctx.fillStyle = 'rgba(0,0,0,.8)';
+  ctx.fillRect(s.x, s.y - 20, ctx.measureText(s.name).width + 60, 20);
+  ctx.fillStyle = '#00bfff';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(` ${s.name}  ${Math.round(s.w)}x${Math.round(s.h)}`, s.x, s.y - 10);
+  ctx.restore();
+}
+
+function renderLoop() {
+  const now = performance.now();
+  // FPS calc
+  lastFrameTimes.push(now);
+  lastFrameTimes = lastFrameTimes.filter(t => now - t < 1000);
+  state.measuredFps = lastFrameTimes.length;
+
+  // === Preview Canvas ===
+  const previewCanvas = document.getElementById('previewCanvas');
+  const pCtx = previewCanvas.getContext('2d');
+  pCtx.fillStyle = '#000';
+  pCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+  const previewScene = state.studioMode ? getStagingScene() : getActiveScene();
+
+  // Transition in normal mode
+  if (!state.studioMode && state.transition.anim) {
+    const a = state.transition.anim;
+    const elapsed = now - a.start;
+    const p = Math.min(1, elapsed / a.duration);
+    if (p >= 1) {
+      state.transition.anim = null;
+      renderScene(pCtx, getActiveScene());
+    } else {
+      const fromScene = state.scenes.find(s => s.id === a.fromId);
+      const toScene = state.scenes.find(s => s.id === a.toId);
+      if (a.type === 'fade') {
+        renderScene(pCtx, fromScene, 1);
+        renderScene(pCtx, toScene, p);
+      } else if (a.type === 'slide') {
+        const w = previewCanvas.width;
+        renderScene(pCtx, fromScene, 1, -w * p);
+        renderScene(pCtx, toScene, 1, w * (1 - p));
+      }
+    }
+  } else {
+    renderScene(pCtx, previewScene);
+  }
+
+  // Draw selection in edit scene
+  if (state.selectedSourceId) {
+    const selected = getSelectedSource();
+    if (selected) drawSelection(pCtx, selected);
+  }
+
+  // === Program Canvas (studio mode) ===
+  if (state.studioMode) {
+    const progCanvas = document.getElementById('programCanvas');
+    const gCtx = progCanvas.getContext('2d');
+    gCtx.fillStyle = '#000';
+    gCtx.fillRect(0, 0, progCanvas.width, progCanvas.height);
+
+    if (state.transition.anim) {
+      const a = state.transition.anim;
+      const elapsed = now - a.start;
+      const p = Math.min(1, elapsed / a.duration);
+      if (p >= 1) {
+        state.transition.anim = null;
+        renderScene(gCtx, getActiveScene());
+      } else {
+        const fromScene = state.scenes.find(s => s.id === a.fromId);
+        const toScene = state.scenes.find(s => s.id === a.toId);
+        if (a.type === 'fade') {
+          renderScene(gCtx, fromScene, 1);
+          renderScene(gCtx, toScene, p);
+        } else if (a.type === 'slide') {
+          const w = progCanvas.width;
+          renderScene(gCtx, fromScene, 1, -w * p);
+          renderScene(gCtx, toScene, 1, w * (1 - p));
+        }
+      }
+    } else {
+      renderScene(gCtx, getActiveScene());
+    }
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+
+/* =====================================================
+   METER / AUDIO
+===================================================== */
+function addAudioChannel(name, stream) {
+  const ch = { id: uid(), name, stream, muted: false, volume: 100, level: 0, analyser: null };
+  if (stream) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const actx = new AC();
+      const src = actx.createMediaStreamSource(stream);
+      const analyser = actx.createAnalyser();
+      analyser.fftSize = 128;
+      src.connect(analyser);
+      ch.analyser = analyser;
+      ch.actx = actx;
+    } catch(e) {}
+  }
+  state.audioSources.push(ch);
+  renderAudioChannels();
+  return ch;
+}
+
+function meterLoop() {
+  state.audioSources.forEach(ch => {
+    if (ch.analyser) {
+      const data = new Uint8Array(ch.analyser.frequencyBinCount);
+      ch.analyser.getByteFrequencyData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      const avg = sum / data.length;
+      ch.level = ch.muted ? 0 : Math.min(100, avg * 1.5 * (ch.volume / 100));
+    } else {
+      // Simulated
+      ch.level = ch.muted ? 0
+        : Math.max(0, Math.min(100, (30 + Math.random() * 45) * (ch.volume / 100)));
+    }
+    const el = document.getElementById('meter-' + ch.id);
+    if (el) el.style.width = ch.level + '%';
+  });
+  requestAnimationFrame(meterLoop);
+}
+
+/* =====================================================
+   RENDER LISTS
+===================================================== */
+function renderAll() {
+  renderScenes();
+  renderSources();
+  renderAudioChannels();
+  renderTransitions();
+}
+
+function renderScenes() {
+  const list = document.getElementById('scene-list');
+  list.innerHTML = '';
+  state.scenes.forEach(sc => {
+    const isActive = sc.id === state.activeSceneId;
+    const isStaging = sc.id === state.stagingSceneId;
+    const div = document.createElement('div');
+    div.className = 'scene-item' + (isActive && !state.studioMode ? ' active' : '') + (isStaging && state.studioMode ? ' active' : '');
+    div.innerHTML = `<span class="icon"></span>${sc.name}`;
+    div.onclick = () => switchScene(sc.id);
+    div.ondblclick = () => renameScene(sc.id);
     list.appendChild(div);
   });
 }
 
-function switchScene(id) {
-  if (id === state.currentSceneId) return;
-  if (state.studioMode) {
-    state.previewSceneId = id;
-    renderScenes();
-    renderSources();
-    return;
-  }
-  // Normal mode: apply transition
-  applyTransition(state.currentSceneId, id);
-}
-
-function applyTransition(fromId, toId) {
-  const duration = state.transition === 'Cut' ? 0 : state.transitionDuration;
-  if (duration <= 0) {
-    state.currentSceneId = toId;
-    state.activeSourceId = null;
-    renderScenes();
-    renderSources();
-    return;
-  }
-  // Fade transition
-  const start = performance.now();
-  const fadeEl = document.createElement('div');
-  fadeEl.style.cssText = 'position:absolute;inset:0;background:black;opacity:0;z-index:50;pointer-events:none;';
-  $('preview-wrap').appendChild(fadeEl);
-  state.currentSceneId = toId;
-  renderScenes();
-  renderSources();
-  function step(now) {
-    const t = Math.min(1, (now - start) / duration);
-    fadeEl.style.opacity = t < 0.5 ? t*2 : (1-t)*2;
-    if (t < 1) requestAnimationFrame(step);
-    else fadeEl.remove();
-  }
-  requestAnimationFrame(step);
-}
-
-function addScene() {
-  const name = prompt('Scene name:', `Scene ${state.scenes.length + 1}`);
-  if (!name || state.scenes.some(s => s.name === name)) return;
-  const id = 'scene' + Date.now();
-  state.scenes.push({ id, name, sources:[] });
-  state.currentSceneId = id;
-  state.activeSourceId = null;
-  renderScenes();
-  renderSources();
-}
-
-function removeScene() {
-  if (state.scenes.length <= 1) { alert('Minimal 1 scene diperlukan'); return; }
-  const idx = state.scenes.findIndex(s => s.id === state.currentSceneId);
-  state.scenes.splice(idx, 1);
-  state.currentSceneId = state.scenes[Math.max(0, idx-1)].id;
-  state.activeSourceId = null;
-  renderScenes();
-  renderSources();
-}
-
-function reorderScene(fromId, toId) {
-  const from = state.scenes.findIndex(s => s.id === fromId);
-  const to = state.scenes.findIndex(s => s.id === toId);
-  if (from < 0 || to < 0 || from === to) return;
-  const [moved] = state.scenes.splice(from, 1);
-  state.scenes.splice(to, 0, moved);
-  renderScenes();
-}
-
-/* ======================== SOURCES ======================== */
 function renderSources() {
-  const scene = state.studioMode ? previewScene() : currentScene();
-  const list = $('source-list');
+  const list = document.getElementById('source-list');
   list.innerHTML = '';
-  if (!scene || scene.sources.length === 0) {
-    list.innerHTML = '<div style="padding:12px;text-align:center;color:#666;font-size:12px">Tidak ada sumber<br><small>Klik + untuk menambah</small></div>';
-    return;
-  }
-  const colors = { screen:'#3a5a8a', webcam:'#4a8a5a', audio:'#8a5a4a', text:'#8a4a8a', image:'#5a5a8a' };
-  // Render reversed so top of list = top layer (last drawn)
-  const reversed = [...scene.sources].reverse();
-  reversed.forEach(src => {
+  const sc = getEditScene();
+  if (!sc) return;
+  // Reverse order (top = front)
+  [...sc.sources].reverse().forEach(src => {
     const div = document.createElement('div');
-    div.className = 'source-item';
-    if (src.id === state.activeSourceId) div.classList.add('active');
-    if (!src.visible) div.classList.add('hidden-source');
-    div.dataset.id = src.id;
-    div.draggable = true;
+    div.className = 'source-item' +
+      (src.id === state.selectedSourceId ? ' active' : '') +
+      (!src.visible ? ' hidden-src' : '') +
+      (src.locked ? ' locked-src' : '');
     div.innerHTML = `
-      <span class="icon" style="background:${colors[src.type] || '#555'}"></span>
-      <span class="name">${escapeHtml(src.name)}</span>
-      <button class="visibility-toggle" title="Toggle visibility">${src.visible?'👁':'👁‍🗨'}</button>
+      <span class="icon"></span>
+      <span>${src.name}</span>
+      <button class="vis" title="Toggle Visibility">${src.visible ? '👁' : '🚫'}</button>
     `;
-    div.querySelector('.visibility-toggle').onclick = e => {
+    div.onclick = (e) => {
+      if (e.target.classList.contains('vis')) return;
+      state.selectedSourceId = src.id;
+      renderSources();
+    };
+    div.querySelector('.vis').onclick = (e) => {
       e.stopPropagation();
       src.visible = !src.visible;
       renderSources();
     };
-    div.onclick = () => { state.activeSourceId = src.id; renderSources(); };
-    div.addEventListener('dragstart', () => { state.dragSourceId = 'src:'+src.id; });
-    div.addEventListener('dragover', e => { e.preventDefault(); div.style.borderTop = '2px solid var(--accent)'; });
-    div.addEventListener('dragleave', () => { div.style.borderTop = ''; });
-    div.addEventListener('drop', e => {
-      e.preventDefault(); div.style.borderTop = '';
-      if (state.dragSourceId && state.dragSourceId.startsWith('src:')) {
-        reorderSource(state.dragSourceId.substring(4), src.id);
-      }
-    });
+    div.ondblclick = () => openProperties(src.id);
+    div.oncontextmenu = (e) => { e.preventDefault(); showSourceContext(e, src.id); };
     list.appendChild(div);
   });
 }
 
-function reorderSource(fromId, toId) {
-  const scene = state.studioMode ? previewScene() : currentScene();
-  const from = scene.sources.findIndex(s => s.id === fromId);
-  const to = scene.sources.findIndex(s => s.id === toId);
-  if (from < 0 || to < 0 || from === to) return;
-  const [moved] = scene.sources.splice(from, 1);
-  scene.sources.splice(to, 0, moved);
-  renderSources();
-}
-
-function moveSource(dir) {
-  const scene = state.studioMode ? previewScene() : currentScene();
-  if (!state.activeSourceId) return;
-  const idx = scene.sources.findIndex(s => s.id === state.activeSourceId);
-  if (idx < 0) return;
-  if (dir === 'up' && idx < scene.sources.length - 1) {
-    [scene.sources[idx], scene.sources[idx+1]] = [scene.sources[idx+1], scene.sources[idx]];
-  } else if (dir === 'down' && idx > 0) {
-    [scene.sources[idx], scene.sources[idx-1]] = [scene.sources[idx-1], scene.sources[idx]];
-  }
-  renderSources();
-}
-
-function toggleSourceVisibilityActive() {
-  const scene = state.studioMode ? previewScene() : currentScene();
-  const src = scene.sources.find(s => s.id === state.activeSourceId);
-  if (src) { src.visible = !src.visible; renderSources(); }
-}
-
-function copySource() {
-  const scene = state.studioMode ? previewScene() : currentScene();
-  const src = scene.sources.find(s => s.id === state.activeSourceId);
-  if (!src) { alert('Pilih sumber terlebih dahulu'); return; }
-  const copy = { ...src, id:'src' + Date.now(), name:src.name + ' (Copy)' };
-  scene.sources.push(copy);
-  state.activeSourceId = copy.id;
-  renderSources();
-}
-
-function duplicateSource() { copySource(); }
-
-function openAddSourceModal() {
-  $('modal-add-source').classList.add('open');
-  $('new-source-name').value = '';
-  setTimeout(() => $('new-source-name').focus(), 100);
-}
-
-function addSource() {
-  const name = $('new-source-name').value.trim();
-  const type = $('new-source-type').value;
-  if (!name) { alert('Nama sumber harus diisi'); return; }
-  const scene = state.studioMode ? previewScene() : currentScene();
-  if (scene.sources.some(s => s.name === name)) { alert('Nama sumber sudah ada'); return; }
-  const newSrc = { id:'src' + Date.now(), name, type, visible:true };
-  if (type === 'text') newSrc.text = name;
-  scene.sources.push(newSrc);
-  state.activeSourceId = newSrc.id;
-  renderSources();
-  closeModal('modal-add-source');
-}
-
-function removeSource() {
-  const scene = state.studioMode ? previewScene() : currentScene();
-  if (!state.activeSourceId) { alert('Pilih sumber terlebih dahulu'); return; }
-  const idx = scene.sources.findIndex(s => s.id === state.activeSourceId);
-  if (idx < 0) return;
-  scene.sources.splice(idx, 1);
-  state.activeSourceId = null;
-  renderSources();
-}
-
-/* ======================== PREVIEW RENDER ======================== */
-function drawScene(canvas, scene, time) {
-  if (!canvas || !scene) return;
-  const ctx = canvas.getContext('2d');
-  // Fit canvas ke container dengan aspect ratio setting
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const targetAspect = state.settings.width / state.settings.height;
-  let cw = rect.width, ch = rect.height;
-  if (cw / ch > targetAspect) cw = ch * targetAspect;
-  else ch = cw / targetAspect;
-  canvas.width = Math.max(1, Math.floor(cw));
-  canvas.height = Math.max(1, Math.floor(ch));
-  canvas.style.width = canvas.width + 'px';
-  canvas.style.height = canvas.height + 'px';
-
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  // Background
-  ctx.fillStyle = '#0a0a0a';
-  ctx.fillRect(0, 0, W, H);
-
-  // Draw sources in order (bottom to top)
-  scene.sources.forEach(src => {
-    if (!src.visible) return;
-    const isActive = src.id === state.activeSourceId;
-    drawSource(ctx, src, W, H, time, isActive);
-  });
-
-  // Grid if no sources
-  if (scene.sources.filter(s => s.visible).length === 0) {
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let i = 1; i < 8; i++) {
-      ctx.moveTo(W/8*i, 0); ctx.lineTo(W/8*i, H);
-      ctx.moveTo(0, H/8*i); ctx.lineTo(W, H/8*i);
-    }
-    ctx.stroke();
-    ctx.fillStyle = '#444';
-    ctx.font = '16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No sources visible', W/2, H/2);
-  }
-}
-
-function drawSource(ctx, src, W, H, time, isActive) {
-  let x=0, y=0, w=W, h=H;
-  ctx.save();
-
-  if (src.type === 'screen') {
-    // Full background with fake desktop
-    ctx.fillStyle = '#1a2a3f';
-    ctx.fillRect(0, 0, W, H);
-    // Windows
-    const winColors = ['#2a3a5f','#3a4a6f','#2a4a5f'];
-    for (let i = 0; i < 3; i++) {
-      const wx = W*0.08 + i*(W*0.28), wy = H*0.15, ww = W*0.22, wh = H*0.55;
-      ctx.fillStyle = winColors[i];
-      ctx.fillRect(wx, wy, ww, wh);
-      ctx.fillStyle = '#4a5a7f';
-      ctx.fillRect(wx, wy, ww, 22);
-      // "text" lines
-      ctx.fillStyle = 'rgba(255,255,255,.15)';
-      for (let l = 0; l < 6; l++) ctx.fillRect(wx+8, wy+30+l*18, ww-16-l*8, 6);
-    }
-    // Taskbar
-    ctx.fillStyle = '#0a1a2a';
-    ctx.fillRect(0, H-30, W, 30);
-    ctx.fillStyle = '#444';
-    for (let i = 0; i < 5; i++) ctx.fillRect(10+i*32, H-24, 20, 20);
-  }
-  else if (src.type === 'webcam') {
-    // PiP webcam bottom-right
-    w = W * 0.28; h = H * 0.28;
-    x = W - w - W*0.02; y = H - h - H*0.02;
-    // Gradient background
-    const hue = (time * 0.03) % 360;
-    const g = ctx.createLinearGradient(x, y, x+w, y+h);
-    g.addColorStop(0, `hsl(${hue}, 40%, 20%)`);
-    g.addColorStop(1, `hsl(${(hue+60)%360}, 40%, 30%)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y, w, h);
-    // Face
-    const cx = x + w/2, cy = y + h/2, r = Math.min(w, h) * 0.35;
-    ctx.fillStyle = `hsl(${hue}, 60%, 55%)`;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    // Eyes that follow cursor
-    const mouseX = state._mouseX || cx, mouseY = state._mouseY || cy;
-    const eyeOffX = Math.max(-1, Math.min(1, (mouseX - cx) / 200)) * r*0.15;
-    const eyeOffY = Math.max(-1, Math.min(1, (mouseY - cy) / 200)) * r*0.1;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(cx - r*0.35 + eyeOffX, cy - r*0.15 + eyeOffY, r*0.18, 0, Math.PI*2);
-    ctx.arc(cx + r*0.35 + eyeOffX, cy - r*0.15 + eyeOffY, r*0.18, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    const blink = (Math.sin(time*0.003) > 0.95) ? 0.1 : 1;
-    ctx.beginPath();
-    ctx.ellipse(cx - r*0.35 + eyeOffX, cy - r*0.15 + eyeOffY, r*0.08, r*0.08*blink, 0, 0, Math.PI*2);
-    ctx.ellipse(cx + r*0.35 + eyeOffX, cy - r*0.15 + eyeOffY, r*0.08, r*0.08*blink, 0, 0, Math.PI*2);
-    ctx.fill();
-    // Mouth
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy + r*0.25, r*0.3, 0.2, Math.PI-0.2);
-    ctx.stroke();
-  }
-  else if (src.type === 'audio') {
-    // Waveform overlay at bottom
-    h = H * 0.15; y = H - h;
-    ctx.fillStyle = 'rgba(20,10,30,.85)';
-    ctx.fillRect(0, y, W, h);
-    ctx.strokeStyle = `hsl(${260 + Math.sin(time*0.001)*30}, 70%, 60%)`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const amp = h*0.4;
-    for (let i = 0; i < W; i += 3) {
-      const v = Math.sin(i*0.05 + time*0.004) * Math.sin(i*0.02) * amp;
-      if (i === 0) ctx.moveTo(i, y+h/2 + v);
-      else ctx.lineTo(i, y+h/2 + v);
-    }
-    ctx.stroke();
-  }
-  else if (src.type === 'text') {
-    // Centered badge
-    ctx.font = 'bold ' + Math.floor(H*0.12) + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const label = src.text || src.name;
-    const tw = ctx.measureText(label).width;
-    const bw = tw + H*0.15, bh = H*0.18;
-    const bx = (W - bw)/2, by = H*0.06;
-    // Red badge
-    ctx.fillStyle = '#e63946';
-    roundRect(ctx, bx, by, bw, bh, 6);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.fillText(label, W/2, by + bh/2);
-  }
-  else if (src.type === 'image') {
-    // Placeholder image
-    w = W*0.4; h = H*0.4;
-    x = (W-w)/2; y = (H-h)/2;
-    ctx.fillStyle = '#2a2a4a';
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#4a4a8a';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = '#888';
-    ctx.font = '16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🖼 Image', x+w/2, y+h/2);
-  }
-
-  // Selection border
-  if (isActive) {
-    ctx.strokeStyle = '#ff4444';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8,4]);
-    ctx.strokeRect(x+1, y+1, w-2, h-2);
-    ctx.setLineDash([]);
-    // Corner handles
-    ctx.fillStyle = '#ff4444';
-    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([hx,hy]) => {
-      ctx.fillRect(hx-4, hy-4, 8, 8);
-    });
-  }
-  ctx.restore();
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.arcTo(x+w, y, x+w, y+h, r);
-  ctx.arcTo(x+w, y+h, x, y+h, r);
-  ctx.arcTo(x, y+h, x, y, r);
-  ctx.arcTo(x, y, x+w, y, r);
-  ctx.closePath();
-}
-
-/* ======================== ANIMATION LOOP ======================== */
-function loop(time) {
-  drawScene($('program-canvas'), currentScene(), time);
-  if (state.studioMode) {
-    drawScene($('preview-canvas'), previewScene(), time);
-  }
-  requestAnimationFrame(loop);
-}
-
-/* ======================== STUDIO MODE ======================== */
-function toggleStudioMode() {
-  state.studioMode = !state.studioMode;
-  $('preview-pane-2').classList.toggle('hidden', !state.studioMode);
-  $('preview-label').textContent = state.studioMode ? 'Program' : 'Preview';
-  $('btn-studio').classList.toggle('active', state.studioMode);
-  $('btn-studio').textContent = state.studioMode ? '🎬 Studio Mode ON' : '🎬 Studio Mode';
-  // Swap scene
-  if (state.studioMode) {
-    // preview scene = active, current = program
-    if (state.previewSceneId === state.currentSceneId) {
-      const other = state.scenes.find(s => s.id !== state.currentSceneId);
-      if (other) state.previewSceneId = other.id;
-    }
-  }
-  renderScenes();
-  renderSources();
-  if (state.studioMode) addTransitionButton();
-  else removeTransitionButton();
-}
-
-function addTransitionButton() {
-  if ($('btn-transition')) return;
-  const btn = document.createElement('button');
-  btn.id = 'btn-transition';
-  btn.className = 'btn btn-stream';
-  btn.textContent = '▶ Transition';
-  btn.onclick = doTransition;
-  $('btn-studio').parentElement.insertBefore(btn, $('btn-studio'));
-}
-
-function removeTransitionButton() {
-  const b = $('btn-transition');
-  if (b) b.remove();
-}
-
-function doTransition() {
-  if (!state.studioMode) return;
-  const fromId = state.currentSceneId;
-  const toId = state.previewSceneId;
-  const other = state.scenes.find(s => s.id !== toId);
-  state.previewSceneId = other ? other.id : toId;
-  applyTransition(fromId, toId);
-  renderScenes();
-  renderSources();
-}
-
-/* ======================== AUDIO ======================== */
-function renderAudio() {
-  const list = $('audio-mixer');
+function renderAudioChannels() {
+  const list = document.getElementById('audio-list');
   list.innerHTML = '';
-  Object.entries(state.audio).forEach(([key, ch]) => {
+  state.audioSources.forEach(ch => {
     const div = document.createElement('div');
-    div.className = 'audio-channel';
+    div.className = 'audio-ch';
     div.innerHTML = `
-      <span class="audio-label" title="${ch.name}">${ch.name}</span>
+      <span class="name" title="${ch.name}">${ch.name}</span>
       <input type="range" class="audio-slider" min="0" max="100" value="${ch.volume}">
-      <div class="audio-meter"><div class="audio-meter-fill" data-ch="${key}" style="width:0%"></div></div>
-      <button class="audio-mute ${ch.muted?'muted':''}">${ch.muted?'🔇':'🔊'}</button>
+      <div class="audio-meter"><div class="audio-meter-fill" id="meter-${ch.id}"></div></div>
+      <button class="audio-btn ${ch.muted ? 'muted' : ''}">${ch.muted ? '🔇' : '🔊'}</button>
+      <button class="audio-btn" title="Remove">✕</button>
     `;
-    div.querySelector('input').oninput = e => { ch.volume = +e.target.value; };
-    div.querySelector('.audio-mute').onclick = () => { ch.muted = !ch.muted; renderAudio(); };
+    const slider = div.querySelector('input');
+    slider.oninput = () => { ch.volume = +slider.value; };
+    div.querySelectorAll('.audio-btn')[0].onclick = (e) => {
+      ch.muted = !ch.muted;
+      e.target.textContent = ch.muted ? '🔇' : '🔊';
+      e.target.classList.toggle('muted', ch.muted);
+    };
+    div.querySelectorAll('.audio-btn')[1].onclick = () => {
+      if (ch.stream) ch.stream.getTracks().forEach(t => t.stop());
+      state.audioSources = state.audioSources.filter(x => x.id !== ch.id);
+      renderAudioChannels();
+    };
     list.appendChild(div);
   });
 }
-
-function updateAudioMeters() {
-  Object.entries(state.audio).forEach(([key, ch]) => {
-    const el = document.querySelector(`.audio-meter-fill[data-ch="${key}"]`);
-    if (!el) return;
-    if (ch.muted) { el.style.width = '0%'; return; }
-    // Simulate audio level based on volume
-    const base = ch.volume;
-    const noise = Math.sin(Date.now()*0.003 + key.length) * 0.3 + 0.7;
-    const level = base * noise;
-    ch.level = level;
-    el.style.width = level + '%';
-    el.className = 'audio-meter-fill';
-    if (level > 90) el.classList.add('clip');
-    else if (level > 70) el.classList.add('hot');
-  });
-}
-
-function toggleAllMute() {
-  const anyUnmuted = Object.values(state.audio).some(c => !c.muted);
-  Object.values(state.audio).forEach(c => c.muted = anyUnmuted);
-  renderAudio();
-}
-
-setInterval(updateAudioMeters, 80);
-
-/* ======================== TRANSITIONS ======================== */
-const TRANSITIONS = [
-  { name:'Fade', duration:300 },
-  { name:'Cut', duration:0 },
-  { name:'Slide', duration:500 },
-  { name:'Stinger', duration:800 }
-];
 
 function renderTransitions() {
-  const list = $('transition-list');
+  const types = [
+    { id: 'fade', name: 'Fade', dur: 300 },
+    { id: 'cut', name: 'Cut', dur: 0 },
+    { id: 'slide', name: 'Slide', dur: 400 }
+  ];
+  const list = document.getElementById('trans-list');
   list.innerHTML = '';
-  TRANSITIONS.forEach(t => {
+  types.forEach(t => {
     const div = document.createElement('div');
-    div.className = 'transition-item' + (t.name === state.transition ? ' active' : '');
-    div.innerHTML = `${t.name} <span class="transition-duration">${t.duration} ms</span>`;
+    div.className = 'trans-item' + (t.id === state.selectedTransType ? ' active' : '');
+    div.innerHTML = `${t.name}<span class="trans-dur">${t.dur}ms</span>`;
     div.onclick = () => {
-      state.transition = t.name;
-      state.transitionDuration = t.duration;
+      state.selectedTransType = t.id;
+      state.transition.type = t.id;
+      state.transition.duration = t.dur;
       renderTransitions();
     };
     list.appendChild(div);
   });
 }
 
-/* ======================== STREAM / RECORD ======================== */
+/* =====================================================
+   SCENE MANAGEMENT
+===================================================== */
+function addScene() {
+  const name = prompt('Scene name:', `Scene ${state.scenes.length + 1}`);
+  if (!name) return;
+  if (state.scenes.some(s => s.name === name)) { toast('Nama scene sudah ada', 'error'); return; }
+  const sc = { id: uid(), name, sources: [] };
+  state.scenes.push(sc);
+  if (state.studioMode) state.stagingSceneId = sc.id;
+  else state.activeSceneId = sc.id;
+  renderScenes(); renderSources();
+  toast(`Scene "${name}" ditambahkan`, 'success');
+}
+
+function removeScene() {
+  if (state.scenes.length <= 1) { toast('Tidak bisa hapus scene terakhir', 'error'); return; }
+  const targetId = state.studioMode ? state.stagingSceneId : state.activeSceneId;
+  const idx = state.scenes.findIndex(s => s.id === targetId);
+  if (!confirm(`Hapus scene "${state.scenes[idx].name}"?`)) return;
+  state.scenes.splice(idx, 1);
+  const newId = state.scenes[Math.max(0, idx - 1)].id;
+  if (state.studioMode) state.stagingSceneId = newId;
+  else state.activeSceneId = newId;
+  renderScenes(); renderSources();
+  toast('Scene dihapus', 'success');
+}
+
+function renameScene(id) {
+  const sc = state.scenes.find(s => s.id === id);
+  if (!sc) return;
+  const name = prompt('Nama baru:', sc.name);
+  if (name && name !== sc.name) { sc.name = name; renderScenes(); }
+}
+
+function switchScene(id) {
+  if (state.studioMode) {
+    state.stagingSceneId = id;
+    renderScenes(); renderSources();
+  } else {
+    // Animate transition
+    const fromId = state.activeSceneId;
+    if (fromId === id) return;
+    state.activeSceneId = id;
+    state.stagingSceneId = id;
+    state.selectedSourceId = null;
+    if (state.transition.type !== 'cut') {
+      state.transition.anim = {
+        fromId, toId: id,
+        type: state.transition.type,
+        duration: state.transition.duration,
+        start: performance.now()
+      };
+    }
+    renderScenes(); renderSources();
+  }
+}
+
+function toggleTransition() {
+  if (!state.studioMode) return;
+  const fromId = state.activeSceneId;
+  if (fromId === state.stagingSceneId) return;
+  state.activeSceneId = state.stagingSceneId;
+  if (state.transition.type !== 'cut') {
+    state.transition.anim = {
+      fromId, toId: state.activeSceneId,
+      type: state.transition.type,
+      duration: state.transition.duration,
+      start: performance.now()
+    };
+  }
+  renderScenes();
+  toast('Transition complete', 'success');
+}
+
+/* =====================================================
+   SOURCE MANAGEMENT
+===================================================== */
+function openAddSource(presetType) {
+  if (presetType === 'audio') {
+    document.getElementById('new-src-type').value = 'audio';
+  }
+  document.getElementById('new-src-name').value = '';
+  openModal('modal-add-source');
+}
+
+async function confirmAddSource() {
+  const type = document.getElementById('new-src-type').value;
+  const name = document.getElementById('new-src-name').value.trim() ||
+    (type.charAt(0).toUpperCase() + type.slice(1) + ' ' + (getEditScene().sources.length + 1));
+  const preset = document.getElementById('new-src-preset').value;
+  closeModal('modal-add-source');
+
+  try {
+    const src = await createSourceAsync(type, name, preset);
+    if (src) {
+      getEditScene().sources.push(src);
+      state.selectedSourceId = src.id;
+      renderSources();
+      toast(`Source "${name}" ditambahkan`, 'success');
+    }
+  } catch(e) {
+    toast('Gagal menambahkan source: ' + e.message, 'error');
+  }
+}
+
+function removeSource() {
+  const sc = getEditScene();
+  if (!sc) return;
+  if (!state.selectedSourceId) { toast('Pilih source dulu', 'error'); return; }
+  const idx = sc.sources.findIndex(s => s.id === state.selectedSourceId);
+  if (idx < 0) return;
+  const src = sc.sources[idx];
+  if (src.stream) src.stream.getTracks().forEach(t => t.stop());
+  sc.sources.splice(idx, 1);
+  state.selectedSourceId = null;
+  renderSources();
+  toast('Source dihapus', 'success');
+}
+
+function moveSource(dir) {
+  const sc = getEditScene();
+  if (!sc || !state.selectedSourceId) return;
+  const idx = sc.sources.findIndex(s => s.id === state.selectedSourceId);
+  if (idx < 0) return;
+  if (dir === 'up' && idx < sc.sources.length - 1) {
+    [sc.sources[idx], sc.sources[idx + 1]] = [sc.sources[idx + 1], sc.sources[idx]];
+  } else if (dir === 'down' && idx > 0) {
+    [sc.sources[idx], sc.sources[idx - 1]] = [sc.sources[idx - 1], sc.sources[idx]];
+  }
+  renderSources();
+}
+
+/* =====================================================
+   PROPERTIES DIALOG
+===================================================== */
+let propsEditingId = null;
+
+function openProperties(sourceId) {
+  const sc = getEditScene();
+  const src = sc.sources.find(s => s.id === sourceId);
+  if (!src) return;
+  propsEditingId = sourceId;
+
+  document.getElementById('props-title').textContent = 'Properties: ' + src.name;
+  const body = document.getElementById('props-body');
+  let html = `
+    <label>Name</label>
+    <input type="text" id="p-name" value="${escapeHtml(src.name)}">
+    <label>Position & Size</label>
+    <div class="row">
+      <input type="number" id="p-x" value="${src.x}" placeholder="X">
+      <input type="number" id="p-y" value="${src.y}" placeholder="Y">
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <input type="number" id="p-w" value="${src.w}" placeholder="W">
+      <input type="number" id="p-h" value="${src.h}" placeholder="H">
+    </div>
+  `;
+
+  if (src.type === 'color') {
+    html += `
+      <label>Color</label>
+      <input type="color" id="p-color" value="${src.color || '#ff4444'}">
+    `;
+  }
+  if (src.type === 'text') {
+    html += `
+      <label>Text</label>
+      <textarea id="p-text" rows="3">${escapeHtml(src.text || '')}</textarea>
+      <label>Font Size</label>
+      <input type="number" id="p-font" value="${src.fontSize || 48}">
+      <label>Color</label>
+      <input type="color" id="p-color" value="${src.color || '#ffffff'}">
+    `;
+  }
+
+  html += `
+    <label style="margin-top:14px;">
+      <input type="checkbox" id="p-locked" ${src.locked ? 'checked' : ''} style="width:auto;margin-right:6px;">
+      Lock source position
+    </label>
+  `;
+  body.innerHTML = html;
+  openModal('modal-props');
+}
+
+function applyProps() {
+  const sc = getEditScene();
+  const src = sc.sources.find(s => s.id === propsEditingId);
+  if (!src) { closeModal('modal-props'); return; }
+
+  src.name = document.getElementById('p-name').value;
+  src.x = +document.getElementById('p-x').value;
+  src.y = +document.getElementById('p-y').value;
+  src.w = +document.getElementById('p-w').value;
+  src.h = +document.getElementById('p-h').value;
+  src.locked = document.getElementById('p-locked').checked;
+
+  const c = document.getElementById('p-color');
+  if (c) src.color = c.value;
+  const t = document.getElementById('p-text');
+  if (t) src.text = t.value;
+  const f = document.getElementById('p-font');
+  if (f) src.fontSize = +f.value;
+
+  renderSources();
+  closeModal('modal-props');
+  toast('Properties diperbarui', 'success');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =====================================================
+   CANVAS INTERACTION (drag, resize, select)
+===================================================== */
+let dragState = null;
+
+function canvasCoords(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+}
+
+function sourceAt(x, y) {
+  const sc = getEditScene();
+  if (!sc) return null;
+  for (let i = sc.sources.length - 1; i >= 0; i--) {
+    const s = sc.sources[i];
+    if (!s.visible) continue;
+    if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) return s;
+  }
+  return null;
+}
+
+function onHandle(s, x, y) {
+  return x >= s.x + s.w - 10 && x <= s.x + s.w + 4 && y >= s.y + s.h - 10 && y <= s.y + s.h + 4;
+}
+
+document.getElementById('previewCanvas').addEventListener('mousedown', e => {
+  const canvas = e.target;
+  const { x, y } = canvasCoords(e, canvas);
+  const sel = getSelectedSource();
+
+  if (sel && !sel.locked && onHandle(sel, x, y)) {
+    dragState = { type: 'resize', src: sel, sx: x, sy: y, ow: sel.w, oh: sel.h };
+    return;
+  }
+  const hit = sourceAt(x, y);
+  if (hit && !hit.locked) {
+    state.selectedSourceId = hit.id;
+    dragState = { type: 'move', src: hit, sx: x, sy: y, ox: hit.x, oy: hit.y };
+    renderSources();
+  } else if (hit) {
+    state.selectedSourceId = hit.id;
+    renderSources();
+  } else {
+    state.selectedSourceId = null;
+    renderSources();
+  }
+});
+
+window.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  const canvas = document.getElementById('previewCanvas');
+  const { x, y } = canvasCoords(e, canvas);
+  const dx = x - dragState.sx, dy = y - dragState.sy;
+  if (dragState.type === 'move') {
+    dragState.src.x = Math.round(dragState.ox + dx);
+    dragState.src.y = Math.round(dragState.oy + dy);
+  } else {
+    dragState.src.w = Math.max(30, Math.round(dragState.ow + dx));
+    dragState.src.h = Math.max(30, Math.round(dragState.oh + dy));
+  }
+});
+
+window.addEventListener('mouseup', () => { dragState = null; });
+
+document.getElementById('previewCanvas').addEventListener('dblclick', e => {
+  const { x, y } = canvasCoords(e, e.target);
+  const hit = sourceAt(x, y);
+  if (hit) openProperties(hit.id);
+});
+
+/* =====================================================
+   STREAMING & RECORDING
+===================================================== */
 function toggleStream() {
-  const btn = $('btn-stream');
+  const btn = document.getElementById('streamBtn');
   if (!state.streaming) {
     state.streaming = true;
-    state.streamStartTime = Date.now();
-    btn.classList.add('active');
+    state.liveStart = Date.now();
     btn.textContent = '⏹ Stop Streaming';
-    $('status-indicator').className = 'status-dot live';
-    $('status-text').textContent = 'Live';
-    $('stream-timer').classList.remove('hidden');
-    $('preview-label').classList.add('rec');
-    $('live-time').textContent = '00:00:00';
-    state.streamInterval = setInterval(() => {
-      $('live-time').textContent = formatTime((Date.now() - state.streamStartTime)/1000);
-    }, 1000);
+    btn.classList.add('active');
+    document.getElementById('st-dot').className = 'status-dot live';
+    document.getElementById('st-text').textContent = 'LIVE';
+    document.getElementById('st-timer-wrap').style.display = 'inline';
+    document.getElementById('st-timer-dot').className = 'status-dot live';
+    document.getElementById('previewLabel').className = 'preview-label live';
+    document.getElementById('previewLabel').textContent = '🔴 LIVE';
+    toast('🔴 LIVE! (Simulasi streaming - preview aktif)', 'success');
   } else {
     state.streaming = false;
-    clearInterval(state.streamInterval);
-    btn.classList.remove('active');
     btn.textContent = '▶ Start Streaming';
-    $('status-indicator').className = 'status-dot offline';
-    $('status-text').textContent = 'Offline';
-    $('stream-timer').classList.add('hidden');
-    if (!state.recording) $('preview-label').classList.remove('rec');
+    btn.classList.remove('active');
+    document.getElementById('st-dot').className = 'status-dot';
+    document.getElementById('st-text').textContent = 'Ready';
+    document.getElementById('st-timer-wrap').style.display = 'none';
+    document.getElementById('previewLabel').className = 'preview-label off';
+    document.getElementById('previewLabel').textContent = 'Preview';
+    toast('Streaming dihentikan');
   }
 }
 
 function toggleRecord() {
-  const btn = $('btn-record');
-  if (!state.recording) {
+  if (!state.recording) startRecording();
+  else stopRecording();
+}
+
+function startRecording() {
+  try {
+    const canvas = document.getElementById('previewCanvas');
+    const stream = canvas.captureStream(state.settings.fps);
+    // Add audio tracks
+    state.audioSources.forEach(ch => {
+      if (ch.stream && !ch.muted) {
+        ch.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+      }
+    });
+
+    let mime = 'video/webm;codecs=vp9,opus';
+    if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+    if (!MediaRecorder.isTypeSupported(mime)) mime = '';
+
+    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    recordChunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) recordChunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(recordChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `obs-recording-${Date.now()}.webm`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast('✅ Recording tersimpan!', 'success');
+    };
+    recorder.start(1000);
+
     state.recording = true;
-    state.recordStartTime = Date.now();
-    btn.classList.add('active');
+    state.recordStart = Date.now();
+    const btn = document.getElementById('recordBtn');
     btn.textContent = '⏹ Stop Recording';
-    $('record-timer').classList.remove('hidden');
-    $('preview-label').classList.add('rec');
-    $('rec-time').textContent = '00:00:00';
-    state.recordInterval = setInterval(() => {
-      $('rec-time').textContent = formatTime((Date.now() - state.recordStartTime)/1000);
-    }, 1000);
-  } else {
-    state.recording = false;
-    clearInterval(state.recordInterval);
-    btn.classList.remove('active');
-    btn.textContent = '⏺ Start Recording';
-    $('record-timer').classList.add('hidden');
-    if (!state.streaming) $('preview-label').classList.remove('rec');
-    const dur = (Date.now() - state.recordStartTime)/1000;
-    alert(`Recording selesai!\nDurasi: ${formatTime(dur)}\nFile: /Videos/obs-replay-${Date.now()}.mp4`);
+    btn.classList.add('active');
+    document.getElementById('st-timer-wrap').style.display = 'inline';
+    document.getElementById('st-timer-dot').className = 'status-dot rec';
+    document.getElementById('st-text').textContent = 'Recording';
+    document.getElementById('st-dot').className = 'status-dot rec';
+    toast('⏺ Recording dimulai', 'success');
+  } catch (err) {
+    toast('Gagal mulai recording: ' + err.message, 'error');
   }
 }
 
-function formatTime(s) {
-  s = Math.floor(s);
-  return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
-    .map(v => String(v).padStart(2,'0')).join(':');
+function stopRecording() {
+  if (recorder && recorder.state !== 'inactive') {
+    recorder.stop();
+  }
+  state.recording = false;
+  const btn = document.getElementById('recordBtn');
+  btn.textContent = '⏺ Start Recording';
+  btn.classList.remove('active');
+  document.getElementById('st-timer-wrap').style.display = state.streaming ? 'inline' : 'none';
+  document.getElementById('st-timer-dot').className = 'status-dot live';
+  document.getElementById('st-text').textContent = state.streaming ? 'LIVE' : 'Ready';
+  document.getElementById('st-dot').className = state.streaming ? 'status-dot live' : 'status-dot';
 }
 
-/* ======================== SETTINGS ======================== */
-function openSettingsModal() {
-  $('setting-res').value = `${state.settings.width}x${state.settings.height}`;
-  $('setting-fps').value = state.settings.fps;
-  $('setting-bitrate').value = state.settings.bitrate;
-  $('modal-settings').classList.add('open');
+function screenshot() {
+  const canvas = document.getElementById('previewCanvas');
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `obs-screenshot-${Date.now()}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('📷 Screenshot tersimpan', 'success');
+  });
 }
 
-function saveSettings() {
-  const [w, h] = $('setting-res').value.split('x').map(Number);
+/* =====================================================
+   STUDIO MODE & UI
+===================================================== */
+function toggleStudioMode() {
+  state.studioMode = !state.studioMode;
+  state.transition.anim = null;
+  const progPane = document.getElementById('programPane');
+  const transitionBtn = document.getElementById('transitionBtn');
+  const studioBtn1 = document.getElementById('studioToggleBtn');
+  const studioBtn2 = document.getElementById('studioBtn');
+  if (state.studioMode) {
+    progPane.style.display = 'flex';
+    transitionBtn.style.display = 'inline-block';
+    studioBtn1.classList.add('active');
+    studioBtn2.classList.add('active');
+    state.stagingSceneId = state.activeSceneId;
+    document.getElementById('programLabel').textContent = '🔴 Live';
+  } else {
+    progPane.style.display = 'none';
+    transitionBtn.style.display = 'none';
+    studioBtn1.classList.remove('active');
+    studioBtn2.classList.remove('active');
+    state.stagingSceneId = state.activeSceneId;
+  }
+  renderScenes();
+  renderSources();
+  toast(state.studioMode ? 'Studio Mode ON' : 'Studio Mode OFF');
+}
+
+function fullscreenPreview() {
+  const el = document.getElementById('preview-area');
+  if (document.fullscreenElement) document.exitFullscreen();
+  else el.requestFullscreen().catch(() => toast('Fullscreen tidak didukung', 'error'));
+}
+
+function fitCanvases() {
+  const dpr = window.devicePixelRatio || 1;
+  const c1 = document.getElementById('previewCanvas');
+  const c2 = document.getElementById('programCanvas');
+  [c1, c2].forEach(c => {
+    c.width = state.settings.width;
+    c.height = state.settings.height;
+  });
+  document.getElementById('res-info').textContent = `${state.settings.width} x ${state.settings.height}`;
+  document.getElementById('st-res').textContent = `${state.settings.width}x${state.settings.height}`;
+}
+
+/* =====================================================
+   SETTINGS
+===================================================== */
+function openSettings() {
+  document.getElementById('set-res').value = `${state.settings.width}x${state.settings.height}`;
+  document.getElementById('set-fps').value = state.settings.fps;
+  document.getElementById('set-trans').value = state.transition.type;
+  openModal('modal-settings');
+}
+
+function applySettings() {
+  const [w, h] = document.getElementById('set-res').value.split('x').map(Number);
   state.settings.width = w;
   state.settings.height = h;
-  state.settings.fps = +$('setting-fps').value;
-  state.settings.bitrate = +$('setting-bitrate').value;
-  $('res-label').textContent = `${w}×${h}`;
-  $('bitrate-label').textContent = `${state.settings.bitrate} Kbps`;
-  $('fps-counter').textContent = state.settings.fps;
+  state.settings.fps = +document.getElementById('set-fps').value;
+  state.transition.type = document.getElementById('set-trans').value;
+  state.selectedTransType = state.transition.type;
+  fitCanvases();
+  renderTransitions();
   closeModal('modal-settings');
+  toast(`Settings applied: ${w}x${h} @ ${state.settings.fps}fps`, 'success');
 }
 
-/* ======================== MISC ======================== */
-function closeModal(id) { $(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+/* =====================================================
+   STATS & TIMERS
+===================================================== */
+function updateStats() {
+  document.getElementById('fps-info').textContent = state.measuredFps + ' fps';
+  document.getElementById('st-fps').textContent = state.measuredFps;
+  document.getElementById('st-cpu').textContent = Math.min(99, 5 + state.scenes.length * 2 + state.audioSources.length * 3) + '%';
+  document.getElementById('st-dropped').textContent = state.droppedFrames;
+}
+
+function updateTimers() {
+  const ref = state.recording ? state.recordStart : (state.streaming ? state.liveStart : 0);
+  if (!ref) return;
+  const sec = Math.floor((Date.now() - ref) / 1000);
+  const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+  const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  document.getElementById('st-timer').textContent = `${h}:${m}:${s}`;
+}
+
+/* =====================================================
+   CONTEXT MENU
+===================================================== */
+const ctxMenu = document.getElementById('ctx-menu');
+function showSourceContext(e, sourceId) {
+  state.selectedSourceId = sourceId;
+  const sc = getEditScene();
+  const src = sc.sources.find(s => s.id === sourceId);
+  ctxMenu.innerHTML = `
+    <div class="ctx-item" onclick="openProperties('${sourceId}');hideCtx()">Properties</div>
+    <div class="ctx-item" onclick="toggleVis('${sourceId}');hideCtx()">${src.visible ? 'Hide' : 'Show'}</div>
+    <div class="ctx-item" onclick="toggleLock('${sourceId}');hideCtx()">${src.locked ? 'Unlock' : 'Lock'}</div>
+    <div class="ctx-item" onclick="moveSource('up');hideCtx()">Move Up</div>
+    <div class="ctx-item" onclick="moveSource('down');hideCtx()">Move Down</div>
+    <div class="dd-sep"></div>
+    <div class="ctx-item" onclick="removeSource();hideCtx()">Remove</div>
+  `;
+  ctxMenu.style.left = e.clientX + 'px';
+  ctxMenu.style.top = e.clientY + 'px';
+  ctxMenu.classList.add('open');
+}
+function hideCtx() { ctxMenu.classList.remove('open'); }
+document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) hideCtx(); });
+
+function toggleVis(id) {
+  const src = getEditScene().sources.find(s => s.id === id);
+  if (src) { src.visible = !src.visible; renderSources(); }
+}
+function toggleLock(id) {
+  const src = getEditScene().sources.find(s => s.id === id);
+  if (src) { src.locked = !src.locked; renderSources(); }
+}
+
+/* =====================================================
+   MENU ACTIONS
+===================================================== */
+document.querySelectorAll('[data-action]').forEach(el => {
+  el.addEventListener('click', () => {
+    const a = el.dataset.action;
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    switch (a) {
+      case 'screenshot': screenshot(); break;
+      case 'record': toggleRecord(); break;
+      case 'settings': openSettings(); break;
+      case 'exit': if (confirm('Keluar dari OBS Pro Web?')) { window.close(); location.reload(); } break;
+      case 'props': if (state.selectedSourceId) openProperties(state.selectedSourceId); else toast('Pilih source dulu', 'error'); break;
+      case 'remove-source': removeSource(); break;
+      case 'audio-props': showInfo('Advanced Audio Properties', '<p>Fitur ini tersedia di versi native OBS. Di Web demo, gunakan Audio Mixer di sebelah kanan untuk mengatur volume dan mute.</p>'); break;
+      case 'fullscreen': fullscreenPreview(); break;
+      case 'toggle-stats': state.showStats = !state.showStats; document.querySelector('.statusbar').style.display = state.showStats ? 'flex' : 'none'; break;
+      case 'toggle-docks': document.querySelectorAll('.sidebar').forEach(el => el.style.display = el.style.display === 'none' ? 'flex' : 'none'); break;
+      case 'autoconfig': showInfo('Auto-Configuration Wizard', '<p>✅ Deteksi perangkat selesai.</p><p>Rekomendasi: Resolusi 1280x720 @ 30fps, bitrate 3500 Kbps.</p><p>Klik Apply di Settings untuk menerapkan.</p>'); break;
+      case 'test-audio': showInfo('Test Audio', '🔊 Anda dapat menambahkan audio input via <b>Sources → + → Audio Input Capture</b>. Volume dapat diatur di Audio Mixer.'); break;
+      case 'about': showInfo('About OBS Pro Web', `<p><b>OBS Pro Web Clone</b> v2.0</p><p>Fitur:<br>• Canvas preview live<br>• Webcam & screen capture<br>• Recording ke file .webm<br>• Screenshot PNG<br>• Audio meter realtime<br>• Scene transition fade/slide/cut<br>• Studio mode</p>`); break;
+      case 'shortcuts': showInfo('Keyboard Shortcuts', `<p><b>Ctrl + R</b> — Start/Stop Recording<br><b>Ctrl + S</b> — Screenshot<br><b>Del</b> — Hapus source terpilih<br><b>Esc</b> — Tutup modal/menu<br><b>Dbl-click source</b> — Properties</p>`); break;
+    }
+  });
 });
+
+// Keyboard shortcuts
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    hideCtx();
+  }
+  if (e.ctrlKey && e.key === 'r') { e.preventDefault(); toggleRecord(); }
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); screenshot(); }
+  if (e.key === 'Delete' && state.selectedSourceId) {
+    if (!document.activeElement.matches('input,textarea')) removeSource();
   }
 });
 
-function showRecordings() { alert('Membuka folder /Videos/OBS ...'); }
-function remuxRecordings() { alert('Remux tool dibuka'); }
-function resetLayout() { alert('Layout direset ke default'); }
-function toggleStats() {
-  state.statsVisible = !state.statsVisible;
-  document.querySelector('.statusbar').style.display = state.statsVisible ? '' : 'none';
-}
-function toggleDock(name) {
-  const el = $('dock-' + name);
-  if (el) el.classList.toggle('hidden');
-}
-function exitApp() {
-  if (confirm('Keluar dari OBS Pro?')) {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#666;font-size:24px;flex-direction:column;gap:12px">OBS Pro Closed<div style="font-size:14px;color:#444">Refresh halaman untuk membuka kembali</div></div>';
-  }
-}
-
-function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* ======================== CPU/STATS SIM ======================== */
-let cpuBase = 8;
-setInterval(() => {
-  cpuBase = cpuBase * 0.7 + (state.streaming ? 35 : state.recording ? 25 : 8) * 0.3 + (Math.random()*4-2);
-  cpuBase = Math.max(2, Math.min(95, cpuBase));
-  $('cpu-usage').textContent = Math.round(cpuBase) + '%';
-  // Dropped frames realistic
-  if (state.streaming) {
-    const dropped = Math.floor(Math.random() * 3) * (cpuBase > 70 ? 5 : 1);
-    $('dropped-frames').textContent = dropped;
-  } else {
-    $('dropped-frames').textContent = '0';
-  }
-}, 1500);
-
-/* Mouse tracking for webcam eyes */
-document.addEventListener('mousemove', e => {
-  state._mouseX = e.clientX;
-  state._mouseY = e.clientY;
-});
-
-/* ======================== INIT ======================== */
-renderScenes();
-renderSources();
-renderAudio();
-renderTransitions();
-requestAnimationFrame(loop);
-
-// Auto-resize
-new ResizeObserver(() => {}).observe(document.body);
+/* =====================================================
+   START
+===================================================== */
+init();
 </script>
 </body>
 </html>
