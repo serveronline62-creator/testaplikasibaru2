@@ -3,357 +3,387 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Studio — OBS Style</title>
+<title>Live Studio — OBS Style + Rekam MP4</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-        --bg-app: #141414; --bg-panel: #202020; --bg-head: #2a2a2a; --bg-input: #131313;
-        --bg-hover: #2e2e2e; --bd: #333; --tx: #cfcfcf; --tx-dim: #8a8a8a;
-        --accent: #3d7eff; --danger: #d9534f; --success: #4caf50; --warn: #e0a13d;
-    }
+    :root { --bg-app: #141414; --bg-panel: #202020; --bg-head: #2a2a2a; --bg-input: #131313; --bg-hover: #2e2e2e; --tx: #cfcfcf; --tx-dim: #8a8a8a; --accent: #3d7eff; --danger: #d9534f; --success: #4caf50; --warn: #e0a13d; }
     html, body { height: 100%; }
-    body { background: var(--bg-app); color: var(--tx); font-family: 'Segoe UI', Inter, system-ui, -apple-system, sans-serif; font-size: 13px; overflow: hidden; -webkit-font-smoothing: antialiased; }
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: #1a1a1a; }
-    ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 5px; border: 2px solid #1a1a1a; }
-    ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+    body { background: var(--bg-app); color: var(--tx); font-family: 'Segoe UI', Inter, system-ui, sans-serif; font-size: 13px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-track { background: #1a1a1a; } ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 5px; border: 2px solid #1a1a1a; }
     .hidden { display: none !important; }
     .app { display: flex; flex-direction: column; height: 100dvh; }
     .menubar { height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: #1a1a1a; border-bottom: 1px solid #0d0d0d; }
     .menubar-left { display: flex; align-items: center; gap: 16px; }
     .brand { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .9px; color: #e8e8e8; }
     .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: #e03b3b; box-shadow: 0 0 7px rgba(224,59,59,.85); }
-    .menus { display: flex; gap: 1px; }
-    .menus button { background: none; border: none; color: #a2a2a2; font-size: 12px; font-family: inherit; padding: 4px 9px; border-radius: 3px; cursor: pointer; }
-    .menus button:hover { background: #2e2e2e; color: #e6e6e6; }
+    .brand-dot.rec { animation: tickerPulse 1s infinite; }
+    .menus { display: flex; gap: 1px; } .menus button { background: none; border: none; color: #a2a2a2; font-size: 12px; font-family: inherit; padding: 4px 9px; border-radius: 3px; cursor: pointer; } .menus button:hover { background: #2e2e2e; color: #e6e6e6; }
     .live-badge { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #ff5b5b; border: 1px solid #5c2020; background: #2a1414; padding: 3px 9px; border-radius: 3px; }
+    .live-badge.rec { background: #5c1414; color: #fff; animation: tickerPulse 1s infinite; }
     .workspace { flex: 1; min-height: 0; display: flex; gap: 1px; background: #0d0d0d; padding: 1px; }
-    .col { display: flex; flex-direction: column; gap: 1px; min-height: 0; }
-    .col.left { width: 258px; flex-shrink: 0; }
-    .col.right { width: 300px; flex-shrink: 0; }
-    .col.center { flex: 1; min-width: 0; }
+    .col { display: flex; flex-direction: column; gap: 1px; min-height: 0; } .col.left { width: 258px; flex-shrink: 0; } .col.right { width: 300px; flex-shrink: 0; } .col.center { flex: 1; min-width: 0; }
     .dock { background: var(--bg-panel); display: flex; flex-direction: column; min-height: 0; overflow: hidden; border: 1px solid #262626; }
     .dock-head { height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; background: var(--bg-head); border-bottom: 1px solid #1a1a1a; font-size: 11px; font-weight: 600; color: #b8b8b8; letter-spacing: .4px; text-transform: uppercase; }
-    .dock-btns { display: flex; gap: 6px; color: #666; font-size: 10px; }
-    .dock-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px; }
-    .dock-body.pad { padding: 10px; display: flex; flex-direction: column; gap: 9px; }
-    .dock-foot { padding: 6px; border-top: 1px solid #1a1a1a; display: flex; flex-direction: column; gap: 6px; }
+    .dock-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px; } .dock-body.pad { padding: 10px; display: flex; flex-direction: column; gap: 9px; } .dock-foot { padding: 6px; border-top: 1px solid #1a1a1a; display: flex; flex-direction: column; gap: 6px; }
     .source-row, .scene-row { display: flex; align-items: center; gap: 7px; padding: 5px 7px; border-radius: 3px; cursor: pointer; font-size: 12.5px; color: var(--tx); user-select: none; }
-    .scene-row:hover, .source-row:hover { background: var(--bg-hover); }
-    .scene-row.active, .source-row.selected { background: rgba(61,126,255,.18); box-shadow: inset 2px 0 0 var(--accent); color: #fff; }
-    .src-ico { font-size: 12px; color: #7d7d7d; width: 13px; text-align: center; }
-    .src-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .vis-btn { background: none; border: none; color: #9a9a9a; cursor: pointer; display: flex; padding: 0; }
-    .vis-btn:hover { color: #fff; }
-    .source-row.off .src-name, .source-row.off .src-ico { opacity: .38; }
-    .source-row.off .vis-btn { opacity: .3; }
+    .scene-row:hover, .source-row:hover { background: var(--bg-hover); } .scene-row.active, .source-row.selected { background: rgba(61,126,255,.18); box-shadow: inset 2px 0 0 var(--accent); color: #fff; }
+    .src-ico { font-size: 12px; color: #7d7d7d; width: 13px; text-align: center; } .src-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vis-btn { background: none; border: none; color: #9a9a9a; cursor: pointer; display: flex; padding: 0; } .vis-btn:hover { color: #fff; }
+    .source-row.off .src-name, .source-row.off .src-ico { opacity: .38; } .source-row.off .vis-btn { opacity: .3; }
     .empty-note { color: #6a6a6a; font-size: 11.5px; font-style: italic; padding: 8px; text-align: center; }
-    .btn { background: #333; border: 1px solid #454545; color: #dcdcdc; padding: 7px 10px; border-radius: 3px; font-size: 12px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .15s, border-color .15s; }
-    .btn:hover { background: #3d3d3d; border-color: #575757; }
-    .btn.primary { background: #2f66c4; border-color: #3d7eff; color: #fff; }
-    .btn.primary:hover { background: #3d7eff; }
-    .btn.success { background: #2e7d32; border-color: #43a047; color: #fff; }
-    .btn.success:hover { background: #388e3c; }
-    .btn.danger { background: #8c3330; border-color: #c0392b; color: #fff; }
-    .btn.danger:hover { background: #a13c38; }
-    .btn.block { width: 100%; }
+    .btn { background: #333; border: 1px solid #454545; color: #dcdcdc; padding: 7px 10px; border-radius: 3px; font-size: 12px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .15s; }
+    .btn:hover { background: #3d3d3d; border-color: #575757; } .btn.primary { background: #2f66c4; border-color: #3d7eff; color: #fff; } .btn.primary:hover { background: #3d7eff; }
+    .btn.success { background: #2e7d32; border-color: #43a047; color: #fff; } .btn.danger { background: #8c3330; border-color: #c0392b; color: #fff; } .btn.danger:hover { background: #a13c38; } .btn.block { width: 100%; }
+    .btn.recording { background: #c0392b !important; border-color: #ff5b5b !important; color: #fff !important; animation: tickerPulse 1.2s infinite; }
     .input { width: 100%; background: var(--bg-input); border: 1px solid #3a3a3a; color: var(--tx); padding: 7px 9px; border-radius: 3px; font-size: 12.5px; font-family: inherit; outline: none; }
-    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(61,126,255,.3); }
-    .input[type="file"] { padding: 5px; font-size: 11px; cursor: pointer; }
+    .input:focus { border-color: var(--accent); } .input[type="file"] { padding: 5px; font-size: 11px; cursor: pointer; }
     .prop-label { font-size: 10.5px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .5px; }
     .prop-hint { font-size: 11px; color: #767676; line-height: 1.45; background: #191919; border-left: 2px solid #3a3a3a; padding: 6px 8px; border-radius: 2px; }
-    .props-panel { display: flex; flex-direction: column; gap: 7px; }
-    .range { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .props-panel { display: flex; flex-direction: column; gap: 7px; } .range { width: 100%; accent-color: var(--accent); cursor: pointer; }
     .preview-toolbar { height: 34px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 10px; background: var(--bg-panel); border: 1px solid #262626; }
-    .ratio-group { display: flex; gap: 2px; background: #161616; padding: 2px; border-radius: 4px; }
-    .ratio-btn { background: none; border: none; color: #8f8f8f; font-size: 11px; font-weight: 600; font-family: inherit; padding: 4px 12px; border-radius: 3px; cursor: pointer; letter-spacing: .3px; }
-    .ratio-btn:hover { background: #2c2c2c; color: #ddd; }
-    .ratio-btn.active { background: var(--accent); color: #fff; }
-    .lock-toggle { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #9a9a9a; cursor: pointer; user-select: none; margin-left: auto; }
-    .lock-toggle input { cursor: pointer; accent-color: var(--accent); }
+    .ratio-group { display: flex; gap: 2px; background: #161616; padding: 2px; border-radius: 4px; } .ratio-btn { background: none; border: none; color: #8f8f8f; font-size: 11px; font-weight: 600; font-family: inherit; padding: 4px 12px; border-radius: 3px; cursor: pointer; } .ratio-btn:hover { background: #2c2c2c; color: #ddd; } .ratio-btn.active { background: var(--accent); color: #fff; }
+    .lock-toggle { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #9a9a9a; cursor: pointer; user-select: none; margin-left: auto; } .lock-toggle input { accent-color: var(--accent); }
     .preview-badge { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--warn); border: 1px solid #6b5324; background: #2a2313; padding: 3px 9px; border-radius: 3px; }
+    .rec-badge { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #fff; background: #c0392b; padding: 3px 9px; border-radius: 3px; display: none; animation: tickerPulse 1s infinite; }
+    .rec-badge.show { display: inline-block; }
     .preview-canvas { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #0a0a0a; padding: 14px; container-type: size; }
-    .video-player-container { position: relative; width: 100%; max-width: 100%; aspect-ratio: var(--ar-num, 1.7778); width: min(100%, calc(100cqh * var(--ar-num, 1.7778))); background: #000; overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px #262626, 0 12px 40px rgba(0,0,0,.75); transition: width .18s ease; }
-    .video-player-container:fullscreen { position: fixed; inset: 0; width: min(100vw, calc(100vh * var(--ar-num, 1.7778))); height: min(100vh, calc(100vw / var(--ar-num, 1.7778))); max-width: none; max-height: none; min-width: 0; min-height: 0; margin: auto; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; overflow: hidden; transition: none; }
+    .video-player-container { position: relative; width: 100%; max-width: 100%; aspect-ratio: var(--ar-num, 1.7778); width: min(100%, calc(100cqh * var(--ar-num, 1.7778))); background: #000; overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px #262626, 0 12px 40px rgba(0,0,0,.75); }
+    .video-player-container:fullscreen { position: fixed; inset: 0; width: min(100vw, calc(100vh * var(--ar-num, 1.7778))); height: min(100vh, calc(100vw / var(--ar-num, 1.7778))); max-width: none; max-height: none; margin: auto; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; overflow: hidden; }
     .video-player-container:fullscreen::backdrop { background: #000; }
     .video-background, #mainVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background-color: #000; }
     .scoreboard { position: absolute; top: 15px; left: 15px; display: flex; border-radius: 4px; overflow: hidden; font-size: 14px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,.6); z-index: 10; pointer-events: none; max-width: calc(100% - 30px); flex-wrap: wrap; }
-    .score-team { background-color: #cc0000; color: #fff; padding: 5px 10px; display: flex; align-items: center; flex-wrap: wrap; }
-    .score-team span { margin: 0 5px; }
+    .score-team { background-color: #cc0000; color: #fff; padding: 5px 10px; display: flex; align-items: center; flex-wrap: wrap; } .score-team span { margin: 0 5px; }
     .score-time { background-color: #1b1b1b; color: #fff; padding: 5px 10px; display: flex; align-items: center; min-width: 62px; justify-content: center; }
     .overlay-logos { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
-    .overlay-logos .logo-draggable { position: absolute; pointer-events: auto; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); transition: filter .15s; }
-    .overlay-logos .logo-draggable:hover { filter: drop-shadow(0 2px 8px rgba(0,0,0,.7)); }
-    .overlay-logos .logo-draggable.dragging { cursor: grabbing; filter: drop-shadow(0 4px 12px rgba(0,0,0,.85)); }
-    .overlay-logos .logo-draggable img { display: block; width: 100%; height: auto; pointer-events: none; }
-    .overlay-logos.locked .logo-draggable { pointer-events: none; cursor: default; }
-    .ticker-wrapper { position: absolute; bottom: 0; left: 0; right: 0; height: 46px; display: flex; align-items: stretch; background: linear-gradient(90deg, #0b1220 0%, #15233d 35%, #15233d 65%, #0b1220 100%); border-top: 2px solid #e11d2f; box-shadow: 0 -6px 24px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); z-index: 20; pointer-events: none; overflow: hidden; font-family: 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif; }
-    .ticker-label { background: linear-gradient(180deg, #ff2d3f 0%, #c00d1f 100%); color: #fff; padding: 0 24px 0 14px; font-weight: 900; font-size: 12.5px; letter-spacing: 1.6px; display: flex; align-items: center; gap: 8px; white-space: nowrap; text-transform: uppercase; clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); box-shadow: 6px 0 16px rgba(0,0,0,.55); z-index: 2; position: relative; text-shadow: 0 1px 2px rgba(0,0,0,.4); flex-shrink: 0; }
-    .ticker-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #fff; animation: tickerPulse 1.1s ease-in-out infinite; }
+    .overlay-logos .logo-draggable { position: absolute; pointer-events: auto; cursor: grab; user-select: none; touch-action: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+    .overlay-logos .logo-draggable.dragging { cursor: grabbing; } .overlay-logos .logo-draggable img { display: block; width: 100%; height: auto; pointer-events: none; } .overlay-logos.locked .logo-draggable { pointer-events: none; cursor: default; }
+    .ticker-wrapper { position: absolute; bottom: 0; left: 0; right: 0; height: 46px; display: flex; align-items: stretch; background: linear-gradient(90deg, #0b1220 0%, #15233d 35%, #15233d 65%, #0b1220 100%); border-top: 2px solid #e11d2f; box-shadow: 0 -6px 24px rgba(0,0,0,.55); z-index: 20; pointer-events: none; overflow: hidden; font-family: 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif; }
+    .ticker-label { background: linear-gradient(180deg, #ff2d3f 0%, #c00d1f 100%); color: #fff; padding: 0 24px 0 14px; font-weight: 900; font-size: 12.5px; letter-spacing: 1.6px; display: flex; align-items: center; gap: 8px; white-space: nowrap; text-transform: uppercase; clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); z-index: 2; flex-shrink: 0; }
+    .ticker-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: tickerPulse 1.1s infinite; }
     @keyframes tickerPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.65); } }
-    .ticker-track { flex: 1; overflow: hidden; position: relative; display: flex; align-items: center; }
-    .ticker-content { display: flex; white-space: nowrap; will-change: transform; animation: marquee 22s linear infinite; font-size: 15px; font-weight: 600; color: #fff; letter-spacing: .35px; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
-    .ticker-content span { padding-right: 80px; }
+    .ticker-track { flex: 1; overflow: hidden; display: flex; align-items: center; }
+    .ticker-content { display: flex; white-space: nowrap; will-change: transform; animation: marquee 22s linear infinite; font-size: 15px; font-weight: 600; color: #fff; letter-spacing: .35px; text-shadow: 0 1px 3px rgba(0,0,0,.85); } .ticker-content span { padding-right: 80px; }
     @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-    .ticker-live { display: flex; align-items: center; gap: 6px; padding: 0 14px; background: rgba(225,29,47,.15); border-left: 1px solid rgba(225,29,47,.5); color: #ff4d5e; font-weight: 900; font-size: 11px; letter-spacing: 1.5px; z-index: 2; text-shadow: 0 0 8px rgba(255,77,94,.5); flex-shrink: 0; }
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff4d5e; box-shadow: 0 0 8px #ff4d5e; animation: tickerPulse 1.4s infinite; }
-    .fs-btn { position: absolute; top: 12px; right: 12px; z-index: 30; width: 38px; height: 38px; border-radius: 4px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s, background .2s; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 0; }
-    .video-player-container:hover .fs-btn { opacity: 1; }
-    .fs-btn:hover { background: rgba(0,0,0,.85); border-color: rgba(255,255,255,.45); }
-    .fs-btn:active { transform: scale(.94); }
+    .ticker-live { display: flex; align-items: center; gap: 6px; padding: 0 14px; background: rgba(225,29,47,.15); border-left: 1px solid rgba(225,29,47,.5); color: #ff4d5e; font-weight: 900; font-size: 11px; letter-spacing: 1.5px; z-index: 2; flex-shrink: 0; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff4d5e; animation: tickerPulse 1.4s infinite; }
+    .fs-btn { position: absolute; top: 12px; right: 12px; z-index: 30; width: 38px; height: 38px; border-radius: 4px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; padding: 0; }
+    .video-player-container:hover .fs-btn { opacity: 1; } .fs-btn:hover { background: rgba(0,0,0,.85); }
     .mixer { flex-shrink: 0; height: 130px; background: var(--bg-panel); border: 1px solid #262626; display: flex; flex-direction: column; }
-    .mixer-head { height: 24px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: #b8b8b8; text-transform: uppercase; letter-spacing: .4px; background: var(--bg-head); border-bottom: 1px solid #1a1a1a; }
-    .mixer-channels { flex: 1; display: flex; gap: 1px; padding: 6px 8px; overflow-x: auto; }
-    .channel { width: 80px; flex-shrink: 0; background: #1a1a1a; border: 1px solid #262626; border-radius: 3px; display: flex; flex-direction: column; align-items: center; padding: 5px 4px; gap: 4px; }
-    .ch-track { display: flex; gap: 6px; align-items: center; justify-content: center; height: 44px; }
-    .fader { width: 16px; height: 44px; writing-mode: vertical-lr; direction: rtl; accent-color: var(--accent); cursor: pointer; }
-    .ch-meter { width: 6px; height: 44px; background: #0d0d0d; border-radius: 2px; overflow: hidden; display: flex; align-items: flex-end; }
-    .meter-fill { width: 100%; height: 35%; background: linear-gradient(to top, #4caf50, #8bc34a 55%, #e0a13d 82%, #e04a4a); animation: vu 2.6s ease-in-out infinite; }
-    .channel:nth-child(2) .meter-fill { animation-duration: 3.1s; animation-delay: .4s; }
-    .channel:nth-child(3) .meter-fill { animation-duration: 2.2s; animation-delay: .9s; }
-    @keyframes vu { 0%, 100% { height: 28%; } 18% { height: 52%; } 36% { height: 38%; } 54% { height: 66%; } 72% { height: 44%; } 88% { height: 58%; } }
+    .mixer-head { height: 24px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: #b8b8b8; text-transform: uppercase; background: var(--bg-head); border-bottom: 1px solid #1a1a1a; }
+    .mixer-channels { flex: 1; display: flex; gap: 1px; padding: 6px 8px; overflow-x: auto; } .channel { width: 80px; flex-shrink: 0; background: #1a1a1a; border: 1px solid #262626; border-radius: 3px; display: flex; flex-direction: column; align-items: center; padding: 5px 4px; gap: 4px; }
+    .ch-track { display: flex; gap: 6px; align-items: center; justify-content: center; height: 44px; } .fader { width: 16px; height: 44px; writing-mode: vertical-lr; direction: rtl; accent-color: var(--accent); }
+    .ch-meter { width: 6px; height: 44px; background: #0d0d0d; border-radius: 2px; overflow: hidden; display: flex; align-items: flex-end; } .meter-fill { width: 100%; height: 35%; background: linear-gradient(to top, #4caf50, #8bc34a 55%, #e0a13d 82%, #e04a4a); animation: vu 2.6s infinite; }
+    @keyframes vu { 0%,100%{height:28%} 54%{height:66%} }
     .ch-name { font-size: 10px; color: #9a9a9a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-    .ch-mute { background: #2a2a2a; border: 1px solid #3a3a3a; color: #8a8a8a; border-radius: 3px; width: 24px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
-    .ch-mute:hover { background: #3a3a3a; }
-    .ch-mute.muted { background: #8c3330; border-color: #c0392b; color: #fff; }
-    .timer-controls { display: flex; gap: 6px; }
-    .timer-controls .btn { flex: 1; padding: 7px 6px; font-size: 11.5px; }
-    .statusbar { height: 26px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 12px; background: #1a1a1a; border-top: 1px solid #0d0d0d; font-size: 11px; color: #8a8a8a; }
-    .statusbar .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-    .dot.green { background: #4caf50; box-shadow: 0 0 5px rgba(76,175,80,.7); }
+    .ch-mute { background: #2a2a2a; border: 1px solid #3a3a3a; color: #8a8a8a; border-radius: 3px; width: 24px; height: 18px; font-size: 10px; cursor: pointer; } .ch-mute.muted { background: #8c3330; color: #fff; }
+    .timer-controls { display: flex; gap: 6px; } .timer-controls .btn { flex: 1; padding: 7px 6px; font-size: 11.5px; }
+    .statusbar { height: 26px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 12px; background: #1a1a1a; border-top: 1px solid #0d0d0d; font-size: 11px; color: #8a8a8a; } .statusbar .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; } .dot.green { background: #4caf50; }
     .spacer { flex: 1; }
-    @media (max-width: 1100px) {
-        body { overflow: auto; } .app { height: auto; min-height: 100dvh; }
-        .workspace { flex-direction: column; overflow-y: auto; }
-        .col.left, .col.right { width: 100%; flex: none; }
-        .col.left .dock, .col.right .dock { max-height: 340px; }
-        .preview-canvas { height: 58vw; min-height: 220px; flex: none; }
-        .menus { display: none; } .ticker-wrapper { height: 40px; } .ticker-content { font-size: 13px; }
-    }
+    @media (max-width: 1100px) { body { overflow: auto; } .app { height: auto; min-height: 100dvh; } .workspace { flex-direction: column; overflow-y: auto; } .col.left, .col.right { width: 100%; flex: none; } .preview-canvas { height: 58vw; min-height: 220px; flex: none; } .menus { display: none; } }
 </style>
 </head>
 <body>
 <div class="app">
     <div class="menubar">
-        <div class="menubar-left">
-            <div class="brand"><span class="brand-dot"></span> LIVE STUDIO</div>
-            <nav class="menus"><button>File</button><button>Edit</button><button>View</button><button>Docks</button><button>Profile</button><button>Scene Collection</button><button>Tools</button><button>Help</button></nav>
-        </div>
-        <div class="menubar-right"><span class="live-badge">● LIVE</span></div>
+        <div class="menubar-left"><div class="brand"><span class="brand-dot" id="brandDot"></span> LIVE STUDIO</div><nav class="menus"><button>File</button><button>Edit</button><button>View</button><button>Docks</button><button>Profile</button><button>Tools</button><button>Help</button></nav></div>
+        <div class="menubar-right"><span class="live-badge" id="liveBadge">● LIVE</span></div>
     </div>
     <div class="workspace">
         <aside class="col left">
-            <section class="dock" style="flex: 0 0 32%;">
-                <header class="dock-head">Scenes <span class="dock-btns">+ − ▲ ▼</span></header>
-                <div class="dock-body">
-                    <div class="scene-row active"><span class="src-ico">▣</span> Live Match</div>
-                    <div class="scene-row"><span class="src-ico">▣</span> Warm Up</div>
-                    <div class="scene-row"><span class="src-ico">▣</span> Half Time</div>
-                </div>
-            </section>
-            <section class="dock" style="flex: 1;">
-                <header class="dock-head">Sources <span class="dock-btns">+ − ▲ ▼</span></header>
-                <div class="dock-body" id="sourceList">
-                    <div class="source-row" data-source-id="video"><button class="vis-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="src-ico">▣</span><span class="src-name">Video Utama</span></div>
-                    <div class="source-row" data-source-id="scoreboard"><button class="vis-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="src-ico">⊞</span><span class="src-name">Papan Skor</span></div>
-                    <div class="source-row" data-source-id="ticker"><button class="vis-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="src-ico">≡</span><span class="src-name">Teks Berjalan</span></div>
-                    <div id="logoSources"></div>
-                </div>
-                <div class="dock-foot">
-                    <input type="file" id="logoInput" class="input" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif">
-                    <button id="btnAddLogo" class="btn block">+ Tambah Logo</button>
-                </div>
-            </section>
+            <section class="dock" style="flex:0 0 32%;"><header class="dock-head">Scenes</header><div class="dock-body"><div class="scene-row active"><span class="src-ico">▣</span> Live Match</div><div class="scene-row"><span class="src-ico">▣</span> Warm Up</div><div class="scene-row"><span class="src-ico">▣</span> Half Time</div></div></section>
+            <section class="dock" style="flex:1;"><header class="dock-head">Sources</header><div class="dock-body" id="sourceList">
+                <div class="source-row" data-source-id="video"><button class="vis-btn">👁</button><span class="src-ico">▣</span><span class="src-name">Video Utama</span></div>
+                <div class="source-row" data-source-id="scoreboard"><button class="vis-btn">👁</button><span class="src-ico">⊞</span><span class="src-name">Papan Skor</span></div>
+                <div class="source-row" data-source-id="ticker"><button class="vis-btn">👁</button><span class="src-ico">≡</span><span class="src-name">Teks Berjalan</span></div>
+                <div id="logoSources"></div>
+            </div><div class="dock-foot"><input type="file" id="logoInput" class="input" accept="image/*"><button id="btnAddLogo" class="btn block">+ Tambah Logo</button></div></section>
         </aside>
         <main class="col center">
             <div class="preview-toolbar">
-                <div class="ratio-group">
-                    <button type="button" class="ratio-btn active" data-ratio="original">ASLI</button>
-                    <button type="button" class="ratio-btn" data-ratio="16:9">16:9</button>
-                    <button type="button" class="ratio-btn" data-ratio="9:16">9:16</button>
-                </div>
+                <div class="ratio-group"><button type="button" class="ratio-btn active" data-ratio="original">ASLI</button><button type="button" class="ratio-btn" data-ratio="16:9">16:9</button><button type="button" class="ratio-btn" data-ratio="9:16">9:16</button></div>
                 <label class="lock-toggle"><input type="checkbox" id="lockPositions"><span>🔒 Kunci posisi logo</span></label>
+                <span class="rec-badge" id="recBadge">● REC 00:00</span>
                 <span class="preview-badge">PROGRAM</span>
             </div>
-            <div class="preview-canvas">
-                <div class="video-player-container" id="playerContainer" data-ratio="original">
-                    <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1200&auto=format&fit=crop" alt="Lapangan Sepak Bola" class="video-background" id="placeholderImage">
-                    <video id="mainVideo" controls controlsList="nofullscreen" style="display: none;"></video>
-                    <!-- PAPAN SKOR: SEMBUNYI SAMPAI DIINPUT -->
-                    <div class="scoreboard" id="scoreboard" style="display:none"><div class="score-team"><span id="teamA">TIM A</span><span id="scoreDisplay">0 - 0</span><span id="teamB">TIM B</span></div><div class="score-time" id="matchTime">00:00</div></div>
-                    <div class="overlay-logos" id="overlayLogos"></div>
-                    <div class="ticker-wrapper" id="tickerWrapper">
-                        <div class="ticker-label"><span class="ticker-dot"></span>INFO MATCH</div>
-                        <div class="ticker-track"><div class="ticker-content" id="runningText"><span>Selamat datang di Live Streaming ETMC XXXV 2026 Flores Timur - Match Day 2.</span><span aria-hidden="true">Selamat datang di Live Streaming ETMC XXXV 2026 Flores Timur - Match Day 2.</span></div></div>
-                        <div class="ticker-live"><span class="live-dot"></span>LIVE</div>
-                    </div>
-                    <button class="fs-btn" id="fsBtn" title="Layar Penuh" aria-label="Layar Penuh"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
-                </div>
-            </div>
-            <div class="mixer">
-                <div class="mixer-head">Audio Mixer</div>
-                <div class="mixer-channels">
-                    <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="82"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Mic / Aux</div><button class="ch-mute">🔊</button></div>
-                    <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="64"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Desktop Audio</div><button class="ch-mute">🔊</button></div>
-                    <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="90"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Video Source</div><button class="ch-mute">🔊</button></div>
-                </div>
-            </div>
+            <div class="preview-canvas"><div class="video-player-container" id="playerContainer">
+                <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1200&auto=format&fit=crop" class="video-background" id="placeholderImage">
+                <video id="mainVideo" controls controlsList="nofullscreen" style="display:none"></video>
+                <div class="scoreboard" id="scoreboard" style="display:none"><div class="score-team"><span id="teamA">TIM A</span><span id="scoreDisplay">0 - 0</span><span id="teamB">TIM B</span></div><div class="score-time" id="matchTime">00:00</div></div>
+                <div class="overlay-logos" id="overlayLogos"></div>
+                <div class="ticker-wrapper" id="tickerWrapper" style="display:none"><div class="ticker-label"><span class="ticker-dot"></span>INFO MATCH</div><div class="ticker-track"><div class="ticker-content" id="runningText"><span></span><span aria-hidden="true"></span></div></div><div class="ticker-live"><span class="live-dot"></span>LIVE</div></div>
+                <button class="fs-btn" id="fsBtn">⛶</button>
+            </div></div>
+            <div class="mixer"><div class="mixer-head">Audio Mixer</div><div class="mixer-channels">
+                <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="82"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Mic / Aux</div><button class="ch-mute">🔊</button></div>
+                <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="64"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Desktop Audio</div><button class="ch-mute">🔊</button></div>
+                <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="90"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Video Source</div><button class="ch-mute">🔊</button></div>
+            </div></div>
         </main>
         <aside class="col right">
-            <section class="dock" style="flex: 0 0 auto;"><header class="dock-head">Controls</header><div class="dock-body pad"><button class="btn primary block">● Mulai Streaming</button><button class="btn block">● Mulai Rekaman</button><button class="btn block">⚙ Pengaturan</button></div></section>
-            <section class="dock" style="flex: 1;"><header class="dock-head">Properties — <span id="propsTitle">Video Utama</span></header><div class="dock-body pad" id="propsBody">
-                <div class="props-panel" id="propsVideo"><span class="prop-label">Sumber Video</span><button class="btn block" id="btnUpload">⬆ Unggah Video</button><div class="prop-hint" id="videoInfo">Belum ada video dipilih — menampilkan gambar placeholder.</div><span class="prop-label">Rasio</span><div class="prop-hint">Atur rasio lewat tombol <b>ASLI / 16:9 / 9:16</b> di atas jendela preview.</div><span class="prop-label">Layar Penuh</span><div class="prop-hint">Arahkan kursor ke sudut kanan atas video, lalu klik tombol ⛶. Teks berjalan tetap tampil menyatu dengan video.</div></div>
+            <section class="dock" style="flex:0 0 auto;"><header class="dock-head">Controls</header><div class="dock-body pad">
+                <button class="btn primary block">● Mulai Streaming</button>
+                <!-- TOMBOL REKAM -->
+                <button class="btn block" id="btnRecord">● Mulai Rekaman</button>
+                <div class="prop-hint" id="recInfo">Belum merekam. Hasil rekaman akan terdownload otomatis sebagai MP4 (jika didukung) setelah Stop.</div>
+                <label class="prop-label">Kualitas Rekaman</label>
+                <select id="recQuality" class="input"><option value="720">720p — 1280x720 (Ringan, HP)</option><option value="1080" selected>1080p — 1920x1080 (HD)</option><option value="480">480p — 854x480 (Paling Ringan)</option></select>
+                <label class="prop-label">Sertakan Audio Video?</label>
+                <select id="recAudio" class="input"><option value="yes" selected>Ya — audio video ikut terekam</option><option value="no">Tidak — video bisu</option></select>
+                <button class="btn block">⚙ Pengaturan</button>
+            </div></section>
+            <section class="dock" style="flex:1;"><header class="dock-head">Properties — <span id="propsTitle">Video Utama</span></header><div class="dock-body pad">
+                <div class="props-panel" id="propsVideo"><span class="prop-label">Sumber Video</span><button class="btn block" id="btnUpload">⬆ Unggah Video</button><div class="prop-hint" id="videoInfo">Belum ada video dipilih — menampilkan gambar placeholder.</div><span class="prop-label">Rasio</span><div class="prop-hint">Atur rasio lewat tombol ASLI / 16:9 / 9:16 di atas preview.</div></div>
                 <div class="props-panel hidden" id="propsScoreboard">
                     <span class="prop-label">Nama Tim Kiri</span><input type="text" id="inputTeamA" class="input" placeholder="Nama Tim Kiri">
                     <span class="prop-label">Skor</span><input type="text" id="inputScore" class="input" placeholder="Contoh: 2 - 1">
                     <span class="prop-label">Nama Tim Kanan</span><input type="text" id="inputTeamB" class="input" placeholder="Nama Tim Kanan">
                     <span class="prop-label">Waktu Pertandingan</span><input type="text" id="inputTime" class="input" placeholder="Contoh: 75:30">
                     <button id="btnUpdateScore" class="btn primary block">Perbarui Skor &amp; Waktu</button>
-                    <div class="prop-hint">Papan skor baru muncul di video setelah kamu klik tombol di atas. Kosongkan = tetap sembunyi.</div>
-                    <div class="timer-controls"><button id="btnStartTimer" class="btn success">Mulai</button><button id="btnStopTimer" class="btn danger" style="display: none;">Jeda</button><button id="btnResetTimer" class="btn">Reset</button></div>
+                    <div class="timer-controls"><button id="btnStartTimer" class="btn success">Mulai</button><button id="btnStopTimer" class="btn danger" style="display:none">Jeda</button><button id="btnResetTimer" class="btn">Reset</button></div>
                     <button id="btnHideScore" class="btn block">🙈 Sembunyikan Papan Skor</button>
                 </div>
-                <div class="props-panel hidden" id="propsTicker"><span class="prop-label">Teks Berjalan</span><input type="text" id="inputText" class="input" placeholder="Ketik informasi pertandingan..."><button id="btnKirim" class="btn primary block">Kirim Teks Berjalan</button><div class="prop-hint">Tekan <b>Enter</b> untuk langsung mengirim. Teks tampil di depan video, termasuk saat layar penuh.</div></div>
+                <div class="props-panel hidden" id="propsTicker">
+                    <span class="prop-label">Teks Berjalan</span><input type="text" id="inputText" class="input" placeholder="Ketik informasi pertandingan...">
+                    <button id="btnKirim" class="btn primary block">Kirim Teks Berjalan</button>
+                    <button id="btnHideTicker" class="btn block">🙈 Sembunyikan Teks Berjalan</button>
+                </div>
                 <div class="props-panel hidden" id="propsLogo"></div>
             </div></section>
         </aside>
     </div>
-    <div class="statusbar"><span><i class="dot green"></i><span id="statCpu">CPU 3.2%</span></span><span>FPS 60</span><span id="statKbs">KB/s 0.0</span><span>Stream 0 kbps</span><span class="spacer"></span><span id="statClock">00:00:00</span></div>
+    <div class="statusbar"><span><i class="dot green"></i><span id="statCpu">CPU 3.2%</span></span><span id="statRec">● REC OFF</span><span class="spacer"></span><span id="statClock">00:00:00</span></div>
 </div>
-<input type="file" id="videoInput" accept="video/*" style="display: none;">
+<input type="file" id="videoInput" accept="video/*" style="display:none">
+<!-- Canvas tersembunyi untuk rekaman -->
+<canvas id="recCanvas" style="display:none"></canvas>
 <script>
 const $ = id => document.getElementById(id);
-const overlayLogos = $('overlayLogos'); const logoInput = $('logoInput'); const btnAddLogo = $('btnAddLogo'); const logoSources = $('logoSources'); const lockCheckbox = $('lockPositions'); const playerContainer = $('playerContainer'); const mainVideo = $('mainVideo'); const placeholderImage = $('placeholderImage'); const scoreboardEl = document.querySelector('.scoreboard'); const tickerEl = document.querySelector('.ticker-wrapper'); const fsBtn = $('fsBtn');
-const propsVideo = $('propsVideo'); const propsScoreboard = $('propsScoreboard'); const propsTicker = $('propsTicker'); const propsLogo = $('propsLogo'); const propsTitle = $('propsTitle');
-let logos = []; let logoIdCounter = 0; let selectedSource = 'video'; let currentRatio = 'original';
-// FIX: scoreboard awalnya false = sembunyi sampai diinput
-const sourceVisible = { video: true, scoreboard: false, ticker: true };
-const newLogoId = () => 'logo-' + (++logoIdCounter);
-const EYE_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const overlayLogos=$('overlayLogos'), logoInput=$('logoInput'), btnAddLogo=$('btnAddLogo'), logoSources=$('logoSources'), lockCheckbox=$('lockPositions'), playerContainer=$('playerContainer'), mainVideo=$('mainVideo'), placeholderImage=$('placeholderImage'), scoreboardEl=$('scoreboard'), tickerEl=$('tickerWrapper'), fsBtn=$('fsBtn');
+const propsVideo=$('propsVideo'), propsScoreboard=$('propsScoreboard'), propsTicker=$('propsTicker'), propsLogo=$('propsLogo'), propsTitle=$('propsTitle');
+let logos=[], logoIdCounter=0, selectedSource='video', currentRatio='original';
+const sourceVisible={video:true, scoreboard:false, ticker:false};
+const newLogoId=()=>'logo-'+(++logoIdCounter);
+const EYE_SVG=`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
 
-/* ===== 1. TICKER — SEAMLESS ===== */
-const btnKirim = $('btnKirim'); const inputText = $('inputText'); const runningText = $('runningText');
-function restartTicker() {
-    const first = runningText.querySelector('span');
-    if (!first) return;
-    runningText.style.animation = 'none';
-    void runningText.offsetWidth;
-    const oneW = first.offsetWidth || 600;
-    const speed = 130;
-    const duration = Math.max(8, oneW / speed);
-    runningText.style.animation = `marquee ${duration}s linear infinite`;
+/* TICKER */
+const btnKirim=$('btnKirim'), inputText=$('inputText'), runningText=$('runningText'), btnHideTicker=$('btnHideTicker');
+let currentTickerText='';
+function restartTicker(){ if(!sourceVisible.ticker) return; const f=runningText.querySelector('span'); if(!f) return; runningText.style.animation='none'; void runningText.offsetWidth; const w=f.offsetWidth||600; runningText.style.animation=`marquee ${Math.max(8,w/130)}s linear infinite`; }
+function updateRunningText(){ const t=inputText.value; if(!t.trim()){alert('Teks tidak boleh kosong!');return;} currentTickerText=t; sourceVisible.ticker=true; tickerEl.style.display=''; runningText.innerHTML=`<span>${t.replace(/</g,'&lt;')}</span><span aria-hidden="true">${t.replace(/</g,'&lt;')}</span>`; restartTicker(); inputText.value=''; refreshUI(); }
+btnKirim.addEventListener('click',updateRunningText); inputText.addEventListener('keypress',e=>{if(e.key==='Enter'){e.preventDefault();updateRunningText();}});
+btnHideTicker.addEventListener('click',()=>{sourceVisible.ticker=false; tickerEl.style.display='none'; refreshUI();});
+let tickerResizeTimer; window.addEventListener('resize',()=>{clearTimeout(tickerResizeTimer); tickerResizeTimer=setTimeout(restartTicker,260);});
+
+/* SKOR */
+const btnUpdateScore=$('btnUpdateScore'), inputTeamA=$('inputTeamA'), inputScore=$('inputScore'), inputTeamB=$('inputTeamB'), inputTime=$('inputTime'), teamA=$('teamA'), scoreDisplay=$('scoreDisplay'), teamB=$('teamB'), matchTime=$('matchTime'), btnHideScore=$('btnHideScore');
+btnUpdateScore.addEventListener('click',()=>{ const ada=inputTeamA.value.trim()||inputScore.value.trim()||inputTeamB.value.trim()||inputTime.value.trim(); if(!ada){alert('Isi dulu nama tim / skor / waktunya!');return;} sourceVisible.scoreboard=true; scoreboardEl.style.display=''; if(inputTeamA.value.trim()) teamA.textContent=inputTeamA.value.toUpperCase(); if(inputScore.value.trim()) scoreDisplay.textContent=inputScore.value; if(inputTeamB.value.trim()) teamB.textContent=inputTeamB.value.toUpperCase(); if(inputTime.value.trim()){const p=inputTime.value.split(':'); if(p.length===2){totalSeconds=(parseInt(p[0])||0)*60+(parseInt(p[1])||0); updateTimerDisplay();}} inputTeamA.value='';inputScore.value='';inputTeamB.value='';inputTime.value=''; refreshUI(); });
+btnHideScore.addEventListener('click',()=>{sourceVisible.scoreboard=false; scoreboardEl.style.display='none'; refreshUI();});
+
+/* TIMER */
+let totalSeconds=0, timerInterval=null, isRunning=false;
+const btnStartTimer=$('btnStartTimer'), btnStopTimer=$('btnStopTimer'), btnResetTimer=$('btnResetTimer');
+const formatTime=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+const updateTimerDisplay=()=>{matchTime.textContent=formatTime(totalSeconds);};
+function startTimer(){if(isRunning)return; timerInterval=setInterval(()=>{totalSeconds++; updateTimerDisplay();},1000); isRunning=true; btnStartTimer.style.display='none'; btnStopTimer.style.display='block';}
+function stopTimer(){if(!isRunning)return; clearInterval(timerInterval); isRunning=false; btnStartTimer.style.display='block'; btnStopTimer.style.display='none';}
+function resetTimer(){stopTimer(); totalSeconds=0; updateTimerDisplay();}
+btnStartTimer.addEventListener('click',startTimer); btnStopTimer.addEventListener('click',stopTimer); btnResetTimer.addEventListener('click',resetTimer);
+
+/* VIDEO */
+const btnUpload=$('btnUpload'), videoInput=$('videoInput'); let currentVideoUrl=null;
+btnUpload.addEventListener('click',()=>videoInput.click());
+videoInput.addEventListener('change',e=>{const f=e.target.files[0]; if(!f)return; if(currentVideoUrl) URL.revokeObjectURL(currentVideoUrl); currentVideoUrl=URL.createObjectURL(f); mainVideo.src=currentVideoUrl; mainVideo.muted=false; $('videoInfo').textContent=f.name+' • '+(f.size/1048576).toFixed(1)+' MB'; applyVideoVisibility(); mainVideo.play(); if(currentRatio==='original') applyAspectRatio('original');});
+function applyVideoVisibility(){ const has=!!mainVideo.src; if(!sourceVisible.video){mainVideo.style.display='none'; placeholderImage.style.display='none'; return;} if(has){mainVideo.style.display='block'; placeholderImage.style.display='none';} else {mainVideo.style.display='none'; placeholderImage.style.display='block';}}
+
+/* LOGO */
+function renderLogos(){ overlayLogos.innerHTML=''; logos.forEach(logo=>{ const w=document.createElement('div'); w.className='logo-draggable'; w.dataset.logoId=logo.id; w.style.left=logo.x+'%'; w.style.top=logo.y+'%'; w.style.width=logo.width+'px'; if(!logo.visible) w.style.display='none'; const img=document.createElement('img'); img.src=logo.src; img.alt='Logo'; img.draggable=false; if(logo.imgEl) {} img.onload=()=>{logo.imgEl=img;}; logo.imgEl=img; w.appendChild(img); setupDrag(w,logo); overlayLogos.appendChild(w); }); renderSourceList(); }
+function renderSourceList(){ logoSources.innerHTML=''; if(!logos.length){const e=document.createElement('div'); e.className='empty-note'; e.textContent='Belum ada logo.'; logoSources.appendChild(e);} logos.forEach((logo,i)=>{const r=document.createElement('div'); r.className='source-row'; r.dataset.sourceId=logo.id; r.innerHTML=`<button class="vis-btn">${EYE_SVG}</button><span class="src-ico">◈</span><span class="src-name">Logo ${i+1}</span>`; logoSources.appendChild(r);}); refreshUI(); }
+function renderLogoProps(logo){ propsLogo.innerHTML=''; const l=document.createElement('span'); l.className='prop-label'; l.textContent=`Ukuran: ${logo.width}px`; const s=document.createElement('input'); s.type='range'; s.min='20'; s.max='400'; s.value=logo.width; s.className='range'; s.addEventListener('input',e=>{logo.width=parseInt(e.target.value); l.textContent=`Ukuran: ${logo.width}px`; const w=overlayLogos.querySelector(`[data-logo-id="${logo.id}"]`); if(w) w.style.width=logo.width+'px'; clampPosition(logo);}); const h=document.createElement('div'); h.className='prop-hint'; h.textContent='Geser logo langsung di atas video.'; const b=document.createElement('button'); b.className='btn danger block'; b.textContent='🗑 Hapus Logo'; b.addEventListener('click',()=>{logos=logos.filter(x=>x.id!==logo.id); selectedSource='video'; renderLogos();}); propsLogo.append(l,s,h,b); }
+function setupDrag(el,logoData){ let drag=false,sx=0,sy=0,sl=0,st=0,rect=null; function down(e){ if(e.button!==undefined&&e.button!==0)return; if(lockCheckbox.checked)return; e.preventDefault(); e.stopPropagation(); const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; rect=overlayLogos.getBoundingClientRect(); sl=(logoData.x/100)*rect.width; st=(logoData.y/100)*rect.height; drag=true; el.classList.add('dragging'); document.addEventListener('mousemove',move); document.addEventListener('mouseup',up); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',up);} function move(e){ if(!drag)return; e.preventDefault(); const p=e.touches?e.touches[0]:e; const nl=Math.max(0,Math.min(sl+(p.clientX-sx),rect.width-el.offsetWidth)); const nt=Math.max(0,Math.min(st+(p.clientY-sy),rect.height-el.offsetHeight)); logoData.x=(nl/rect.width)*100; logoData.y=(nt/rect.height)*100; el.style.left=logoData.x+'%'; el.style.top=logoData.y+'%'; } function up(){ if(!drag)return; drag=false; el.classList.remove('dragging'); document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up); document.removeEventListener('touchmove',move); document.removeEventListener('touchend',up);} el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false}); }
+function clampPosition(logo){ const el=overlayLogos.querySelector(`[data-logo-id="${logo.id}"]`); if(!el||!el.offsetWidth)return; const r=overlayLogos.getBoundingClientRect(); let lx=(logo.x/100)*r.width, ty=(logo.y/100)*r.height; lx=Math.min(lx,Math.max(0,r.width-el.offsetWidth)); ty=Math.min(ty,Math.max(0,r.height-el.offsetHeight)); logo.x=(lx/r.width)*100; logo.y=(ty/r.height)*100; el.style.left=logo.x+'%'; el.style.top=logo.y+'%'; }
+btnAddLogo.addEventListener('click',()=>{ const f=logoInput.files[0]; if(!f){alert('Pilih file logo dulu!');return;} if(!f.type.startsWith('image/')){alert('File harus gambar!');return;} const rd=new FileReader(); rd.onload=ev=>{const n=logos.length; const img=new Image(); img.onload=()=>{logos.push({id:newLogoId(), src:ev.target.result, x:Math.max(60,92-n*6), y:5+n*4, width:70, visible:true, imgEl:img}); renderLogos();}; img.src=ev.target.result; logoInput.value='';}; rd.readAsDataURL(f); });
+lockCheckbox.addEventListener('change',()=>overlayLogos.classList.toggle('locked',lockCheckbox.checked));
+
+/* SOURCE */
+function selectSource(id){selectedSource=id; refreshUI();}
+function refreshUI(){ document.querySelectorAll('#sourceList .source-row').forEach(row=>{const id=row.dataset.sourceId; row.classList.toggle('selected',id===selectedSource); let vis; if(id in sourceVisible) vis=sourceVisible[id]; else {const lg=logos.find(l=>l.id===id); vis=lg?lg.visible:true;} row.classList.toggle('off',!vis);}); const isV=selectedSource==='video', isS=selectedSource==='scoreboard', isT=selectedSource==='ticker', lg=logos.find(l=>l.id===selectedSource); propsVideo.classList.toggle('hidden',!isV); propsScoreboard.classList.toggle('hidden',!isS); propsTicker.classList.toggle('hidden',!isT); propsLogo.classList.toggle('hidden',!lg); propsTitle.textContent=isV?'Video Utama':isS?'Papan Skor':isT?'Teks Berjalan':lg?'Logo':'—'; if(lg) renderLogoProps(lg);}
+function toggleVisibility(id){ if(id in sourceVisible){sourceVisible[id]=!sourceVisible[id]; applyStaticVisibility(); refreshUI();} else {const lg=logos.find(l=>l.id===id); if(lg){lg.visible=!lg.visible; renderLogos();}}}
+function applyStaticVisibility(){ scoreboardEl.style.display=sourceVisible.scoreboard?'':'none'; tickerEl.style.display=sourceVisible.ticker?'':'none'; applyVideoVisibility(); }
+document.getElementById('sourceList').addEventListener('click',e=>{const row=e.target.closest('.source-row'); if(!row)return; if(e.target.closest('.vis-btn')){toggleVisibility(row.dataset.sourceId);return;} selectSource(row.dataset.sourceId);});
+
+/* RASIO */
+const ratioButtons=document.querySelectorAll('.ratio-btn');
+function getOriginalAR(){ if(mainVideo.src&&mainVideo.videoWidth>0) return mainVideo.videoWidth/mainVideo.videoHeight; if(placeholderImage.naturalWidth>0) return placeholderImage.naturalWidth/placeholderImage.naturalHeight; return 16/9; }
+function applyAspectRatio(mode){ currentRatio=mode; let ar=mode==='9:16'?9/16:mode==='16:9'?16/9:getOriginalAR(); playerContainer.style.setProperty('--ar-num',ar.toFixed(4)); clearTimeout(playerContainer._t); playerContainer._t=setTimeout(()=>{logos.forEach(clampPosition); restartTicker();},320); }
+ratioButtons.forEach(b=>b.addEventListener('click',()=>{ratioButtons.forEach(x=>x.classList.remove('active')); b.classList.add('active'); applyAspectRatio(b.dataset.ratio);}));
+mainVideo.addEventListener('loadedmetadata',()=>{if(currentRatio==='original') applyAspectRatio('original');});
+if(placeholderImage.complete) applyAspectRatio(currentRatio); placeholderImage.addEventListener('load',()=>{if(currentRatio==='original') applyAspectRatio('original');});
+
+/* FULLSCREEN — 1 HANDLER */
+function getFs(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+let isRedirectingFs=false;
+function reqFs(){ if(isRedirectingFs)return; if(playerContainer.requestFullscreen) playerContainer.requestFullscreen().catch(()=>{}); else if(playerContainer.webkitRequestFullscreen) playerContainer.webkitRequestFullscreen(); }
+function exitFs(){ if(document.exitFullscreen) document.exitFullscreen().catch(()=>{}); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }
+function toggleFs(){ if(!getFs()) reqFs(); else exitFs(); }
+fsBtn.addEventListener('click',toggleFs);
+playerContainer.addEventListener('dblclick',e=>{if(e.target.closest('.logo-draggable'))return; if(e.target.closest('.fs-btn'))return; toggleFs();});
+function onFsChange(){ const el=getFs(); if(el===mainVideo&&!isRedirectingFs){isRedirectingFs=true; exitFs(); setTimeout(()=>{reqFs(); setTimeout(()=>isRedirectingFs=false,300);},80); return;} setTimeout(()=>{logos.forEach(clampPosition); restartTicker();},200); }
+document.addEventListener('fullscreenchange',onFsChange); document.addEventListener('webkitfullscreenchange',onFsChange);
+
+/* MIXER */
+document.querySelectorAll('.ch-mute').forEach(b=>b.addEventListener('click',()=>{b.classList.toggle('muted'); b.textContent=b.classList.contains('muted')?'🔇':'🔊';}));
+
+/* ================= REKAM MP4 — CANVAS COMPOSITOR ================= */
+const recCanvas=$('recCanvas'), recCtx=recCanvas.getContext('2d');
+const btnRecord=$('btnRecord'), recInfo=$('recInfo'), recBadge=$('recBadge'), statRec=$('statRec'), liveBadge=$('liveBadge'), brandDot=$('brandDot');
+let mediaRecorder=null, recordedChunks=[], isRecording=false, recStartTime=0, recTimer=null, drawRaf=null, tickerX=0, lastTickerTime=0;
+let recW=1920, recH=1080;
+
+function getRecSize(){
+  const q=$('recQuality').value;
+  if(q==='1080') return {w:1920,h:1080};
+  if(q==='480') return {w:854,h:480};
+  return {w:1280,h:720};
 }
-function updateRunningText() {
-    const newText = inputText.value;
-    if (newText.trim() === '') { alert('Teks tidak boleh kosong!'); return; }
-    runningText.innerHTML = `<span>${newText.replace(/</g,'&lt;')}</span><span aria-hidden="true">${newText.replace(/</g,'&lt;')}</span>`;
-    restartTicker();
-    inputText.value = '';
+function drawRoundRect(x,y,w,h,r){ recCtx.beginPath(); recCtx.moveTo(x+r,y); recCtx.arcTo(x+w,y,x+w,y+h,r); recCtx.arcTo(x+w,y+h,x,y+h,r); recCtx.arcTo(x,y+h,x,y,r); recCtx.arcTo(x,y,x+w,y,r); recCtx.closePath(); }
+
+function drawFrame(now){
+  drawRaf=requestAnimationFrame(drawFrame);
+  const W=recCanvas.width, H=recCanvas.height;
+  recCtx.fillStyle='#000'; recCtx.fillRect(0,0,W,H);
+  // Video / gambar — cover biar penuh, tidak ada bar hitam di hasil rekaman
+  let src=null;
+  if(sourceVisible.video){
+    if(mainVideo.src && mainVideo.readyState>=2) src=mainVideo;
+    else if(placeholderImage.complete) src=placeholderImage;
+  }
+  if(src){
+    const sw=src.videoWidth||src.naturalWidth||W, sh=src.videoHeight||src.naturalHeight||H;
+    const scale=Math.max(W/sw, H/sh); const dw=sw*scale, dh=sh*scale;
+    recCtx.drawImage(src,(W-dw)/2,(H-dh)/2,dw,dh);
+  }
+  // Logo
+  logos.forEach(l=>{
+    if(!l.visible||!l.imgEl||!l.imgEl.complete) return;
+    const scaleW = W / playerContainer.clientWidth;
+    const w = l.width * scaleW;
+    const iw=l.imgEl.naturalWidth||w, ih=l.imgEl.naturalHeight||w;
+    const h = w * (ih/iw);
+    recCtx.drawImage(l.imgEl, (l.x/100)*W, (l.y/100)*H, w, h);
+  });
+  // Papan Skor — hanya jika sudah diinput
+  if(sourceVisible.scoreboard){
+    recCtx.font=`800 ${Math.round(H*0.028)}px Arial`;
+    const txt = `${teamA.textContent}  ${scoreDisplay.textContent}  ${teamB.textContent}`;
+    const tw=recCtx.measureText(txt).width + H*0.04;
+    const th=H*0.055, tx=W*0.012, ty=H*0.028;
+    recCtx.fillStyle='#cc0000'; drawRoundRect(tx,ty,tw,th,8); recCtx.fill();
+    recCtx.fillStyle='#fff'; recCtx.textBaseline='middle'; recCtx.fillText(txt, tx+H*0.02, ty+th/2+1);
+    const timeTxt=matchTime.textContent;
+    recCtx.font=`800 ${Math.round(H*0.028)}px Arial`;
+    const tw2=recCtx.measureText(timeTxt).width + H*0.03;
+    recCtx.fillStyle='#1b1b1b'; drawRoundRect(tx+tw+4,ty,tw2,th,8); recCtx.fill();
+    recCtx.fillStyle='#fff'; recCtx.fillText(timeTxt, tx+tw+4+H*0.015, ty+th/2+1);
+  }
+  // Ticker — hanya jika sudah diinput, jalan seamless di canvas juga
+  if(sourceVisible.ticker && currentTickerText){
+    const th=H*0.064, ty=H-th;
+    recCtx.fillStyle='#15233d'; recCtx.fillRect(0,ty,W,th);
+    recCtx.fillStyle='#e11d2f'; recCtx.fillRect(0,ty,W,3);
+    // Label kiri
+    recCtx.fillStyle='#c00d1f'; recCtx.fillRect(0,ty,W*0.16,th);
+    recCtx.fillStyle='#fff'; recCtx.font=`900 ${Math.round(H*0.022)}px Arial`; recCtx.textBaseline='middle';
+    recCtx.fillText('INFO MATCH', W*0.015, ty+th/2+1);
+    recCtx.fillStyle='#ff4d5e'; recCtx.fillText('LIVE', W*0.92, ty+th/2+1);
+    // Teks berjalan
+    recCtx.font=`600 ${Math.round(H*0.026)}px Arial`;
+    const gap=W*0.08;
+    const tw=recCtx.measureText(currentTickerText).width + gap;
+    if(!lastTickerTime) lastTickerTime=now;
+    const dt=(now-lastTickerTime)/1000; lastTickerTime=now;
+    tickerX -= dt * (W*0.12); // kecepatan ~12% lebar/detik
+    if(tickerX < -tw) tickerX += tw;
+    recCtx.fillStyle='#fff';
+    // Gambar 2x biar seamless
+    const startX = W*0.18 + tickerX;
+    recCtx.fillText(currentTickerText, startX, ty+th/2+1);
+    recCtx.fillText(currentTickerText, startX+tw, ty+th/2+1);
+    recCtx.fillText(currentTickerText, startX+tw*2, ty+th/2+1);
+  }
 }
-btnKirim.addEventListener('click', updateRunningText);
-inputText.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); updateRunningText(); } });
-let tickerResizeTimer;
-window.addEventListener('resize', () => { clearTimeout(tickerResizeTimer); tickerResizeTimer = setTimeout(restartTicker, 260); });
 
-/* ===== 2. SKOR — SEMBUNYI SAMPAI DIINPUT ===== */
-const btnUpdateScore = $('btnUpdateScore'); const inputTeamA = $('inputTeamA'); const inputScore = $('inputScore'); const inputTeamB = $('inputTeamB'); const inputTime = $('inputTime'); const teamA = $('teamA'); const scoreDisplay = $('scoreDisplay'); const teamB = $('teamB'); const matchTime = $('matchTime');
-const btnHideScore = $('btnHideScore');
-btnUpdateScore.addEventListener('click', () => {
-    const adaInput = inputTeamA.value.trim() !== '' || inputScore.value.trim() !== '' || inputTeamB.value.trim() !== '' || inputTime.value.trim() !== '';
-    if (!adaInput) { alert('Isi dulu nama tim / skor / waktunya!'); return; }
-    // Baru tampilkan setelah ada input
-    sourceVisible.scoreboard = true;
-    scoreboardEl.style.display = '';
-    if (inputTeamA.value.trim() !== '') teamA.textContent = inputTeamA.value.toUpperCase();
-    if (inputScore.value.trim() !== '') scoreDisplay.textContent = inputScore.value;
-    if (inputTeamB.value.trim() !== '') teamB.textContent = inputTeamB.value.toUpperCase();
-    if (inputTime.value.trim() !== '') { const p = inputTime.value.split(':'); if (p.length === 2) { totalSeconds = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0); updateTimerDisplay(); } }
-    inputTeamA.value = ''; inputScore.value = ''; inputTeamB.value = ''; inputTime.value = '';
-    refreshUI();
-});
-btnHideScore.addEventListener('click', () => {
-    sourceVisible.scoreboard = false;
-    scoreboardEl.style.display = 'none';
-    refreshUI();
-});
-
-/* ===== 3. TIMER ===== */
-let totalSeconds = 0; let timerInterval = null; let isRunning = false;
-const btnStartTimer = $('btnStartTimer'); const btnStopTimer = $('btnStopTimer'); const btnResetTimer = $('btnResetTimer');
-const formatTime = s => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-const updateTimerDisplay = () => { matchTime.textContent = formatTime(totalSeconds); };
-function startTimer() { if (isRunning) return; timerInterval = setInterval(() => { totalSeconds++; updateTimerDisplay(); }, 1000); isRunning = true; btnStartTimer.style.display = 'none'; btnStopTimer.style.display = 'block'; }
-function stopTimer() { if (!isRunning) return; clearInterval(timerInterval); isRunning = false; btnStartTimer.style.display = 'block'; btnStopTimer.style.display = 'none'; }
-function resetTimer() { stopTimer(); totalSeconds = 0; updateTimerDisplay(); }
-btnStartTimer.addEventListener('click', startTimer); btnStopTimer.addEventListener('click', stopTimer); btnResetTimer.addEventListener('click', resetTimer);
-
-/* ===== 4. VIDEO ===== */
-const btnUpload = $('btnUpload'); const videoInput = $('videoInput'); let currentVideoUrl = null;
-btnUpload.addEventListener('click', () => videoInput.click());
-videoInput.addEventListener('change', e => { const file = e.target.files[0]; if (!file) return; if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl); currentVideoUrl = URL.createObjectURL(file); mainVideo.src = currentVideoUrl; $('videoInfo').textContent = file.name + ' • ' + (file.size / 1048576).toFixed(1) + ' MB'; applyVideoVisibility(); mainVideo.play(); if (currentRatio === 'original') applyAspectRatio('original'); });
-function applyVideoVisibility() { const hasVideo = !!mainVideo.src; if (!sourceVisible.video) { mainVideo.style.display = 'none'; placeholderImage.style.display = 'none'; return; } if (hasVideo) { mainVideo.style.display = 'block'; placeholderImage.style.display = 'none'; } else { mainVideo.style.display = 'none'; placeholderImage.style.display = 'block'; } }
-
-/* ===== 5. LOGO ===== */
-function renderLogos() { overlayLogos.innerHTML = ''; logos.forEach(logo => { const wrap = document.createElement('div'); wrap.className = 'logo-draggable'; wrap.dataset.logoId = logo.id; wrap.style.left = logo.x + '%'; wrap.style.top = logo.y + '%'; wrap.style.width = logo.width + 'px'; if (!logo.visible) wrap.style.display = 'none'; const img = document.createElement('img'); img.src = logo.src; img.alt = 'Logo'; img.draggable = false; wrap.appendChild(img); setupDrag(wrap, logo); overlayLogos.appendChild(wrap); }); renderSourceList(); }
-function renderSourceList() { logoSources.innerHTML = ''; if (logos.length === 0) { const empty = document.createElement('div'); empty.className = 'empty-note'; empty.textContent = 'Belum ada logo. Tambahkan di bawah.'; logoSources.appendChild(empty); } logos.forEach((logo, i) => { const row = document.createElement('div'); row.className = 'source-row'; row.dataset.sourceId = logo.id; row.innerHTML = `<button class="vis-btn">${EYE_SVG}</button><span class="src-ico">◈</span><span class="src-name">Logo ${i + 1}</span>`; logoSources.appendChild(row); }); refreshUI(); }
-function renderLogoProps(logo) { propsLogo.innerHTML = ''; const sizeLabel = document.createElement('span'); sizeLabel.className = 'prop-label'; sizeLabel.textContent = `Ukuran: ${logo.width}px`; const slider = document.createElement('input'); slider.type = 'range'; slider.min = '20'; slider.max = '400'; slider.value = logo.width; slider.className = 'range'; slider.addEventListener('input', e => { logo.width = parseInt(e.target.value, 10); sizeLabel.textContent = `Ukuran: ${logo.width}px`; const wrap = overlayLogos.querySelector(`[data-logo-id="${logo.id}"]`); if (wrap) { wrap.style.width = logo.width + 'px'; clampPosition(logo); } }); const hint = document.createElement('div'); hint.className = 'prop-hint'; hint.innerHTML = 'Geser logo langsung di atas video untuk mengatur posisinya.'; const btnRemove = document.createElement('button'); btnRemove.className = 'btn danger block'; btnRemove.textContent = '🗑 Hapus Logo'; btnRemove.addEventListener('click', () => { logos = logos.filter(l => l.id !== logo.id); selectedSource = 'video'; renderLogos(); }); propsLogo.append(sizeLabel, slider, hint, btnRemove); }
-function setupDrag(el, logoData) { let dragging = false, startX = 0, startY = 0, startLeftPx = 0, startTopPx = 0, rect = null; function onDown(e) { if (e.button !== undefined && e.button !== 0) return; if (lockCheckbox.checked) return; e.preventDefault(); e.stopPropagation(); const p = e.touches ? e.touches[0] : e; startX = p.clientX; startY = p.clientY; rect = overlayLogos.getBoundingClientRect(); startLeftPx = (logoData.x / 100) * rect.width; startTopPx = (logoData.y / 100) * rect.height; dragging = true; el.classList.add('dragging'); document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onUp); } function onMove(e) { if (!dragging) return; e.preventDefault(); const p = e.touches ? e.touches[0] : e; const dx = p.clientX - startX; const dy = p.clientY - startY; const maxLeft = rect.width - el.offsetWidth; const maxTop = rect.height - el.offsetHeight; const newLeft = Math.max(0, Math.min(startLeftPx + dx, maxLeft)); const newTop = Math.max(0, Math.min(startTopPx + dy, maxTop)); logoData.x = (newLeft / rect.width) * 100; logoData.y = (newTop / rect.height) * 100; el.style.left = logoData.x + '%'; el.style.top = logoData.y + '%'; } function onUp() { if (!dragging) return; dragging = false; el.classList.remove('dragging'); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp); } el.addEventListener('mousedown', onDown); el.addEventListener('touchstart', onDown, { passive: false }); }
-function clampPosition(logo) { const el = overlayLogos.querySelector(`[data-logo-id="${logo.id}"]`); if (!el || !el.offsetWidth) return; const rect = overlayLogos.getBoundingClientRect(); if (!rect.width || !rect.height) return; const maxLeft = rect.width - el.offsetWidth; const maxTop = rect.height - el.offsetHeight; let leftPx = (logo.x / 100) * rect.width; let topPx = (logo.y / 100) * rect.height; if (leftPx > maxLeft) leftPx = Math.max(0, maxLeft); if (topPx > maxTop) topPx = Math.max(0, maxTop); logo.x = (leftPx / rect.width) * 100; logo.y = (topPx / rect.height) * 100; el.style.left = logo.x + '%'; el.style.top = logo.y + '%'; }
-btnAddLogo.addEventListener('click', () => { const file = logoInput.files[0]; if (!file) { alert('Pilih file logo terlebih dahulu!'); return; } if (!file.type.startsWith('image/')) { alert('File harus berupa gambar!'); return; } if (file.size > 3 * 1024 * 1024) { alert('Ukuran logo maksimal 3 MB.'); return; } const reader = new FileReader(); reader.onload = ev => { const n = logos.length; logos.push({ id: newLogoId(), src: ev.target.result, x: Math.max(60, 92 - n * 6), y: 5 + n * 4, width: 70, visible: true }); renderLogos(); logoInput.value = ''; setTimeout(() => logos.forEach(clampPosition), 40); }; reader.readAsDataURL(file); });
-lockCheckbox.addEventListener('change', () => { overlayLogos.classList.toggle('locked', lockCheckbox.checked); });
-
-/* ===== 6. SOURCE ===== */
-function selectSource(id) { selectedSource = id; refreshUI(); }
-function refreshUI() { document.querySelectorAll('#sourceList .source-row').forEach(row => { const id = row.dataset.sourceId; row.classList.toggle('selected', id === selectedSource); let vis; if (id in sourceVisible) vis = sourceVisible[id]; else { const lg = logos.find(l => l.id === id); vis = lg ? lg.visible : true; } row.classList.toggle('off', !vis); }); const isV = selectedSource === 'video'; const isS = selectedSource === 'scoreboard'; const isT = selectedSource === 'ticker'; const lg = logos.find(l => l.id === selectedSource); propsVideo.classList.toggle('hidden', !isV); propsScoreboard.classList.toggle('hidden', !isS); propsTicker.classList.toggle('hidden', !isT); propsLogo.classList.toggle('hidden', !lg); propsTitle.textContent = isV ? 'Video Utama' : isS ? 'Papan Skor' : isT ? 'Teks Berjalan' : lg ? 'Logo' : '—'; if (lg) renderLogoProps(lg); }
-function toggleVisibility(id) { if (id in sourceVisible) { sourceVisible[id] = !sourceVisible[id]; applyStaticVisibility(); refreshUI(); } else { const lg = logos.find(l => l.id === id); if (lg) { lg.visible = !lg.visible; renderLogos(); } } }
-function applyStaticVisibility() { scoreboardEl.style.display = sourceVisible.scoreboard ? '' : 'none'; tickerEl.style.display = sourceVisible.ticker ? '' : 'none'; applyVideoVisibility(); }
-document.getElementById('sourceList').addEventListener('click', e => { const row = e.target.closest('.source-row'); if (!row) return; if (e.target.closest('.vis-btn')) { toggleVisibility(row.dataset.sourceId); return; } selectSource(row.dataset.sourceId); });
-
-/* ===== 7. RASIO ===== */
-const ratioButtons = document.querySelectorAll('.ratio-btn');
-function getOriginalAR() { if (mainVideo.src && mainVideo.videoWidth > 0 && mainVideo.videoHeight > 0) return mainVideo.videoWidth / mainVideo.videoHeight; if (placeholderImage && placeholderImage.naturalWidth > 0) return placeholderImage.naturalWidth / placeholderImage.naturalHeight; return 16 / 9; }
-function applyAspectRatio(mode) { currentRatio = mode; let ar; if (mode === '9:16') ar = 9 / 16; else if (mode === '16:9') ar = 16 / 9; else ar = getOriginalAR(); playerContainer.style.setProperty('--ar-num', ar.toFixed(4)); playerContainer.dataset.ratio = mode; clearTimeout(playerContainer._clampTimer); playerContainer._clampTimer = setTimeout(() => { logos.forEach(clampPosition); restartTicker(); }, 320); }
-ratioButtons.forEach(btn => { btn.addEventListener('click', () => { ratioButtons.forEach(b => b.classList.remove('active')); btn.classList.add('active'); applyAspectRatio(btn.dataset.ratio); }); });
-mainVideo.addEventListener('loadedmetadata', () => { if (currentRatio === 'original') applyAspectRatio('original'); });
-if (placeholderImage) { if (placeholderImage.complete && placeholderImage.naturalWidth > 0) applyAspectRatio(currentRatio); placeholderImage.addEventListener('load', () => { if (currentRatio === 'original') applyAspectRatio('original'); }); }
-window.addEventListener('resize', () => { clearTimeout(window._clampT); window._clampT = setTimeout(() => logos.forEach(clampPosition), 150); });
-
-/* ===== 8. FULLSCREEN — 1 HANDLER ===== */
-const FS_ICON_OPEN = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-const FS_ICON_CLOSE = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
-function getFullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
-let isRedirectingFs = false;
-function requestContainerFullscreen() { if (isRedirectingFs) return; if (playerContainer.requestFullscreen) { playerContainer.requestFullscreen().catch(() => {}); } else if (playerContainer.webkitRequestFullscreen) { playerContainer.webkitRequestFullscreen(); } }
-function exitFullscreen() { if (document.exitFullscreen) { document.exitFullscreen().catch(() => {}); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } }
-function toggleFullscreen() { if (!getFullscreenElement()) { requestContainerFullscreen(); } else { exitFullscreen(); } }
-fsBtn.addEventListener('click', toggleFullscreen);
-playerContainer.addEventListener('dblclick', e => { if (e.target.closest('.logo-draggable')) return; if (e.target.closest('.fs-btn')) return; toggleFullscreen(); });
-function onFullscreenChange() {
-    const fsEl = getFullscreenElement();
-    const isFs = !!fsEl;
-    fsBtn.innerHTML = isFs ? FS_ICON_CLOSE : FS_ICON_OPEN;
-    fsBtn.title = isFs ? 'Keluar Layar Penuh' : 'Layar Penuh';
-    if (fsEl === mainVideo && !isRedirectingFs) {
-        isRedirectingFs = true;
-        exitFullscreen();
-        setTimeout(() => { requestContainerFullscreen(); setTimeout(() => { isRedirectingFs = false; }, 300); }, 80);
-        return;
-    }
-    setTimeout(() => { logos.forEach(clampPosition); restartTicker(); }, 200);
+function pickMime(){
+  const list=['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm',''];
+  for(const m of list){ if(!m) return {mime:'', ext:'webm'}; try{ if(MediaRecorder.isTypeSupported(m)){ return {mime:m, ext:m.includes('mp4')?'mp4':'webm'}; } }catch(e){} }
+  return {mime:'', ext:'webm'};
 }
-document.addEventListener('fullscreenchange', onFullscreenChange);
-document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
-/* ===== 9. MIXER ===== */
-document.querySelectorAll('.ch-mute').forEach(btn => { btn.addEventListener('click', () => { btn.classList.toggle('muted'); btn.textContent = btn.classList.contains('muted') ? '🔇' : '🔊'; }); });
+function startRecording(){
+  const size=getRecSize(); recW=size.w; recH=size.h;
+  recCanvas.width=recW; recCanvas.height=recH;
+  tickerX=0; lastTickerTime=0;
+  // Mulai gambar canvas terus-menerus
+  if(drawRaf) cancelAnimationFrame(drawRaf);
+  drawRaf=requestAnimationFrame(drawFrame);
+  const canvasStream=recCanvas.captureStream(30);
+  let finalStream=canvasStream;
+  // Ambil audio dari video jika dipilih
+  if($('recAudio').value==='yes' && mainVideo.src){
+    try{
+      const vStream = mainVideo.captureStream ? mainVideo.captureStream() : mainVideo.mozCaptureStream ? mainVideo.mozCaptureStream() : null;
+      if(vStream){
+        const audioTracks=vStream.getAudioTracks();
+        if(audioTracks.length){
+          finalStream=new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+        }
+      }
+    }catch(e){ console.log('Audio tidak bisa diambil, rekam bisu', e); }
+  }
+  const {mime, ext} = pickMime();
+  recordedChunks=[];
+  try{
+    mediaRecorder = mime ? new MediaRecorder(finalStream, {mimeType:mime, videoBitsPerSecond: 5_000_000}) : new MediaRecorder(finalStream);
+  }catch(e){ alert('Browser ini tidak mendukung perekaman. Coba Chrome terbaru.'); return; }
+  mediaRecorder._ext=ext;
+  mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop=()=>{
+    const type = mediaRecorder._ext==='mp4' ? 'video/mp4' : 'video/webm';
+    const blob=new Blob(recordedChunks, {type});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    a.href=url; a.download=`live-studio-${stamp}.${mediaRecorder._ext}`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    recInfo.textContent=`✅ Rekaman selesai & terdownload: live-studio-${stamp}.${mediaRecorder._ext} (${(blob.size/1048576).toFixed(1)} MB)`;
+  };
+  mediaRecorder.start(1000);
+  isRecording=true; recStartTime=Date.now();
+  btnRecord.textContent='■ Stop Rekaman'; btnRecord.classList.add('recording');
+  recBadge.classList.add('show'); liveBadge.classList.add('rec'); brandDot.classList.add('rec');
+  statRec.textContent='● REC ON'; statRec.style.color='#ff5b5e';
+  recInfo.textContent=`⏺ Merekam ${recW}x${recH} • Format: ${ext.toUpperCase()} • Klik Stop untuk download.`;
+  recTimer=setInterval(()=>{
+    const s=Math.floor((Date.now()-recStartTime)/1000);
+    const mm=String(Math.floor(s/60)).padStart(2,'0'), ss=String(s%60).padStart(2,'0');
+    recBadge.textContent=`● REC ${mm}:${ss}`;
+  },1000);
+}
+function stopRecording(){
+  if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  if(drawRaf) cancelAnimationFrame(drawRaf); drawRaf=null;
+  clearInterval(recTimer);
+  isRecording=false;
+  btnRecord.textContent='● Mulai Rekaman'; btnRecord.classList.remove('recording');
+  recBadge.classList.remove('show'); liveBadge.classList.remove('rec'); brandDot.classList.remove('rec');
+  statRec.textContent='● REC OFF'; statRec.style.color='';
+}
+btnRecord.addEventListener('click',()=>{ if(isRecording) stopRecording(); else startRecording(); });
 
-/* ===== 10. STATUS ===== */
-setInterval(() => { $('statCpu').textContent = 'CPU ' + (2 + Math.random() * 4).toFixed(1) + '%'; $('statKbs').textContent = 'KB/s ' + (Math.random() * 2.4).toFixed(1); }, 2200);
-let clockSeconds = 0;
-setInterval(() => { clockSeconds++; const h = String(Math.floor(clockSeconds / 3600)).padStart(2, '0'); const m = String(Math.floor((clockSeconds % 3600) / 60)).padStart(2, '0'); const s = String(clockSeconds % 60).padStart(2, '0'); $('statClock').textContent = `${h}:${m}:${s}`; }, 1000);
-
-/* ===== 11. INIT ===== */
-window.addEventListener('load', () => { updateTimerDisplay(); renderLogos(); applyStaticVisibility(); applyAspectRatio('original'); selectSource('video'); setTimeout(restartTicker, 120); setTimeout(restartTicker, 600); });
+/* STATUS + INIT */
+setInterval(()=>{ $('statCpu').textContent='CPU '+(2+Math.random()*4).toFixed(1)+'%'; },2200);
+let clockSeconds=0; setInterval(()=>{clockSeconds++; const h=String(Math.floor(clockSeconds/3600)).padStart(2,'0'), m=String(Math.floor((clockSeconds%3600)/60)).padStart(2,'0'), s=String(clockSeconds%60).padStart(2,'0'); $('statClock').textContent=`${h}:${m}:${s}`;},1000);
+window.addEventListener('load',()=>{ updateTimerDisplay(); renderLogos(); applyStaticVisibility(); applyAspectRatio('original'); selectSource('video'); });
 </script>
 </body>
 </html>
