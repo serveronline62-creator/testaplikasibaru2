@@ -1,1464 +1,359 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Filter &amp; Extract File Excel Penerimaan Transaksi ASA19 & ASA4</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Studio — OBS Style</title>
 <style>
-  :root{
-    --panel:#ffffff; --soft:#f8fafc; --line:#e2e8f0;
-    --txt:#0f172a; --muted:#64748b;
-    --brand:#c00000; --brand2:#990000; --ok:#c00000; --warn:#d97706;
-    --radius:14px;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family:"Segoe UI",Inter,Roboto,system-ui,-apple-system,sans-serif;
-    background:#f3f4f6; /* Latar belakang abu-abu terang */
-    color:var(--txt); min-height:100vh;
-  }
-  .wrap{max-width:1500px;margin:0 auto;padding:26px 20px 60px}
-
-  /* ================= HEADER BARU (MIRIP J&T / POLYTRON) ================= */
-  .app-header {
-    display: flex;
-    align-items: stretch;
-    background: #e5e7eb; /* Abu-abu terang untuk area tengah */
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    height: 64px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  }
-  .logo-box {
-    background: #ffffff;
-    color: #c00000;
-    font-weight: 900;
-    font-size: 22px;
-    padding: 0 32px;
-    display: flex;
-    align-items: center;
-    letter-spacing: -0.5px;
-  }
-  .logo-box span {
-    font-weight: 300;
-    margin-left: 5px;
-    color: #333;
-  }
-  .header-title {
-    flex: 1;
-    padding: 0 24px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #4b5563;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .header-right {
-    background: #c00000;
-    color: white;
-    display: flex;
-    align-items: center;
-    padding: 0 40px 0 60px;
-    clip-path: polygon(24px 0, 100% 0, 100% 100%, 0 100%); /* Efek miring di kiri */
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .live-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  /* ====================================================================== */
-
-  .tabs{display:flex;gap:8px;margin:0 0 -1px;position:relative;z-index:3}
-  
-  .tab{
-    padding:11px 26px;border-radius:12px 12px 0 0;font-size:13.5px;font-weight:600;
-    background:#e5e7eb;color:#4b5563;cursor:pointer;
-    border:1px solid transparent;border-bottom:none;transition:.18s;user-select:none;
-  }
-  .tab:hover{background:#d1d5db}
-  
-  .tab.active{background:#c00000;color:#fff;border-color:#c00000;cursor:default}
-  .tab .badge{
-    display:inline-block;margin-left:8px;font-size:10.5px;background:#d1d5db;color:#4b5563;
-    padding:2px 7px;border-radius:999px;font-weight:700;letter-spacing:.3px;
-  }
-  .tab.active .badge{background:#fff;color:#c00000}
-
-  .card{
-    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:0 10px 30px rgba(15,23,42,.08);padding:20px;margin-bottom:18px;
-  }
-  .card h2{margin:0 0 4px;font-size:15px}
-  .card .sub{color:var(--muted);font-size:12.5px;margin:0 0 16px}
-  code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:12px}
-
-  /* ================= AREA UPLOAD DIPERKECIL (1 CM) ================= */
-  .drop{
-    border:2px dashed #cbd5e1;
-    border-radius:8px;
-    padding:8px 20px; /* Padding diperkecil */
-    background:#f8fafc;
-    transition:.18s;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    height:42px; /* Tinggi dikunci sekitar 1 cm */
-  }
-  .drop:hover,.drop.over{border-color:#c00000;background:#fef2f2}
-  .drop .ico{font-size:18px;line-height:1;margin:0}
-  .drop b{font-size:13px; margin:0;}
-  .drop span{display:none;} /* Teks penjelasan disembunyikan agar ringkas */
-  /* ================================================================= */
-
-  input[type=file]{display:none}
-
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
-  .field label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:5px}
-  .field input,.field select{
-    width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;font-size:13px;
-    background:#fff;color:var(--txt);outline:none;transition:.15s;font-family:inherit;
-  }
-  .field input:focus,.field select:focus{border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.14)}
-
-  .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
-  button{
-    font-family:inherit;font-size:13px;font-weight:600;border-radius:10px;padding:10px 18px;
-    border:1px solid transparent;cursor:pointer;transition:.15s;
-  }
-  .btn-ghost{background:#fff;border-color:#cbd5e1;color:#334155}
-  .btn-ghost:hover{background:var(--soft)}
-  .btn-ok{background:#c00000;color:#fff}
-  .btn-ok:hover{background:#990000}
-  .btn-danger{background:#fff;border-color:#fecaca;color:#b91c1c}
-  .btn-danger:hover{background:#fef2f2;border-color:#fca5a5}
-  .btn-warn{background:#fff;border-color:#fde68a;color:#b45309}
-  .btn-warn:hover{background:#fffbeb;border-color:#fcd34d}
-  button:disabled{opacity:.5;cursor:not-allowed}
-
-  .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#334155;user-select:none;cursor:pointer}
-  .chk input{width:16px;height:16px;accent-color:#c00000}
-
-  .info{
-    display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:10px;
-    font-size:12.5px;line-height:1.5;margin-top:14px;
-  }
-  .info.ok{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
-  .info.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
-  .info .ico{font-size:16px;line-height:1.2;flex-shrink:0}
-  .info b{font-weight:700}
-  .info code{background:rgba(0,0,0,.06)}
-
-  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-  .pill{
-    background:#f8fafc;border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-size:12.5px;color:#334155;
-  }
-  .pill b{color:#c00000}
-  .pill.ok b{color:#c00000}
-  .pill.danger b{color:#b91c1c}
-
-  .tablebox{overflow:auto;max-height:60vh;border:1px solid var(--line);border-radius:12px;background:#fff}
-  table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
-  
-  thead th{
-    position:sticky;top:0;z-index:2;background:#c00000;color:#fff;font-weight:600;
-    padding:10px 12px;text-align:left;white-space:nowrap;border-right:1px solid #990000;
-  }
-  thead th:last-child{border-right:none}
-  tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1e293b}
-  tbody tr:nth-child(even) td{background:#fafbfc}
-  tbody tr:hover td{background:#fef2f2}
-  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  .empty{padding:40px;text-align:center;color:var(--muted);font-size:13.5px}
-  .hidden{display:none !important}
-
-  .toast{
-    position:fixed;right:22px;bottom:22px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:11px;
-    font-size:13px;box-shadow:0 12px 28px rgba(0,0,0,.3);opacity:0;transform:translateY(12px);
-    transition:.25s;pointer-events:none;z-index:99;
-  }
-  .toast.show{opacity:1;transform:translateY(0)}
-
-  .modal{
-    position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;
-    align-items:center;justify-content:center;z-index:100;padding:20px;
-  }
-  .modal.show{display:flex}
-  .modal-box{
-    background:#fff;border-radius:14px;padding:22px;max-width:440px;width:100%;
-    box-shadow:0 24px 60px rgba(0,0,0,.35);
-  }
-  .modal-box h3{margin:0 0 8px;font-size:16px}
-  .modal-box p{margin:0 0 18px;font-size:13.5px;color:#334155;line-height:1.55}
-  .modal-actions{display:flex;justify-content:flex-end;gap:10px}
-  .modal-actions .btn-ok{background:#dc2626}
-  .modal-actions .btn-ok:hover{background:#b91c1c}
-
-  /* ================= TAP 3 CETAK LABEL — kartu link ================= */
-  .link-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-    gap:14px;
-  }
-  .link-card{
-    display:flex;gap:14px;align-items:flex-start;
-    padding:18px;border:1px solid var(--line);border-radius:12px;
-    background:#f8fafc;text-decoration:none;color:var(--txt);
-    transition:.18s;position:relative;
-  }
-  .link-card:hover{
-    border-color:#c00000;background:#fef2f2;
-    box-shadow:0 6px 18px rgba(192,0,0,.12);
-    transform:translateY(-1px);
-  }
-  .link-card-icon{font-size:26px;line-height:1;flex-shrink:0}
-  .link-card-body{flex:1;min-width:0}
-  .link-card-title{font-weight:700;font-size:14px;margin-bottom:4px;color:#c00000}
-  .link-card-desc{font-size:12.5px;color:var(--muted);margin-bottom:8px;line-height:1.5}
-  .link-card-url{
-    font-size:11.5px;color:#c00000;word-break:break-all;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    background:rgba(192,0,0,.06);padding:3px 7px;border-radius:5px;
-    display:inline-block;
-  }
-  .link-card-arrow{
-    font-size:18px;color:var(--muted);transition:.18s;align-self:center;flex-shrink:0;
-  }
-  .link-card:hover .link-card-arrow{color:#c00000;transform:translateX(2px)}
-
-  .settings-note{
-    display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:10px;
-    font-size:12.5px;line-height:1.55;margin-top:16px;
-    background:#fef2f2;border:1px solid #fecaca;color:#991b1b;
-  }
-  .settings-note .ico{font-size:16px;line-height:1.2;flex-shrink:0}
-
-  /* =========================================================================
-     TAMPILAN RESPONSIF UNTUK HP / TABLET (LAYAR KECIL)
-     ========================================================================= */
-  @media (max-width: 768px) {
-    /* Padding layar disesuaikan */
-    .wrap { padding: 12px 10px 40px; }
-
-    /* Header ditumpuk vertikal */
-    .app-header { 
-      flex-direction: column; 
-      height: auto; 
-      border-radius: 10px;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+        --bg-app: #141414; --bg-panel: #202020; --bg-head: #2a2a2a; --bg-input: #131313;
+        --bg-hover: #2e2e2e; --bd: #333; --tx: #cfcfcf; --tx-dim: #8a8a8a;
+        --accent: #3d7eff; --danger: #d9534f; --success: #4caf50; --warn: #e0a13d;
     }
-    .logo-box { 
-      justify-content: center; 
-      padding: 12px; 
-      font-size: 20px;
+    html, body { height: 100%; }
+    body { background: var(--bg-app); color: var(--tx); font-family: 'Segoe UI', Inter, system-ui, -apple-system, sans-serif; font-size: 13px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #1a1a1a; }
+    ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 5px; border: 2px solid #1a1a1a; }
+    ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+    .hidden { display: none !important; }
+    .app { display: flex; flex-direction: column; height: 100dvh; }
+    .menubar { height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: #1a1a1a; border-bottom: 1px solid #0d0d0d; }
+    .menubar-left { display: flex; align-items: center; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .9px; color: #e8e8e8; }
+    .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: #e03b3b; box-shadow: 0 0 7px rgba(224,59,59,.85); }
+    .menus { display: flex; gap: 1px; }
+    .menus button { background: none; border: none; color: #a2a2a2; font-size: 12px; font-family: inherit; padding: 4px 9px; border-radius: 3px; cursor: pointer; }
+    .menus button:hover { background: #2e2e2e; color: #e6e6e6; }
+    .live-badge { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #ff5b5b; border: 1px solid #5c2020; background: #2a1414; padding: 3px 9px; border-radius: 3px; }
+    .workspace { flex: 1; min-height: 0; display: flex; gap: 1px; background: #0d0d0d; padding: 1px; }
+    .col { display: flex; flex-direction: column; gap: 1px; min-height: 0; }
+    .col.left { width: 258px; flex-shrink: 0; }
+    .col.right { width: 300px; flex-shrink: 0; }
+    .col.center { flex: 1; min-width: 0; }
+    .dock { background: var(--bg-panel); display: flex; flex-direction: column; min-height: 0; overflow: hidden; border: 1px solid #262626; }
+    .dock-head { height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; background: var(--bg-head); border-bottom: 1px solid #1a1a1a; font-size: 11px; font-weight: 600; color: #b8b8b8; letter-spacing: .4px; text-transform: uppercase; }
+    .dock-btns { display: flex; gap: 6px; color: #666; font-size: 10px; }
+    .dock-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px; }
+    .dock-body.pad { padding: 10px; display: flex; flex-direction: column; gap: 9px; }
+    .dock-foot { padding: 6px; border-top: 1px solid #1a1a1a; display: flex; flex-direction: column; gap: 6px; }
+    .source-row, .scene-row { display: flex; align-items: center; gap: 7px; padding: 5px 7px; border-radius: 3px; cursor: pointer; font-size: 12.5px; color: var(--tx); user-select: none; }
+    .scene-row:hover, .source-row:hover { background: var(--bg-hover); }
+    .scene-row.active, .source-row.selected { background: rgba(61,126,255,.18); box-shadow: inset 2px 0 0 var(--accent); color: #fff; }
+    .src-ico { font-size: 12px; color: #7d7d7d; width: 13px; text-align: center; }
+    .src-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vis-btn { background: none; border: none; color: #9a9a9a; cursor: pointer; display: flex; padding: 0; }
+    .vis-btn:hover { color: #fff; }
+    .source-row.off .src-name, .source-row.off .src-ico { opacity: .38; }
+    .source-row.off .vis-btn { opacity: .3; }
+    .empty-note { color: #6a6a6a; font-size: 11.5px; font-style: italic; padding: 8px; text-align: center; }
+    .btn { background: #333; border: 1px solid #454545; color: #dcdcdc; padding: 7px 10px; border-radius: 3px; font-size: 12px; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .15s, border-color .15s; }
+    .btn:hover { background: #3d3d3d; border-color: #575757; }
+    .btn.primary { background: #2f66c4; border-color: #3d7eff; color: #fff; }
+    .btn.primary:hover { background: #3d7eff; }
+    .btn.success { background: #2e7d32; border-color: #43a047; color: #fff; }
+    .btn.success:hover { background: #388e3c; }
+    .btn.danger { background: #8c3330; border-color: #c0392b; color: #fff; }
+    .btn.danger:hover { background: #a13c38; }
+    .btn.block { width: 100%; }
+    .input { width: 100%; background: var(--bg-input); border: 1px solid #3a3a3a; color: var(--tx); padding: 7px 9px; border-radius: 3px; font-size: 12.5px; font-family: inherit; outline: none; }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(61,126,255,.3); }
+    .input[type="file"] { padding: 5px; font-size: 11px; cursor: pointer; }
+    .prop-label { font-size: 10.5px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .5px; }
+    .prop-hint { font-size: 11px; color: #767676; line-height: 1.45; background: #191919; border-left: 2px solid #3a3a3a; padding: 6px 8px; border-radius: 2px; }
+    .props-panel { display: flex; flex-direction: column; gap: 7px; }
+    .range { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .preview-toolbar { height: 34px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 10px; background: var(--bg-panel); border: 1px solid #262626; }
+    .ratio-group { display: flex; gap: 2px; background: #161616; padding: 2px; border-radius: 4px; }
+    .ratio-btn { background: none; border: none; color: #8f8f8f; font-size: 11px; font-weight: 600; font-family: inherit; padding: 4px 12px; border-radius: 3px; cursor: pointer; letter-spacing: .3px; }
+    .ratio-btn:hover { background: #2c2c2c; color: #ddd; }
+    .ratio-btn.active { background: var(--accent); color: #fff; }
+    .lock-toggle { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #9a9a9a; cursor: pointer; user-select: none; margin-left: auto; }
+    .lock-toggle input { cursor: pointer; accent-color: var(--accent); }
+    .preview-badge { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--warn); border: 1px solid #6b5324; background: #2a2313; padding: 3px 9px; border-radius: 3px; }
+    .preview-canvas { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #0a0a0a; padding: 14px; container-type: size; }
+    .video-player-container { position: relative; width: 100%; max-width: 100%; aspect-ratio: var(--ar-num, 1.7778); width: min(100%, calc(100cqh * var(--ar-num, 1.7778))); background: #000; overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px #262626, 0 12px 40px rgba(0,0,0,.75); transition: width .18s ease; }
+    .video-player-container:fullscreen { position: fixed; inset: 0; width: min(100vw, calc(100vh * var(--ar-num, 1.7778))); height: min(100vh, calc(100vw / var(--ar-num, 1.7778))); max-width: none; max-height: none; min-width: 0; min-height: 0; margin: auto; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; overflow: hidden; transition: none; }
+    .video-player-container:fullscreen::backdrop { background: #000; }
+    .video-background, #mainVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background-color: #000; }
+    .scoreboard { position: absolute; top: 15px; left: 15px; display: flex; border-radius: 4px; overflow: hidden; font-size: 14px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,.6); z-index: 10; pointer-events: none; max-width: calc(100% - 30px); flex-wrap: wrap; }
+    .score-team { background-color: #cc0000; color: #fff; padding: 5px 10px; display: flex; align-items: center; flex-wrap: wrap; }
+    .score-team span { margin: 0 5px; }
+    .score-time { background-color: #1b1b1b; color: #fff; padding: 5px 10px; display: flex; align-items: center; min-width: 62px; justify-content: center; }
+    .overlay-logos { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    .overlay-logos .logo-draggable { position: absolute; pointer-events: auto; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); transition: filter .15s; }
+    .overlay-logos .logo-draggable:hover { filter: drop-shadow(0 2px 8px rgba(0,0,0,.7)); }
+    .overlay-logos .logo-draggable.dragging { cursor: grabbing; filter: drop-shadow(0 4px 12px rgba(0,0,0,.85)); }
+    .overlay-logos .logo-draggable img { display: block; width: 100%; height: auto; pointer-events: none; }
+    .overlay-logos.locked .logo-draggable { pointer-events: none; cursor: default; }
+    .ticker-wrapper { position: absolute; bottom: 0; left: 0; right: 0; height: 46px; display: flex; align-items: stretch; background: linear-gradient(90deg, #0b1220 0%, #15233d 35%, #15233d 65%, #0b1220 100%); border-top: 2px solid #e11d2f; box-shadow: 0 -6px 24px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); z-index: 20; pointer-events: none; overflow: hidden; font-family: 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif; }
+    .ticker-label { background: linear-gradient(180deg, #ff2d3f 0%, #c00d1f 100%); color: #fff; padding: 0 24px 0 14px; font-weight: 900; font-size: 12.5px; letter-spacing: 1.6px; display: flex; align-items: center; gap: 8px; white-space: nowrap; text-transform: uppercase; clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); box-shadow: 6px 0 16px rgba(0,0,0,.55); z-index: 2; position: relative; text-shadow: 0 1px 2px rgba(0,0,0,.4); flex-shrink: 0; }
+    .ticker-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #fff; animation: tickerPulse 1.1s ease-in-out infinite; }
+    @keyframes tickerPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.65); } }
+    .ticker-track { flex: 1; overflow: hidden; position: relative; display: flex; align-items: center; }
+    .ticker-content { display: flex; white-space: nowrap; will-change: transform; animation: marquee 22s linear infinite; font-size: 15px; font-weight: 600; color: #fff; letter-spacing: .35px; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+    .ticker-content span { padding-right: 80px; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .ticker-live { display: flex; align-items: center; gap: 6px; padding: 0 14px; background: rgba(225,29,47,.15); border-left: 1px solid rgba(225,29,47,.5); color: #ff4d5e; font-weight: 900; font-size: 11px; letter-spacing: 1.5px; z-index: 2; text-shadow: 0 0 8px rgba(255,77,94,.5); flex-shrink: 0; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff4d5e; box-shadow: 0 0 8px #ff4d5e; animation: tickerPulse 1.4s infinite; }
+    .fs-btn { position: absolute; top: 12px; right: 12px; z-index: 30; width: 38px; height: 38px; border-radius: 4px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s, background .2s; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 0; }
+    .video-player-container:hover .fs-btn { opacity: 1; }
+    .fs-btn:hover { background: rgba(0,0,0,.85); border-color: rgba(255,255,255,.45); }
+    .fs-btn:active { transform: scale(.94); }
+    .mixer { flex-shrink: 0; height: 130px; background: var(--bg-panel); border: 1px solid #262626; display: flex; flex-direction: column; }
+    .mixer-head { height: 24px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; color: #b8b8b8; text-transform: uppercase; letter-spacing: .4px; background: var(--bg-head); border-bottom: 1px solid #1a1a1a; }
+    .mixer-channels { flex: 1; display: flex; gap: 1px; padding: 6px 8px; overflow-x: auto; }
+    .channel { width: 80px; flex-shrink: 0; background: #1a1a1a; border: 1px solid #262626; border-radius: 3px; display: flex; flex-direction: column; align-items: center; padding: 5px 4px; gap: 4px; }
+    .ch-track { display: flex; gap: 6px; align-items: center; justify-content: center; height: 44px; }
+    .fader { width: 16px; height: 44px; writing-mode: vertical-lr; direction: rtl; accent-color: var(--accent); cursor: pointer; }
+    .ch-meter { width: 6px; height: 44px; background: #0d0d0d; border-radius: 2px; overflow: hidden; display: flex; align-items: flex-end; }
+    .meter-fill { width: 100%; height: 35%; background: linear-gradient(to top, #4caf50, #8bc34a 55%, #e0a13d 82%, #e04a4a); animation: vu 2.6s ease-in-out infinite; }
+    .channel:nth-child(2) .meter-fill { animation-duration: 3.1s; animation-delay: .4s; }
+    .channel:nth-child(3) .meter-fill { animation-duration: 2.2s; animation-delay: .9s; }
+    @keyframes vu { 0%, 100% { height: 28%; } 18% { height: 52%; } 36% { height: 38%; } 54% { height: 66%; } 72% { height: 44%; } 88% { height: 58%; } }
+    .ch-name { font-size: 10px; color: #9a9a9a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+    .ch-mute { background: #2a2a2a; border: 1px solid #3a3a3a; color: #8a8a8a; border-radius: 3px; width: 24px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .ch-mute:hover { background: #3a3a3a; }
+    .ch-mute.muted { background: #8c3330; border-color: #c0392b; color: #fff; }
+    .timer-controls { display: flex; gap: 6px; }
+    .timer-controls .btn { flex: 1; padding: 7px 6px; font-size: 11.5px; }
+    .statusbar { height: 26px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 12px; background: #1a1a1a; border-top: 1px solid #0d0d0d; font-size: 11px; color: #8a8a8a; }
+    .statusbar .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .dot.green { background: #4caf50; box-shadow: 0 0 5px rgba(76,175,80,.7); }
+    .spacer { flex: 1; }
+    @media (max-width: 1100px) {
+        body { overflow: auto; } .app { height: auto; min-height: 100dvh; }
+        .workspace { flex-direction: column; overflow-y: auto; }
+        .col.left, .col.right { width: 100%; flex: none; }
+        .col.left .dock, .col.right .dock { max-height: 340px; }
+        .preview-canvas { height: 58vw; min-height: 220px; flex: none; }
+        .menus { display: none; } .ticker-wrapper { height: 40px; } .ticker-content { font-size: 13px; }
     }
-    .header-title { 
-      padding: 12px 15px; 
-      justify-content: center; 
-      text-align: center; 
-      white-space: normal; 
-      font-size: 14px; 
-      line-height: 1.4;
-    }
-    .header-right { 
-      clip-path: none; 
-      padding: 12px; 
-      justify-content: center; 
-      width: 100%;
-    }
-
-    /* Tab Menu bisa di-scroll horizontal */
-    .tabs { 
-      overflow-x: auto; 
-      padding-bottom: 5px;
-      -webkit-overflow-scrolling: touch;
-    }
-    .tab { 
-      flex-shrink: 0; 
-      padding: 10px 16px; 
-      font-size: 12.5px;
-    }
-    .tab .badge { display: none; } /* Sembunyikan badge di HP agar hemat ruang */
-
-    /* Form & Grid 1 Kolom */
-    .grid { 
-      grid-template-columns: 1fr; 
-    }
-    .field[style*="grid-column:span 2"] { 
-      grid-column: span 1 !important; 
-    }
-
-    /* Area Upload menyesuaikan */
-    .drop { 
-      height: auto; 
-      min-height: 50px; 
-      padding: 12px; 
-      flex-direction: column; 
-      text-align: center; 
-    }
-    .drop span { display: block; font-size: 11px; margin-top: 4px; }
-
-    /* Tombol Export & Hapus memenuhi lebar layar */
-    #sheetBox-tap1, #sheetBox-tap2 { 
-      flex-direction: column; 
-      align-items: stretch !important; 
-    }
-    #sheetBox-tap1 .field, #sheetBox-tap2 .field { 
-      width: 100%; 
-      max-width: none !important; 
-    }
-    #sheetBox-tap1 .actions, #sheetBox-tap2 .actions { 
-      justify-content: center !important; 
-      flex-direction: column; 
-      width: 100%;
-    }
-    #sheetBox-tap1 .actions button, #sheetBox-tap2 .actions button { 
-      width: 100%; 
-      margin-top: 8px; 
-    }
-    
-    /* Action Tombol Filter */
-    .actions { 
-      flex-direction: column; 
-      align-items: stretch; 
-    }
-    .actions button { 
-      width: 100%; 
-    }
-    .chk { 
-      justify-content: flex-start; 
-      margin-bottom: 8px;
-    }
-
-    /* Statistik Pill */
-    .stats { justify-content: center; }
-    .pill { font-size: 11px; padding: 5px 12px; }
-    
-    /* Kartu TAP 3 */
-    .link-grid { grid-template-columns: 1fr; }
-    
-    /* Kotak Tabel menyesuaikan tinggi layar HP */
-    .tablebox { max-height: 50vh; }
-  }
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <!-- HEADER BARU SEPERTI CONTOH GAMBAR -->
-  <header class="app-header">
-    <div class="logo-box">
-      POLYTRON <span>KUPANG</span>
+<div class="app">
+    <div class="menubar">
+        <div class="menubar-left">
+            <div class="brand"><span class="brand-dot"></span> LIVE STUDIO</div>
+            <nav class="menus"><button>File</button><button>Edit</button><button>View</button><button>Docks</button><button>Profile</button><button>Scene Collection</button><button>Tools</button><button>Help</button></nav>
+        </div>
+        <div class="menubar-right"><span class="live-badge">● LIVE</span></div>
     </div>
-    <div class="header-title">
-      Filter &amp; Extract File Excel Penerimaan Transaksi ASA19 &amp; ASA4
+    <div class="workspace">
+        <aside class="col left">
+            <section class="dock" style="flex: 0 0 32%;">
+                <header class="dock-head">Scenes <span class="dock-btns">+ − ▲ ▼</span></header>
+                <div class="dock-body">
+                    <div class="scene-row active"><span class="src-ico">▣</span> Live Match</div>
+                    <div class="scene-row"><span class="src-ico">▣</span> Warm Up</div>
+                    <div class="scene-row"><span class="src-ico">▣</span> Half Time</div>
+                </div>
+            </section>
+            <section class="dock" style="flex: 1;">
+                <header class="dock-head">Sources <span class="dock-btns">+ − ▲ ▼</span></header>
+                <div class="dock-body" id="sourceList">
+                    <div class="source-row" data-source-id="video"><button class="vis-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="src-ico">▣</span><span class="src-name">Video Utama</span></div>
+                    <div class="source-row" data-source-id="scoreboard"><button class="vis-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="src-ico">⊞</span><span class="src-name">Papan Skor</span></div>
+                    <div class="source-row" data-source-id="ticker"><button class="vis-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="src-ico">≡</span><span class="src-name">Teks Berjalan</span></div>
+                    <div id="logoSources"></div>
+                </div>
+                <div class="dock-foot">
+                    <input type="file" id="logoInput" class="input" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif">
+                    <button id="btnAddLogo" class="btn block">+ Tambah Logo</button>
+                </div>
+            </section>
+        </aside>
+        <main class="col center">
+            <div class="preview-toolbar">
+                <div class="ratio-group">
+                    <button type="button" class="ratio-btn active" data-ratio="original">ASLI</button>
+                    <button type="button" class="ratio-btn" data-ratio="16:9">16:9</button>
+                    <button type="button" class="ratio-btn" data-ratio="9:16">9:16</button>
+                </div>
+                <label class="lock-toggle"><input type="checkbox" id="lockPositions"><span>🔒 Kunci posisi logo</span></label>
+                <span class="preview-badge">PROGRAM</span>
+            </div>
+            <div class="preview-canvas">
+                <div class="video-player-container" id="playerContainer" data-ratio="original">
+                    <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1200&auto=format&fit=crop" alt="Lapangan Sepak Bola" class="video-background" id="placeholderImage">
+                    <video id="mainVideo" controls controlsList="nofullscreen" style="display: none;"></video>
+                    <!-- PAPAN SKOR: SEMBUNYI SAMPAI DIINPUT -->
+                    <div class="scoreboard" id="scoreboard" style="display:none"><div class="score-team"><span id="teamA">TIM A</span><span id="scoreDisplay">0 - 0</span><span id="teamB">TIM B</span></div><div class="score-time" id="matchTime">00:00</div></div>
+                    <div class="overlay-logos" id="overlayLogos"></div>
+                    <div class="ticker-wrapper" id="tickerWrapper">
+                        <div class="ticker-label"><span class="ticker-dot"></span>INFO MATCH</div>
+                        <div class="ticker-track"><div class="ticker-content" id="runningText"><span>Selamat datang di Live Streaming ETMC XXXV 2026 Flores Timur - Match Day 2.</span><span aria-hidden="true">Selamat datang di Live Streaming ETMC XXXV 2026 Flores Timur - Match Day 2.</span></div></div>
+                        <div class="ticker-live"><span class="live-dot"></span>LIVE</div>
+                    </div>
+                    <button class="fs-btn" id="fsBtn" title="Layar Penuh" aria-label="Layar Penuh"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+                </div>
+            </div>
+            <div class="mixer">
+                <div class="mixer-head">Audio Mixer</div>
+                <div class="mixer-channels">
+                    <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="82"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Mic / Aux</div><button class="ch-mute">🔊</button></div>
+                    <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="64"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Desktop Audio</div><button class="ch-mute">🔊</button></div>
+                    <div class="channel"><div class="ch-track"><input type="range" class="fader" min="0" max="100" value="90"><div class="ch-meter"><div class="meter-fill"></div></div></div><div class="ch-name">Video Source</div><button class="ch-mute">🔊</button></div>
+                </div>
+            </div>
+        </main>
+        <aside class="col right">
+            <section class="dock" style="flex: 0 0 auto;"><header class="dock-head">Controls</header><div class="dock-body pad"><button class="btn primary block">● Mulai Streaming</button><button class="btn block">● Mulai Rekaman</button><button class="btn block">⚙ Pengaturan</button></div></section>
+            <section class="dock" style="flex: 1;"><header class="dock-head">Properties — <span id="propsTitle">Video Utama</span></header><div class="dock-body pad" id="propsBody">
+                <div class="props-panel" id="propsVideo"><span class="prop-label">Sumber Video</span><button class="btn block" id="btnUpload">⬆ Unggah Video</button><div class="prop-hint" id="videoInfo">Belum ada video dipilih — menampilkan gambar placeholder.</div><span class="prop-label">Rasio</span><div class="prop-hint">Atur rasio lewat tombol <b>ASLI / 16:9 / 9:16</b> di atas jendela preview.</div><span class="prop-label">Layar Penuh</span><div class="prop-hint">Arahkan kursor ke sudut kanan atas video, lalu klik tombol ⛶. Teks berjalan tetap tampil menyatu dengan video.</div></div>
+                <div class="props-panel hidden" id="propsScoreboard">
+                    <span class="prop-label">Nama Tim Kiri</span><input type="text" id="inputTeamA" class="input" placeholder="Nama Tim Kiri">
+                    <span class="prop-label">Skor</span><input type="text" id="inputScore" class="input" placeholder="Contoh: 2 - 1">
+                    <span class="prop-label">Nama Tim Kanan</span><input type="text" id="inputTeamB" class="input" placeholder="Nama Tim Kanan">
+                    <span class="prop-label">Waktu Pertandingan</span><input type="text" id="inputTime" class="input" placeholder="Contoh: 75:30">
+                    <button id="btnUpdateScore" class="btn primary block">Perbarui Skor &amp; Waktu</button>
+                    <div class="prop-hint">Papan skor baru muncul di video setelah kamu klik tombol di atas. Kosongkan = tetap sembunyi.</div>
+                    <div class="timer-controls"><button id="btnStartTimer" class="btn success">Mulai</button><button id="btnStopTimer" class="btn danger" style="display: none;">Jeda</button><button id="btnResetTimer" class="btn">Reset</button></div>
+                    <button id="btnHideScore" class="btn block">🙈 Sembunyikan Papan Skor</button>
+                </div>
+                <div class="props-panel hidden" id="propsTicker"><span class="prop-label">Teks Berjalan</span><input type="text" id="inputText" class="input" placeholder="Ketik informasi pertandingan..."><button id="btnKirim" class="btn primary block">Kirim Teks Berjalan</button><div class="prop-hint">Tekan <b>Enter</b> untuk langsung mengirim. Teks tampil di depan video, termasuk saat layar penuh.</div></div>
+                <div class="props-panel hidden" id="propsLogo"></div>
+            </div></section>
+        </aside>
     </div>
-    <div class="header-right">
-      <span class="live-indicator">⚙ Sistem LIVE ON</span>
-    </div>
-  </header>
-
-  <div class="tabs" id="tabsBar"></div>
-  <div class="panel-wrap" id="tabPanels"></div>
+    <div class="statusbar"><span><i class="dot green"></i><span id="statCpu">CPU 3.2%</span></span><span>FPS 60</span><span id="statKbs">KB/s 0.0</span><span>Stream 0 kbps</span><span class="spacer"></span><span id="statClock">00:00:00</span></div>
 </div>
-
-<div class="toast" id="toast"></div>
-
-<div class="modal" id="modalConfirm">
-  <div class="modal-box">
-    <h3 id="modalTitle">Konfirmasi</h3>
-    <p id="modalMsg">Anda yakin?</p>
-    <div class="modal-actions">
-      <button class="btn-ghost" id="modalCancel">Batal</button>
-      <button class="btn-ok" id="modalOk">Ya, Lanjutkan</button>
-    </div>
-  </div>
-</div>
-
+<input type="file" id="videoInput" accept="video/*" style="display: none;">
 <script>
-/* =========================================================================
-   1) KONFIGURASI KOLOM
-   ========================================================================= */
-const TAP1_COLUMNS = [
-  "No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
-  "Nik Tujuan","Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute",
-  "Qty","Satuan","Conversion Qty","Conversion UM","Conversion Value","Nomor Permintaan",
-  "Price Per Unit","Total Value","Mata Uang","Site Parent","Dibuat Oleh","Dibuat Pada",
-  "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
-];
-
-const TAP2_COLUMNS = [
-  "No","Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
-  "Nik Tujuan","Tipe Transaksi","Status","Baris","Part","Deskripsi","Lot","Attribute",
-  "Qty","Satuan","Conversion Qty","Conversion UM","Conversion Value","Nomor Permintaan",
-  "Price Per Unit","Total Value","Mata Uang","Site Parent","Dibuat Oleh","Dibuat Pada",
-  "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
-];
-
-const TAP2_EXCLUDED_COLUMNS = [
-  "Tipe Cetak","Um","Qty Konversi","UM Konversi","Nilai Konversi","Qty Alt Konversi",
-  "Qty Reference","Lokasi Dari","Site Dari","NIK Dari","Nama Dari","Kode Gudang Dari",
-  "Lokasi Sampai","Site Sampai","NIK Sampai","Nama Sampai","Kode Gudang Sampai",
-  "DPP / Unit","Total DPP","Total PPN","Total DPP + PPN","No. Aktiva",
-  "Remarks 1","Remarks 2","Diupdate Oleh","Diupdate Tanggal","Diupdate Pada"
-];
-
-const NUMERIC_COLS = new Set([
-  "No","Baris","Qty","Conversion Qty","Conversion Value","Price Per Unit","Total Value"
-]);
-const DATE_COLS = new Set(["Dibuat Pada","Dikonfirmasi Pada","Diubah Pada"]);
-const TEXT_COLS = new Set([
-  "Kode Perusahaan","Site","Nomor Dokumen","Nomor Referensi","Lokasi Tujuan",
-  "Tipe Transaksi","Status","Part","Deskripsi","Satuan","Conversion UM",
-  "Mata Uang","Site Parent","Dibuat Oleh","Dikonfirmasi Oleh","Diubah Oleh"
-]);
-
-const MAIN_COL_ALIASES = {
-  "Nomor Referensi": [
-    "Nomor Referensi","No Referensi","Nomer Referensi","Nomor Ref",
-    "Referensi","Reference","Ref No","Ref No.","Ref"
-  ],
-  "Lokasi Tujuan": [
-    "Lokasi Tujuan","Lokasi Sampai","Lokasi Tujuan/Sampai",
-    "Destination","Tujuan"
-  ]
-};
-
-const COL_ALIASES = {
-  part: ["part","kode part","kode_part","kodeitem","kode item","part number","partnumber","part no","partno","item","item code"],
-  deskripsi: ["deskripsi","description","desc","nama part","part name","nama item","item name","keterangan"],
-  um: ["um","uom","u m","satuan","unit measure","satuan barang"],
-  nomorDokumen: ["nomor dokumen","no dokumen","nodokumen","dokumen","document number","doc no"],
-  nomorReferensi: ["nomor referensi","no referensi","noreferensi","referensi","reference","ref no"],
-  baris: ["baris","line","no baris","line no","line number","item line"],
-  no: ["no","nomor","no urut","no_urut"]
-};
-
-const GT_ALIASES = {
-  ref:    ["nomor referensi","no referensi","noreferensi","referensi","reference","ref no","ref no.","ref"],
-  lokasi: ["lokasi sampai","lokasi tujuan","lokasi tujuan/sampai","tujuan","destination","lokasi"],
-  status: ["status"],
-  diupdateTanggal: [
-    "diupdate tanggal","diupdate tgl","tanggal diupdate","tgl diupdate",
-    "update tanggal","tanggal update","updated date","update date",
-    "diupdate pada","last update date"
-  ]
-};
-
-const MAX_PREVIEW_ROWS = 800;
-
-const TAB_CONFIGS = {
-  tap1: {
-    label: "TAP 1",
-    badge: "ASA19 - Penerimaan Pembelian",
-    exportTag: "TAP1",
-    sheetPreference: [/tap\s*1/i, /goods\s*transaction/i, /goods/i, /transaksi\s*barang/i],
-    columns: TAP1_COLUMNS,
-    dateFormat: "dmy",
-    defaultBlankRows: false,
-    excludedDetailColumns: []
-  },
-  tap2: {
-    label: "TAP 2",
-    badge: "ASA4 - Transaksi Barang",
-    exportTag: "TAP2",
-    sheetPreference: [/tap\s*2/i, /goods\s*transaction/i, /goods/i, /transaksi\s*barang/i],
-    columns: TAP2_COLUMNS,
-    dateFormat: "dmy",
-    defaultBlankRows: true,
-    excludedDetailColumns: TAP2_EXCLUDED_COLUMNS,
-    gtOverrides: {
-      statusFromGT: true,
-      dateFromGT:   true
-    },
-    detailOverrides: {
-      satuanFromUM: true
-    }
-  },
-
-  /* ---------- TAP 3: CETAK LABEL — hanya daftar tautan ---------- */
-  tap3: {
-    label: "TAP 3",
-    badge: "CETAK LABEL",
-    type: "settings",
-    links: [
-      {
-        icon:  "🏷️",
-        title: "Cetak Label Part QR Code",
-        desc:  "Aplikasi cetak label part dengan QR Code. Membuka di tab baru.",
-        url:   "https://serveronline62-creator.github.io/Cetak-Label-Part-QR-Code-/"
-      },
-      {
-        icon:  "🖨️",
-        title: "Sistem Cetak Label Otomatis REV1",
-        desc:  "Sistem cetak label otomatis versi REV1. Membuka di tab baru.",
-        url:   "https://redspiderbox-ctrl.github.io/Sistem-Cetak-Label-Otomatis-REV1/"
-      }
-    ]
-  }
-};
-
-/* =========================================================================
-   2) UTILITAS
-   ========================================================================= */
 const $ = id => document.getElementById(id);
-const norm = s => String(s ?? "").replace(/\s+/g," ").trim().toLowerCase();
-const pad2 = n => String(n).padStart(2,"0");
+const overlayLogos = $('overlayLogos'); const logoInput = $('logoInput'); const btnAddLogo = $('btnAddLogo'); const logoSources = $('logoSources'); const lockCheckbox = $('lockPositions'); const playerContainer = $('playerContainer'); const mainVideo = $('mainVideo'); const placeholderImage = $('placeholderImage'); const scoreboardEl = document.querySelector('.scoreboard'); const tickerEl = document.querySelector('.ticker-wrapper'); const fsBtn = $('fsBtn');
+const propsVideo = $('propsVideo'); const propsScoreboard = $('propsScoreboard'); const propsTicker = $('propsTicker'); const propsLogo = $('propsLogo'); const propsTitle = $('propsTitle');
+let logos = []; let logoIdCounter = 0; let selectedSource = 'video'; let currentRatio = 'original';
+// FIX: scoreboard awalnya false = sembunyi sampai diinput
+const sourceVisible = { video: true, scoreboard: false, ticker: true };
+const newLogoId = () => 'logo-' + (++logoIdCounter);
+const EYE_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
 
-const escapeHtml = s => String(s).replace(/[&<>"']/g,
-  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const escapeAttr = escapeHtml;
-
-function isoDate(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-
-function toDateOnly(v){
-  if (v instanceof Date) return isoDate(v);
-  const s = String(v ?? "").trim();
-  if (!s) return "";
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
-  const d = new Date(s);
-  return isNaN(d) ? "" : isoDate(d);
+/* ===== 1. TICKER — SEAMLESS ===== */
+const btnKirim = $('btnKirim'); const inputText = $('inputText'); const runningText = $('runningText');
+function restartTicker() {
+    const first = runningText.querySelector('span');
+    if (!first) return;
+    runningText.style.animation = 'none';
+    void runningText.offsetWidth;
+    const oneW = first.offsetWidth || 600;
+    const speed = 130;
+    const duration = Math.max(8, oneW / speed);
+    runningText.style.animation = `marquee ${duration}s linear infinite`;
 }
-
-function formatDateForTab(value, fmt){
-  if (value === null || value === undefined || value === "") return "";
-  const s = String(value).trim();
-  if (fmt === "dmy"){
-    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (m) return `${pad2(m[1])}/${pad2(m[2])}/${m[3]}`;
-    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-    const d = value instanceof Date ? value : new Date(s);
-    if (isNaN(d)) return s;
-    return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
-  }
-  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])} 00:00:00`;
-  m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]} ${m[4]??"00"}:${m[5]??"00"}:${m[6]??"00"}`;
-  const d = value instanceof Date ? value : new Date(s);
-  if (isNaN(d)) return s;
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ` +
-         `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+function updateRunningText() {
+    const newText = inputText.value;
+    if (newText.trim() === '') { alert('Teks tidak boleh kosong!'); return; }
+    runningText.innerHTML = `<span>${newText.replace(/</g,'&lt;')}</span><span aria-hidden="true">${newText.replace(/</g,'&lt;')}</span>`;
+    restartTicker();
+    inputText.value = '';
 }
+btnKirim.addEventListener('click', updateRunningText);
+inputText.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); updateRunningText(); } });
+let tickerResizeTimer;
+window.addEventListener('resize', () => { clearTimeout(tickerResizeTimer); tickerResizeTimer = setTimeout(restartTicker, 260); });
 
-function formatDateOnlyValue(value, fmt){
-  if (value === null || value === undefined || value === "" || value === 0) return "";
-  if (typeof value === "number"){
-    try {
-      const pattern = fmt === "dmy" ? "dd/mm/yyyy" : "yyyy-mm-dd";
-      const result = XLSX.SSF.format(pattern, value);
-      if (result && !String(result).includes("#")) return result;
-    } catch(e){}
-  }
-  const formatted = formatDateForTab(value, fmt);
-  if (fmt !== "dmy") return String(formatted).split(" ")[0];
-  return formatted;
+/* ===== 2. SKOR — SEMBUNYI SAMPAI DIINPUT ===== */
+const btnUpdateScore = $('btnUpdateScore'); const inputTeamA = $('inputTeamA'); const inputScore = $('inputScore'); const inputTeamB = $('inputTeamB'); const inputTime = $('inputTime'); const teamA = $('teamA'); const scoreDisplay = $('scoreDisplay'); const teamB = $('teamB'); const matchTime = $('matchTime');
+const btnHideScore = $('btnHideScore');
+btnUpdateScore.addEventListener('click', () => {
+    const adaInput = inputTeamA.value.trim() !== '' || inputScore.value.trim() !== '' || inputTeamB.value.trim() !== '' || inputTime.value.trim() !== '';
+    if (!adaInput) { alert('Isi dulu nama tim / skor / waktunya!'); return; }
+    // Baru tampilkan setelah ada input
+    sourceVisible.scoreboard = true;
+    scoreboardEl.style.display = '';
+    if (inputTeamA.value.trim() !== '') teamA.textContent = inputTeamA.value.toUpperCase();
+    if (inputScore.value.trim() !== '') scoreDisplay.textContent = inputScore.value;
+    if (inputTeamB.value.trim() !== '') teamB.textContent = inputTeamB.value.toUpperCase();
+    if (inputTime.value.trim() !== '') { const p = inputTime.value.split(':'); if (p.length === 2) { totalSeconds = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0); updateTimerDisplay(); } }
+    inputTeamA.value = ''; inputScore.value = ''; inputTeamB.value = ''; inputTime.value = '';
+    refreshUI();
+});
+btnHideScore.addEventListener('click', () => {
+    sourceVisible.scoreboard = false;
+    scoreboardEl.style.display = 'none';
+    refreshUI();
+});
+
+/* ===== 3. TIMER ===== */
+let totalSeconds = 0; let timerInterval = null; let isRunning = false;
+const btnStartTimer = $('btnStartTimer'); const btnStopTimer = $('btnStopTimer'); const btnResetTimer = $('btnResetTimer');
+const formatTime = s => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+const updateTimerDisplay = () => { matchTime.textContent = formatTime(totalSeconds); };
+function startTimer() { if (isRunning) return; timerInterval = setInterval(() => { totalSeconds++; updateTimerDisplay(); }, 1000); isRunning = true; btnStartTimer.style.display = 'none'; btnStopTimer.style.display = 'block'; }
+function stopTimer() { if (!isRunning) return; clearInterval(timerInterval); isRunning = false; btnStartTimer.style.display = 'block'; btnStopTimer.style.display = 'none'; }
+function resetTimer() { stopTimer(); totalSeconds = 0; updateTimerDisplay(); }
+btnStartTimer.addEventListener('click', startTimer); btnStopTimer.addEventListener('click', stopTimer); btnResetTimer.addEventListener('click', resetTimer);
+
+/* ===== 4. VIDEO ===== */
+const btnUpload = $('btnUpload'); const videoInput = $('videoInput'); let currentVideoUrl = null;
+btnUpload.addEventListener('click', () => videoInput.click());
+videoInput.addEventListener('change', e => { const file = e.target.files[0]; if (!file) return; if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl); currentVideoUrl = URL.createObjectURL(file); mainVideo.src = currentVideoUrl; $('videoInfo').textContent = file.name + ' • ' + (file.size / 1048576).toFixed(1) + ' MB'; applyVideoVisibility(); mainVideo.play(); if (currentRatio === 'original') applyAspectRatio('original'); });
+function applyVideoVisibility() { const hasVideo = !!mainVideo.src; if (!sourceVisible.video) { mainVideo.style.display = 'none'; placeholderImage.style.display = 'none'; return; } if (hasVideo) { mainVideo.style.display = 'block'; placeholderImage.style.display = 'none'; } else { mainVideo.style.display = 'none'; placeholderImage.style.display = 'block'; } }
+
+/* ===== 5. LOGO ===== */
+function renderLogos() { overlayLogos.innerHTML = ''; logos.forEach(logo => { const wrap = document.createElement('div'); wrap.className = 'logo-draggable'; wrap.dataset.logoId = logo.id; wrap.style.left = logo.x + '%'; wrap.style.top = logo.y + '%'; wrap.style.width = logo.width + 'px'; if (!logo.visible) wrap.style.display = 'none'; const img = document.createElement('img'); img.src = logo.src; img.alt = 'Logo'; img.draggable = false; wrap.appendChild(img); setupDrag(wrap, logo); overlayLogos.appendChild(wrap); }); renderSourceList(); }
+function renderSourceList() { logoSources.innerHTML = ''; if (logos.length === 0) { const empty = document.createElement('div'); empty.className = 'empty-note'; empty.textContent = 'Belum ada logo. Tambahkan di bawah.'; logoSources.appendChild(empty); } logos.forEach((logo, i) => { const row = document.createElement('div'); row.className = 'source-row'; row.dataset.sourceId = logo.id; row.innerHTML = `<button class="vis-btn">${EYE_SVG}</button><span class="src-ico">◈</span><span class="src-name">Logo ${i + 1}</span>`; logoSources.appendChild(row); }); refreshUI(); }
+function renderLogoProps(logo) { propsLogo.innerHTML = ''; const sizeLabel = document.createElement('span'); sizeLabel.className = 'prop-label'; sizeLabel.textContent = `Ukuran: ${logo.width}px`; const slider = document.createElement('input'); slider.type = 'range'; slider.min = '20'; slider.max = '400'; slider.value = logo.width; slider.className = 'range'; slider.addEventListener('input', e => { logo.width = parseInt(e.target.value, 10); sizeLabel.textContent = `Ukuran: ${logo.width}px`; const wrap = overlayLogos.querySelector(`[data-logo-id="${logo.id}"]`); if (wrap) { wrap.style.width = logo.width + 'px'; clampPosition(logo); } }); const hint = document.createElement('div'); hint.className = 'prop-hint'; hint.innerHTML = 'Geser logo langsung di atas video untuk mengatur posisinya.'; const btnRemove = document.createElement('button'); btnRemove.className = 'btn danger block'; btnRemove.textContent = '🗑 Hapus Logo'; btnRemove.addEventListener('click', () => { logos = logos.filter(l => l.id !== logo.id); selectedSource = 'video'; renderLogos(); }); propsLogo.append(sizeLabel, slider, hint, btnRemove); }
+function setupDrag(el, logoData) { let dragging = false, startX = 0, startY = 0, startLeftPx = 0, startTopPx = 0, rect = null; function onDown(e) { if (e.button !== undefined && e.button !== 0) return; if (lockCheckbox.checked) return; e.preventDefault(); e.stopPropagation(); const p = e.touches ? e.touches[0] : e; startX = p.clientX; startY = p.clientY; rect = overlayLogos.getBoundingClientRect(); startLeftPx = (logoData.x / 100) * rect.width; startTopPx = (logoData.y / 100) * rect.height; dragging = true; el.classList.add('dragging'); document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onUp); } function onMove(e) { if (!dragging) return; e.preventDefault(); const p = e.touches ? e.touches[0] : e; const dx = p.clientX - startX; const dy = p.clientY - startY; const maxLeft = rect.width - el.offsetWidth; const maxTop = rect.height - el.offsetHeight; const newLeft = Math.max(0, Math.min(startLeftPx + dx, maxLeft)); const newTop = Math.max(0, Math.min(startTopPx + dy, maxTop)); logoData.x = (newLeft / rect.width) * 100; logoData.y = (newTop / rect.height) * 100; el.style.left = logoData.x + '%'; el.style.top = logoData.y + '%'; } function onUp() { if (!dragging) return; dragging = false; el.classList.remove('dragging'); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp); } el.addEventListener('mousedown', onDown); el.addEventListener('touchstart', onDown, { passive: false }); }
+function clampPosition(logo) { const el = overlayLogos.querySelector(`[data-logo-id="${logo.id}"]`); if (!el || !el.offsetWidth) return; const rect = overlayLogos.getBoundingClientRect(); if (!rect.width || !rect.height) return; const maxLeft = rect.width - el.offsetWidth; const maxTop = rect.height - el.offsetHeight; let leftPx = (logo.x / 100) * rect.width; let topPx = (logo.y / 100) * rect.height; if (leftPx > maxLeft) leftPx = Math.max(0, maxLeft); if (topPx > maxTop) topPx = Math.max(0, maxTop); logo.x = (leftPx / rect.width) * 100; logo.y = (topPx / rect.height) * 100; el.style.left = logo.x + '%'; el.style.top = logo.y + '%'; }
+btnAddLogo.addEventListener('click', () => { const file = logoInput.files[0]; if (!file) { alert('Pilih file logo terlebih dahulu!'); return; } if (!file.type.startsWith('image/')) { alert('File harus berupa gambar!'); return; } if (file.size > 3 * 1024 * 1024) { alert('Ukuran logo maksimal 3 MB.'); return; } const reader = new FileReader(); reader.onload = ev => { const n = logos.length; logos.push({ id: newLogoId(), src: ev.target.result, x: Math.max(60, 92 - n * 6), y: 5 + n * 4, width: 70, visible: true }); renderLogos(); logoInput.value = ''; setTimeout(() => logos.forEach(clampPosition), 40); }; reader.readAsDataURL(file); });
+lockCheckbox.addEventListener('change', () => { overlayLogos.classList.toggle('locked', lockCheckbox.checked); });
+
+/* ===== 6. SOURCE ===== */
+function selectSource(id) { selectedSource = id; refreshUI(); }
+function refreshUI() { document.querySelectorAll('#sourceList .source-row').forEach(row => { const id = row.dataset.sourceId; row.classList.toggle('selected', id === selectedSource); let vis; if (id in sourceVisible) vis = sourceVisible[id]; else { const lg = logos.find(l => l.id === id); vis = lg ? lg.visible : true; } row.classList.toggle('off', !vis); }); const isV = selectedSource === 'video'; const isS = selectedSource === 'scoreboard'; const isT = selectedSource === 'ticker'; const lg = logos.find(l => l.id === selectedSource); propsVideo.classList.toggle('hidden', !isV); propsScoreboard.classList.toggle('hidden', !isS); propsTicker.classList.toggle('hidden', !isT); propsLogo.classList.toggle('hidden', !lg); propsTitle.textContent = isV ? 'Video Utama' : isS ? 'Papan Skor' : isT ? 'Teks Berjalan' : lg ? 'Logo' : '—'; if (lg) renderLogoProps(lg); }
+function toggleVisibility(id) { if (id in sourceVisible) { sourceVisible[id] = !sourceVisible[id]; applyStaticVisibility(); refreshUI(); } else { const lg = logos.find(l => l.id === id); if (lg) { lg.visible = !lg.visible; renderLogos(); } } }
+function applyStaticVisibility() { scoreboardEl.style.display = sourceVisible.scoreboard ? '' : 'none'; tickerEl.style.display = sourceVisible.ticker ? '' : 'none'; applyVideoVisibility(); }
+document.getElementById('sourceList').addEventListener('click', e => { const row = e.target.closest('.source-row'); if (!row) return; if (e.target.closest('.vis-btn')) { toggleVisibility(row.dataset.sourceId); return; } selectSource(row.dataset.sourceId); });
+
+/* ===== 7. RASIO ===== */
+const ratioButtons = document.querySelectorAll('.ratio-btn');
+function getOriginalAR() { if (mainVideo.src && mainVideo.videoWidth > 0 && mainVideo.videoHeight > 0) return mainVideo.videoWidth / mainVideo.videoHeight; if (placeholderImage && placeholderImage.naturalWidth > 0) return placeholderImage.naturalWidth / placeholderImage.naturalHeight; return 16 / 9; }
+function applyAspectRatio(mode) { currentRatio = mode; let ar; if (mode === '9:16') ar = 9 / 16; else if (mode === '16:9') ar = 16 / 9; else ar = getOriginalAR(); playerContainer.style.setProperty('--ar-num', ar.toFixed(4)); playerContainer.dataset.ratio = mode; clearTimeout(playerContainer._clampTimer); playerContainer._clampTimer = setTimeout(() => { logos.forEach(clampPosition); restartTicker(); }, 320); }
+ratioButtons.forEach(btn => { btn.addEventListener('click', () => { ratioButtons.forEach(b => b.classList.remove('active')); btn.classList.add('active'); applyAspectRatio(btn.dataset.ratio); }); });
+mainVideo.addEventListener('loadedmetadata', () => { if (currentRatio === 'original') applyAspectRatio('original'); });
+if (placeholderImage) { if (placeholderImage.complete && placeholderImage.naturalWidth > 0) applyAspectRatio(currentRatio); placeholderImage.addEventListener('load', () => { if (currentRatio === 'original') applyAspectRatio('original'); }); }
+window.addEventListener('resize', () => { clearTimeout(window._clampT); window._clampT = setTimeout(() => logos.forEach(clampPosition), 150); });
+
+/* ===== 8. FULLSCREEN — 1 HANDLER ===== */
+const FS_ICON_OPEN = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+const FS_ICON_CLOSE = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
+function getFullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+let isRedirectingFs = false;
+function requestContainerFullscreen() { if (isRedirectingFs) return; if (playerContainer.requestFullscreen) { playerContainer.requestFullscreen().catch(() => {}); } else if (playerContainer.webkitRequestFullscreen) { playerContainer.webkitRequestFullscreen(); } }
+function exitFullscreen() { if (document.exitFullscreen) { document.exitFullscreen().catch(() => {}); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } }
+function toggleFullscreen() { if (!getFullscreenElement()) { requestContainerFullscreen(); } else { exitFullscreen(); } }
+fsBtn.addEventListener('click', toggleFullscreen);
+playerContainer.addEventListener('dblclick', e => { if (e.target.closest('.logo-draggable')) return; if (e.target.closest('.fs-btn')) return; toggleFullscreen(); });
+function onFullscreenChange() {
+    const fsEl = getFullscreenElement();
+    const isFs = !!fsEl;
+    fsBtn.innerHTML = isFs ? FS_ICON_CLOSE : FS_ICON_OPEN;
+    fsBtn.title = isFs ? 'Keluar Layar Penuh' : 'Layar Penuh';
+    if (fsEl === mainVideo && !isRedirectingFs) {
+        isRedirectingFs = true;
+        exitFullscreen();
+        setTimeout(() => { requestContainerFullscreen(); setTimeout(() => { isRedirectingFs = false; }, 300); }, 80);
+        return;
+    }
+    setTimeout(() => { logos.forEach(clampPosition); restartTicker(); }, 200);
 }
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
-function todayStamp(){
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(d.getMinutes())}`;
-}
+/* ===== 9. MIXER ===== */
+document.querySelectorAll('.ch-mute').forEach(btn => { btn.addEventListener('click', () => { btn.classList.toggle('muted'); btn.textContent = btn.classList.contains('muted') ? '🔇' : '🔊'; }); });
 
-let toastTm;
-function toast(msg){
-  const t = $("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(toastTm);
-  toastTm = setTimeout(() => t.classList.remove("show"), 2800);
-}
+/* ===== 10. STATUS ===== */
+setInterval(() => { $('statCpu').textContent = 'CPU ' + (2 + Math.random() * 4).toFixed(1) + '%'; $('statKbs').textContent = 'KB/s ' + (Math.random() * 2.4).toFixed(1); }, 2200);
+let clockSeconds = 0;
+setInterval(() => { clockSeconds++; const h = String(Math.floor(clockSeconds / 3600)).padStart(2, '0'); const m = String(Math.floor((clockSeconds % 3600) / 60)).padStart(2, '0'); const s = String(clockSeconds % 60).padStart(2, '0'); $('statClock').textContent = `${h}:${m}:${s}`; }, 1000);
 
-function confirmDialog(title, message, okLabel){
-  return new Promise(resolve => {
-    const modal = $("modalConfirm");
-    $("modalTitle").textContent = title || "Konfirmasi";
-    $("modalMsg").textContent   = message || "Anda yakin?";
-    $("modalOk").textContent    = okLabel || "Ya, Lanjutkan";
-    const cleanup = (val) => {
-      modal.classList.remove("show");
-      $("modalOk").removeEventListener("click", onOk);
-      $("modalCancel").removeEventListener("click", onCancel);
-      modal.removeEventListener("click", onOverlay);
-      document.removeEventListener("keydown", onKey);
-      resolve(val);
-    };
-    const onOk      = () => cleanup(true);
-    const onCancel  = () => cleanup(false);
-    const onOverlay = e => { if (e.target === modal) cleanup(false); };
-    const onKey     = e => { if (e.key === "Escape") cleanup(false); };
-    $("modalOk").addEventListener("click", onOk);
-    $("modalCancel").addEventListener("click", onCancel);
-    modal.addEventListener("click", onOverlay);
-    document.addEventListener("keydown", onKey);
-    modal.classList.add("show");
-    $("modalOk").focus();
-  });
-}
-
-function findColumnIndex(headers, aliases){
-  const H = headers.map(norm);
-  for (const a of aliases){ if (H.includes(a)) return H.indexOf(a); }
-  for (const a of aliases){
-    const i = H.findIndex(h => h && h.includes(a));
-    if (i !== -1) return i;
-  }
-  return -1;
-}
-
-function findMainColumnIndex(headers, col){
-  const found = headers.findIndex(h => norm(h) === norm(col));
-  if (found !== -1) return found;
-  const aliases = MAIN_COL_ALIASES[col];
-  if (!aliases) return -1;
-  return findColumnIndex(headers, aliases.map(norm));
-}
-
-/* =========================================================================
-   3) TAB CONTROLLER (TAP 1 & TAP 2)
-   ========================================================================= */
-class TabController {
-  constructor(tabId, cfg){
-    this.tabId = tabId;
-    this.cfg   = cfg;
-    this.state = {
-      wb:null, rows:[], filtered:[], baseName:"extract", sheetName:"",
-      columns: cfg.columns.slice(),
-      detailInfo: null, gtInfo: null, autoFillInfo: null
-    };
-    this.mount();
-    this.bind();
-  }
-
-  el(suffix){ return document.getElementById(`${suffix}-${this.tabId}`); }
-
-  mount(){
-    const p = this.tabId, cfg = this.cfg;
-    const panel = document.createElement("div");
-    panel.className = "tab-panel" + (p === "tap1" ? "" : " hidden");
-    panel.id = `panel-${p}`;
-    const checkedBlank = cfg.defaultBlankRows ? "checked" : "";
-
-    panel.innerHTML = `
-      <section class="card">
-        <h2>1. Unggah File Excel — ${cfg.label}</h2>
-        <label class="drop" id="drop-${p}" for="file-${p}" style="margin-top:6px">
-          <div class="ico">📄</div>
-          <b>Klik untuk memilih file Excel, atau tarik &amp; lepas di sini</b>
-          <span>File diproses sepenuhnya di browser Anda — tidak diunggah ke server.</span>
-        </label>
-        <input type="file" id="file-${p}" accept=".xlsx,.xls,.xlsm,.csv" />
-        <div id="sheetBox-${p}" class="hidden" style="margin-top:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;">
-          <div class="field" style="min-width:260px; max-width:340px; flex:0 0 auto;">
-            <label for="sheetSelect-${p}">Pilih Sheet Utama</label>
-            <select id="sheetSelect-${p}"></select>
-          </div>
-          <div class="actions" style="border:none; padding:0; margin:0; flex:1; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:flex-end;">
-            <label class="chk"><input type="checkbox" id="chkRenumber-${p}" checked /> Nomor ulang kolom "No"</label>
-            <label class="chk"><input type="checkbox" id="chkBlank-${p}" ${checkedBlank} /> Sertakan 3 baris kosong</label>
-            <button class="btn-danger" id="btnClear-${p}" title="Hapus semua data yang sudah diunggah">🗑 Hapus Semua Data</button>
-            <button class="btn-ok" id="btnExport-${p}">⬇ Download Excel (${cfg.label})</button>
-          </div>
-        </div>
-        <div id="detailInfo-${p}" class="hidden"></div>
-      </section>
-
-      <section class="card hidden" id="filter-${p}">
-        <h2>2. Filter Data — ${cfg.label}</h2>
-        <p class="sub">Kosongkan kolom yang tidak ingin disaring.</p>
-        <div class="grid">
-          <div class="field" style="grid-column:span 2">
-            <label for="fSearch-${p}">Pencarian Bebas (semua kolom)</label>
-            <input type="text" id="fSearch-${p}" placeholder="Cth: VS-130745 / SVRMBKPG / ORD6KPGA01TS" />
-          </div>
-          <div class="field"><label for="fKode-${p}">Kode Perusahaan</label><select id="fKode-${p}"></select></div>
-          <div class="field"><label for="fSite-${p}">Site</label><select id="fSite-${p}"></select></div>
-          <div class="field"><label for="fTipe-${p}">Tipe Transaksi</label><select id="fTipe-${p}"></select></div>
-          <div class="field"><label for="fStatus-${p}">Status</label><select id="fStatus-${p}"></select></div>
-          <div class="field"><label for="fLokasi-${p}">Lokasi Tujuan</label><select id="fLokasi-${p}"></select></div>
-          <div class="field"><label for="fPart-${p}">Part</label><select id="fPart-${p}"></select></div>
-          <div class="field"><label for="fRef-${p}">Nomor Referensi</label><input type="text" id="fRef-${p}" placeholder="Cth: 1240206247" /></div>
-          <div class="field"><label for="fDari-${p}">Dibuat Pada (dari)</label><input type="date" id="fDari-${p}" /></div>
-          <div class="field"><label for="fSampai-${p}">Dibuat Pada (sampai)</label><input type="date" id="fSampai-${p}" /></div>
-        </div>
-        <div class="actions">
-          <button class="btn-ghost" id="btnReset-${p}">↺ Reset Filter</button>
-          <button class="btn-warn" id="btnDelFiltered-${p}" title="Hapus baris yang sedang tampil dari data">🗑 Hapus Baris Terfilter</button>
-        </div>
-      </section>
-
-      <section class="card hidden" id="preview-${p}">
-        <h2>3. Pratinjau Hasil — ${cfg.label}</h2>
-        <div class="stats">
-          <div class="pill">Total baris: <b id="stTotal-${p}">0</b></div>
-          <div class="pill">Setelah difilter: <b id="stFiltered-${p}">0</b></div>
-          <div class="pill danger" id="stDeleted-${p}" style="display:none">Dihapus: <b>0</b></div>
-          <div class="pill">Kolom: <b id="stCols-${p}">0</b></div>
-          <div class="pill ok" id="stDetail-${p}" style="display:none">Detail match: <b>0</b></div>
-          <div class="pill ok" id="stGT-${p}" style="display:none">Goods Transaction match: <b>0</b></div>
-        </div>
-        <div class="tablebox">
-          <table id="tbl-${p}">
-            <thead><tr id="thead-${p}"></tr></thead>
-            <tbody id="tbody-${p}"></tbody>
-          </table>
-          <div class="empty hidden" id="emptyMsg-${p}">Tidak ada baris yang cocok dengan filter.</div>
-        </div>
-        <p class="sub" id="limitNote-${p}" style="margin-top:10px"></p>
-      </section>
-    `;
-    $("tabPanels").appendChild(panel);
-  }
-
-  bind(){
-    const fileInput = this.el("file");
-    fileInput.addEventListener("change", e => {
-      const f = e.target.files[0];
-      if (f) this.loadFile(f);
-    });
-    const drop = this.el("drop");
-    ["dragenter","dragover"].forEach(ev =>
-      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); })
-    );
-    ["dragleave","drop"].forEach(ev =>
-      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); })
-    );
-    drop.addEventListener("drop", e => {
-      const f = e.dataTransfer.files[0];
-      if (f) this.loadFile(f);
-    });
-    this.el("sheetSelect").addEventListener("change", e => this.buildFromSheet(e.target.value));
-    ["fSearch","fKode","fSite","fTipe","fStatus","fLokasi","fPart","fRef","fDari","fSampai"]
-      .forEach(key => {
-        const el = this.el(key);
-        el.addEventListener("input",  () => this.applyFilter());
-        el.addEventListener("change", () => this.applyFilter());
-      });
-    this.el("btnReset").addEventListener("click", () => this.resetFilter());
-    this.el("btnDelFiltered").addEventListener("click", () => this.deleteFilteredRows());
-    this.el("btnClear").addEventListener("click", () => this.clearAllData());
-    this.el("btnExport").addEventListener("click", () => this.exportExcel());
-    this.el("chkRenumber").addEventListener("change", () => this.renderPreview());
-  }
-
-  loadFile(file){
-    this.state.baseName = file.name.replace(/\.(xlsx|xls|xlsm|csv)$/i,"");
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try{
-        const wb = XLSX.read(new Uint8Array(ev.target.result), { type:"array", cellDates:true });
-        this.state.wb = wb;
-        const sel = this.el("sheetSelect");
-        sel.innerHTML = "";
-        wb.SheetNames.forEach(n => {
-          const o = document.createElement("option");
-          o.value = n; o.textContent = n;
-          sel.appendChild(o);
-        });
-        let preferred = null;
-        for (const re of this.cfg.sheetPreference){
-          preferred = wb.SheetNames.find(n => re.test(n));
-          if (preferred) break;
-        }
-        sel.value = preferred || wb.SheetNames[0];
-        this.el("sheetBox").classList.remove("hidden");
-        this.buildFromSheet(sel.value);
-        toast(`[${this.cfg.label}] Berhasil membaca: ${file.name}`);
-      }catch(err){
-        console.error(err);
-        toast("Gagal membaca file: " + err.message);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  detectDetailSheet(excludeSheetName){
-    const candidates = this.state.wb.SheetNames.filter(n =>
-      n !== excludeSheetName && /detail/i.test(n)
-    );
-    if (!candidates.length) return null;
-    for (const sheetName of candidates){
-      const ws = this.state.wb.Sheets[sheetName];
-      if (!ws) continue;
-      const aoa = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, blankrows:true });
-      let headerIdx = -1;
-      for (let i = 0; i < Math.min(aoa.length, 50); i++){
-        const H = (aoa[i] || []).map(norm);
-        const hasPart = H.some(h => COL_ALIASES.part.some(a => h === a || (h && h.includes(a))));
-        const hasDesc = H.some(h => COL_ALIASES.deskripsi.some(a => h === a || (h && h.includes(a))));
-        if (hasPart || hasDesc){ headerIdx = i; break; }
-      }
-      if (headerIdx === -1) continue;
-      const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
-      const idx = {
-        part:    findColumnIndex(headers, COL_ALIASES.part),
-        desc:    findColumnIndex(headers, COL_ALIASES.deskripsi),
-        um:      findColumnIndex(headers, COL_ALIASES.um),
-        doc:     findColumnIndex(headers, COL_ALIASES.nomorDokumen),
-        ref:     findColumnIndex(headers, COL_ALIASES.nomorReferensi),
-        baris:   findColumnIndex(headers, COL_ALIASES.baris),
-        no:      findColumnIndex(headers, COL_ALIASES.no)
-      };
-      if (idx.part === -1 && idx.desc === -1) continue;
-      const map = new Map();
-      const records = [];
-      for (let r = headerIdx + 1; r < aoa.length; r++){
-        const raw = aoa[r] || [];
-        if (raw.every(c => c === null || c === undefined || String(c).trim() === "")) continue;
-        const rec = {
-          raw: raw,
-          part:      idx.part   >= 0 ? String(raw[idx.part]   ?? "").trim() : "",
-          deskripsi: idx.desc   >= 0 ? String(raw[idx.desc]   ?? "").trim() : "",
-          um:        idx.um     >= 0 ? String(raw[idx.um]     ?? "").trim() : "",
-          doc:       idx.doc    >= 0 ? String(raw[idx.doc]    ?? "").trim() : "",
-          ref:       idx.ref    >= 0 ? String(raw[idx.ref]    ?? "").trim() : "",
-          baris:     idx.baris  >= 0 ? String(raw[idx.baris]  ?? "").trim() : "",
-          no:        idx.no     >= 0 ? String(raw[idx.no]     ?? "").trim() : ""
-        };
-        if (!rec.part && !rec.deskripsi) continue;
-        records.push(rec);
-        if (rec.doc && rec.baris)   map.set(`doc:${rec.doc}|baris:${rec.baris}`, rec);
-        if (rec.ref && rec.baris)   map.set(`ref:${rec.ref}|baris:${rec.baris}`, rec);
-        if (rec.part && rec.baris)  map.set(`part:${rec.part}|baris:${rec.baris}`, rec);
-        if (rec.doc)                map.set(`doc:${rec.doc}`, rec);
-        if (rec.ref)                map.set(`ref:${rec.ref}`, rec);
-        if (rec.no)                 map.set(`no:${rec.no}`, rec);
-        if (rec.part)               map.set(`part:${rec.part}`, rec);
-      }
-      if (!records.length) continue;
-      return {
-        sheetName, map, records, headerIdx, columns: headers, columnIndexes: idx,
-        matchedCols: {
-          part: idx.part >= 0 ? headers[idx.part] : null,
-          deskripsi: idx.desc >= 0 ? headers[idx.desc] : null,
-          um: idx.um >= 0 ? headers[idx.um] : null
-        }
-      };
-    }
-    return null;
-  }
-
-  lookupDetail(detail, row){
-    const doc   = String(row["Nomor Dokumen"] ?? "").trim();
-    const ref   = String(row["Nomor Referensi"] ?? "").trim();
-    const baris = String(row["Baris"] ?? "").trim();
-    const part  = String(row["Part"] ?? "").trim();
-    const no    = String(row["No"] ?? "").trim();
-    if (doc && baris)   { const m = detail.map.get(`doc:${doc}|baris:${baris}`); if (m) return m; }
-    if (ref && baris)   { const m = detail.map.get(`ref:${ref}|baris:${baris}`); if (m) return m; }
-    if (part && baris)  { const m = detail.map.get(`part:${part}|baris:${baris}`); if (m) return m; }
-    if (doc)            { const m = detail.map.get(`doc:${doc}`); if (m) return m; }
-    if (ref)            { const m = detail.map.get(`ref:${ref}`); if (m) return m; }
-    if (no)             { const m = detail.map.get(`no:${no}`);  if (m) return m; }
-    if (part)           { const m = detail.map.get(`part:${part}`); if (m) return m; }
-    return null;
-  }
-
-  detectGoodsTransactionSheet(excludeSheetName){
-    const patterns = [/goods\s*transaction/i, /goods/i, /transaksi\s*barang/i];
-    let candidates = [];
-    for (const re of patterns){
-      candidates = this.state.wb.SheetNames.filter(n => n !== excludeSheetName && re.test(n));
-      if (candidates.length) break;
-    }
-    if (!candidates.length) return null;
-    for (const sheetName of candidates){
-      const ws = this.state.wb.Sheets[sheetName];
-      if (!ws) continue;
-      const aoa = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, blankrows:true });
-      let headerIdx = -1;
-      for (let i = 0; i < Math.min(aoa.length, 60); i++){
-        const H = (aoa[i] || []).map(norm);
-        const hasRef = H.some(h => GT_ALIASES.ref.some(a => h === a));
-        const hasLok = H.some(h => GT_ALIASES.lokasi.some(a => h === a));
-        const hasSta = H.some(h => GT_ALIASES.status.some(a => h === a));
-        if (hasRef || hasLok || hasSta){ headerIdx = i; break; }
-      }
-      if (headerIdx === -1) continue;
-      const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
-      const idx = {
-        ref:    findColumnIndex(headers, GT_ALIASES.ref),
-        lokasi: findColumnIndex(headers, GT_ALIASES.lokasi),
-        status: findColumnIndex(headers, GT_ALIASES.status),
-        diupdateTanggal: findColumnIndex(headers, GT_ALIASES.diupdateTanggal),
-        doc:    findColumnIndex(headers, COL_ALIASES.nomorDokumen),
-        baris:  findColumnIndex(headers, COL_ALIASES.baris),
-        part:   findColumnIndex(headers, COL_ALIASES.part)
-      };
-      if (idx.ref === -1 && idx.lokasi === -1 && idx.status === -1) continue;
-      const map = new Map();
-      const records = [];
-      for (let r = headerIdx + 1; r < aoa.length; r++){
-        const raw = aoa[r] || [];
-        if (raw.every(c => c === null || c === undefined || String(c).trim() === "")) continue;
-        const rec = {
-          raw,
-          ref:    idx.ref    >= 0 ? String(raw[idx.ref]    ?? "").trim() : "",
-          lokasi: idx.lokasi >= 0 ? String(raw[idx.lokasi] ?? "").trim() : "",
-          status: idx.status >= 0 ? String(raw[idx.status] ?? "").trim() : "",
-          diupdateTanggal: idx.diupdateTanggal >= 0 ? raw[idx.diupdateTanggal] : "",
-          doc:    idx.doc    >= 0 ? String(raw[idx.doc]    ?? "").trim() : "",
-          baris:  idx.baris  >= 0 ? String(raw[idx.baris]  ?? "").trim() : "",
-          part:   idx.part   >= 0 ? String(raw[idx.part]   ?? "").trim() : ""
-        };
-        if (!rec.ref && !rec.lokasi && !rec.status) continue;
-        records.push(rec);
-        if (rec.doc && rec.baris)  map.set(`doc:${rec.doc}|baris:${rec.baris}`, rec);
-        if (rec.part && rec.baris) map.set(`part:${rec.part}|baris:${rec.baris}`, rec);
-        if (rec.doc)               map.set(`doc:${rec.doc}`, rec);
-        if (rec.part)              map.set(`part:${rec.part}`, rec);
-      }
-      if (!records.length) continue;
-      return {
-        sheetName, map, records, headerIdx, columns: headers, columnIndexes: idx,
-        matchedCols: {
-          ref:    idx.ref    >= 0 ? headers[idx.ref]    : null,
-          lokasi: idx.lokasi >= 0 ? headers[idx.lokasi] : null,
-          status: idx.status >= 0 ? headers[idx.status] : null,
-          diupdateTanggal: idx.diupdateTanggal >= 0 ? headers[idx.diupdateTanggal] : null
-        }
-      };
-    }
-    return null;
-  }
-
-  lookupGoodsTransaction(gt, row){
-    const doc   = String(row["Nomor Dokumen"] ?? "").trim();
-    const baris = String(row["Baris"] ?? "").trim();
-    const part  = String(row["Part"] ?? "").trim();
-    if (doc && baris)  { const m = gt.map.get(`doc:${doc}|baris:${baris}`);   if (m) return m; }
-    if (part && baris) { const m = gt.map.get(`part:${part}|baris:${baris}`); if (m) return m; }
-    if (doc)           { const m = gt.map.get(`doc:${doc}`);                  if (m) return m; }
-    if (part)          { const m = gt.map.get(`part:${part}`);                if (m) return m; }
-    return null;
-  }
-
-  autoFillChangedFromCreated(rows){
-    let filledOleh = 0, filledPada = 0;
-    rows.forEach(row => {
-      const dibuatOleh = row["Dibuat Oleh"];
-      const curOleh    = row["Diubah Oleh"];
-      if ((curOleh === "" || curOleh === null || curOleh === undefined) &&
-          dibuatOleh !== "" && dibuatOleh !== null && dibuatOleh !== undefined){
-        row["Diubah Oleh"] = dibuatOleh; filledOleh++;
-      }
-      const dibuatPada = row["Dibuat Pada"];
-      const curPada    = row["Diubah Pada"];
-      if ((curPada === "" || curPada === null || curPada === undefined) &&
-          dibuatPada !== "" && dibuatPada !== null && dibuatPada !== undefined){
-        row["Diubah Pada"] = dibuatPada; filledPada++;
-      }
-    });
-    return { filledOleh, filledPada };
-  }
-
-  buildFromSheet(sheetName){
-    const ws = this.state.wb.Sheets[sheetName];
-    if (!ws) return;
-    this.state.sheetName = sheetName;
-    const aoa = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, blankrows:true });
-    let headerIdx = -1;
-    for (let i = 0; i < Math.min(aoa.length, 100); i++){
-      const r = (aoa[i] || []).map(norm);
-      if (r.includes("kode perusahaan") && r.includes("nomor dokumen")){ headerIdx = i; break; }
-    }
-    if (headerIdx === -1){
-      let best = -1, bestScore = 0;
-      for (let i = 0; i < Math.min(aoa.length, 100); i++){
-        const r = (aoa[i] || []).map(norm);
-        const score = this.cfg.columns.filter(c => r.includes(norm(c))).length;
-        if (score > bestScore){ bestScore = score; best = i; }
-      }
-      if (bestScore >= 5) headerIdx = best;
-    }
-    if (headerIdx === -1){
-      toast("Header tidak dikenali. Pastikan file memakai template yang sama.");
-      return;
-    }
-    const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
-    const detail = this.detectDetailSheet(sheetName);
-    const excludedSet = new Set((this.cfg.excludedDetailColumns || []).map(norm));
-    const extraDetailCols = [];
-    if (detail){
-      detail.columns.forEach(c => {
-        if (!c) return;
-        const key = norm(c);
-        if (excludedSet.has(key)) return;
-        if (this.cfg.columns.some(m => norm(m) === key)) return;
-        if (extraDetailCols.some(x => norm(x) === key)) return;
-        extraDetailCols.push(c);
-      });
-    }
-    this.state.columns = [...this.cfg.columns, ...extraDetailCols];
-    const colIdx = this.cfg.columns.map(col => findMainColumnIndex(headers, col));
-    const rows = [];
-    for (let r = headerIdx + 1; r < aoa.length; r++){
-      const raw = aoa[r] || [];
-      const isEmpty = raw.every(c => c === null || c === undefined || String(c).trim() === "");
-      if (isEmpty) continue;
-      const obj = {};
-      this.cfg.columns.forEach((col, i) => {
-        const src = colIdx[i];
-        let v = src >= 0 ? raw[src] : null;
-        if (DATE_COLS.has(col)){ obj[col] = formatDateForTab(v, this.cfg.dateFormat); return; }
-        if (v === null || v === undefined){ obj[col] = ""; return; }
-        if (v instanceof Date){ obj[col] = formatDateForTab(v, this.cfg.dateFormat); return; }
-        if (NUMERIC_COLS.has(col) && col !== "No"){
-          if (typeof v === "number"){ obj[col] = v; return; }
-          const s = String(v).trim();
-          if (s !== "" && !isNaN(Number(s))){ obj[col] = Number(s); return; }
-          obj[col] = s; return;
-        }
-        if (TEXT_COLS.has(col)){ obj[col] = String(v).trim(); return; }
-        obj[col] = typeof v === "number" ? v : String(v).trim();
-      });
-      extraDetailCols.forEach(col => { obj[col] = ""; });
-      if (!obj["Nomor Dokumen"] && !obj["Part"] && !obj["Nomor Referensi"]) continue;
-      rows.push(obj);
-    }
-
-    if (detail){
-      const dov = this.cfg.detailOverrides || {};
-      let matched = 0, filledPart = 0, filledDesc = 0, filledExtra = 0, filledSatuan = 0;
-      const umIdx = detail.columnIndexes.um;
-      rows.forEach(row => {
-        const rec = this.lookupDetail(detail, row);
-        if (!rec) return;
-        matched++;
-        if (!row["Part"] && rec.part){ row["Part"] = rec.part; filledPart++; }
-        if (!row["Deskripsi"] && rec.deskripsi){ row["Deskripsi"] = rec.deskripsi; filledDesc++; }
-        if (dov.satuanFromUM && umIdx >= 0){
-          const umVal = rec.raw[umIdx];
-          if (umVal !== null && umVal !== undefined && String(umVal).trim() !== ""){
-            row["Satuan"] = String(umVal).trim();
-            filledSatuan++;
-          }
-        }
-        detail.columns.forEach((colName, ci) => {
-          if (!colName) return;
-          const v = rec.raw[ci];
-          if (v === null || v === undefined || String(v).trim() === "") return;
-          const target = this.state.columns.find(c => norm(c) === norm(colName));
-          if (!target) return;
-          const cur = row[target];
-          if (cur === "" || cur === undefined || cur === null){
-            row[target] = typeof v === "number" ? v : String(v).trim();
-            if (extraDetailCols.some(x => norm(x) === norm(target))) filledExtra++;
-          }
-        });
-      });
-      this.state.detailInfo = {
-        sheetName: detail.sheetName, count: detail.records.length,
-        matched, filledPart, filledDesc, filledExtra, filledSatuan,
-        partCol: detail.matchedCols.part,
-        descCol: detail.matchedCols.deskripsi,
-        umCol: detail.matchedCols.um,
-        extraCols: extraDetailCols
-      };
-    } else {
-      this.state.detailInfo = null;
-    }
-
-    const gt = this.detectGoodsTransactionSheet(sheetName);
-    if (gt){
-      const ov = this.cfg.gtOverrides || {};
-      let matched = 0, filledRef = 0, filledLokasi = 0;
-      let filledStatus = 0, filledDibuat = 0, filledKonfirmasi = 0;
-      rows.forEach(row => {
-        const rec = this.lookupGoodsTransaction(gt, row);
-        if (!rec) return;
-        matched++;
-        if (!row["Nomor Referensi"] && rec.ref){ row["Nomor Referensi"] = rec.ref; filledRef++; }
-        if (!row["Lokasi Tujuan"] && rec.lokasi){ row["Lokasi Tujuan"] = rec.lokasi; filledLokasi++; }
-        if (ov.statusFromGT && rec.status){ row["Status"] = rec.status; filledStatus++; }
-        if (ov.dateFromGT){
-          const tgl = formatDateOnlyValue(rec.diupdateTanggal, this.cfg.dateFormat);
-          if (tgl){
-            if (this.cfg.columns.includes("Dibuat Pada")){
-              row["Dibuat Pada"] = tgl; filledDibuat++;
-            }
-            if (this.cfg.columns.includes("Dikonfirmasi Pada")){
-              row["Dikonfirmasi Pada"] = tgl; filledKonfirmasi++;
-            }
-          }
-        }
-      });
-      this.state.gtInfo = {
-        sheetName: gt.sheetName, count: gt.records.length,
-        matched, filledRef, filledLokasi,
-        filledStatus, filledDibuat, filledKonfirmasi,
-        refCol: gt.matchedCols.ref,
-        lokasiCol: gt.matchedCols.lokasi,
-        statusCol: gt.matchedCols.status,
-        tanggalCol: gt.matchedCols.diupdateTanggal
-      };
-    } else {
-      this.state.gtInfo = null;
-    }
-
-    this.state.autoFillInfo = this.autoFillChangedFromCreated(rows);
-    this.state.rows = rows;
-    this.renderDetailInfo();
-    this.buildFilterOptions();
-    this.applyFilter();
-    this.el("preview").classList.remove("hidden");
-  }
-
-  renderDetailInfo(){
-    const box = this.el("detailInfo");
-    const info = this.state.detailInfo;
-    const gt   = this.state.gtInfo;
-    const af   = this.state.autoFillInfo;
-    const ov   = this.cfg.gtOverrides || {};
-    const dov  = this.cfg.detailOverrides || {};
-    box.innerHTML = "";
-    let html = "";
-
-    if (!info){
-      html += `
-        <div class="info warn">
-          <span class="ico">⚠️</span>
-          <div><b>Sheet Detail tidak ditemukan.</b><br>Kolom <b>Part</b> dan <b>Deskripsi</b> hanya diambil dari sheet utama.</div>
-        </div>`;
-    } else {
-      const extraHtml = info.extraCols && info.extraCols.length
-        ? `<br>Kolom tambahan dari Detail: <code>${info.extraCols.map(escapeHtml).join("</code>, <code>")}</code>.`
-        : "";
-      const excluded = (this.cfg.excludedDetailColumns || []);
-      const excludedHtml = excluded.length
-        ? `<br><span style="color:#b45309"><b>Dikecualikan:</b> <code>${excluded.map(escapeHtml).join("</code>, <code>")}</code>.</span>`
-        : "";
-      const satuanHtml = (dov.satuanFromUM && info.filledSatuan !== undefined)
-        ? `<br>Kolom <b>Satuan</b> diambil dari <code>${escapeHtml(info.umCol ?? "-")}</code> — <b>${info.filledSatuan.toLocaleString("id-ID")}</b> baris.`
-        : "";
-      html += `
-        <div class="info ok">
-          <span class="ico">✅</span>
-          <div>
-            <b>Sheet Detail terdeteksi: <code>${escapeHtml(info.sheetName)}</code></b>
-            — ${info.count.toLocaleString("id-ID")} baris referensi.
-            ${satuanHtml}${extraHtml}${excludedHtml}
-          </div>
-        </div>`;
-    }
-
-    if (!gt){
-      html += `
-        <div class="info warn">
-          <span class="ico">⚠️</span>
-          <div><b>Sheet Goods Transaction tidak ditemukan.</b></div>
-        </div>`;
-    } else {
-      const gtExtra = [];
-      if (ov.statusFromGT && gt.statusCol){
-        gtExtra.push(`Kolom <b>Status</b> dari <code>${escapeHtml(gt.statusCol)}</code>.`);
-      }
-      if (ov.dateFromGT && gt.tanggalCol){
-        gtExtra.push(`Kolom <b>Dibuat Pada</b> &amp; <b>Dikonfirmasi Pada</b> dari <code>${escapeHtml(gt.tanggalCol)}</code>.`);
-      }
-      html += `
-        <div class="info ok">
-          <span class="ico">✅</span>
-          <div>
-            <b>Sheet Goods Transaction terdeteksi: <code>${escapeHtml(gt.sheetName)}</code></b>
-            — ${gt.count.toLocaleString("id-ID")} baris referensi.
-            ${gtExtra.length ? "<br>" + gtExtra.join("<br>") : ""}
-          </div>
-        </div>`;
-    }
-
-    if (af && (af.filledOleh || af.filledPada)){
-      html += `
-        <div class="info ok" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
-          <span class="ico">🔁</span>
-          <div><b>Auto-fill kolom perubahan</b> aktif.</div>
-        </div>`;
-    }
-    box.innerHTML = html;
-
-    const pill = this.el("stDetail");
-    if (info){ pill.style.display = ""; pill.querySelector("b").textContent = info.matched.toLocaleString("id-ID"); }
-    else { pill.style.display = "none"; }
-    const pillGT = this.el("stGT");
-    if (gt){ pillGT.style.display = ""; pillGT.querySelector("b").textContent = gt.matched.toLocaleString("id-ID"); }
-    else { pillGT.style.display = "none"; }
-  }
-
-  buildFilterOptions(){
-    const map = {
-      fKode:"Kode Perusahaan", fSite:"Site", fTipe:"Tipe Transaksi",
-      fStatus:"Status", fLokasi:"Lokasi Tujuan", fPart:"Part"
-    };
-    Object.entries(map).forEach(([key, col]) => {
-      const sel = this.el(key);
-      const current = sel.value;
-      const vals = [...new Set(
-        this.state.rows.map(r => String(r[col] ?? "").trim()).filter(Boolean)
-      )].sort();
-      sel.innerHTML = `<option value="">— Semua —</option>` +
-        vals.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
-      if (vals.includes(current)) sel.value = current;
-    });
-  }
-
-  applyFilter(){
-    const q      = norm(this.el("fSearch").value);
-    const kode   = this.el("fKode").value;
-    const site   = this.el("fSite").value;
-    const tipe   = this.el("fTipe").value;
-    const status = this.el("fStatus").value;
-    const lokasi = this.el("fLokasi").value;
-    const part   = this.el("fPart").value;
-    const ref    = norm(this.el("fRef").value);
-    const dari   = this.el("fDari").value;
-    const sampai = this.el("fSampai").value;
-    this.state.filtered = this.state.rows.filter(r => {
-      if (kode   && String(r["Kode Perusahaan"]) !== kode)   return false;
-      if (site   && String(r["Site"])            !== site)   return false;
-      if (tipe   && String(r["Tipe Transaksi"])  !== tipe)   return false;
-      if (status && String(r["Status"])          !== status) return false;
-      if (lokasi && String(r["Lokasi Tujuan"])   !== lokasi) return false;
-      if (part   && String(r["Part"])            !== part)   return false;
-      if (ref    && !norm(r["Nomor Referensi"]).includes(ref)) return false;
-      if (dari || sampai){
-        const d = toDateOnly(r["Dibuat Pada"]);
-        if (!d) return false;
-        if (dari   && d < dari)   return false;
-        if (sampai && d > sampai) return false;
-      }
-      if (q){
-        const hay = this.state.columns.map(c => norm(r[c])).join(" | ");
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-    this.renderPreview();
-  }
-
-  resetFilter(){
-    ["fSearch","fRef","fDari","fSampai"].forEach(k => this.el(k).value = "");
-    ["fKode","fSite","fTipe","fStatus","fLokasi","fPart"].forEach(k => this.el(k).value = "");
-    this.applyFilter();
-  }
-
-  async deleteFilteredRows(){
-    if (!this.state.rows.length){ toast("Belum ada data yang dimuat."); return; }
-    if (!this.state.filtered.length){ toast("Tidak ada baris terfilter untuk dihapus."); return; }
-    const jumlah = this.state.filtered.length;
-    const total  = this.state.rows.length;
-    const pesan  = (jumlah === total)
-      ? `Semua ${jumlah.toLocaleString("id-ID")} baris akan dihapus dan data akan menjadi kosong. Lanjutkan?`
-      : `Hapus ${jumlah.toLocaleString("id-ID")} baris yang sedang tampil dari total ${total.toLocaleString("id-ID")} baris?`;
-    const ok = await confirmDialog("Hapus Baris Terfilter", pesan, "Ya, Hapus");
-    if (!ok) return;
-    const hapus = new Set(this.state.filtered);
-    this.state.rows = this.state.rows.filter(r => !hapus.has(r));
-    this.state.deletedCount = (this.state.deletedCount || 0) + jumlah;
-    this.buildFilterOptions();
-    this.applyFilter();
-    const pillDel = this.el("stDeleted");
-    if (pillDel){ pillDel.style.display = ""; pillDel.querySelector("b").textContent = this.state.deletedCount.toLocaleString("id-ID"); }
-    toast(`[${this.cfg.label}] ${jumlah.toLocaleString("id-ID")} baris dihapus. Sisa ${this.state.rows.length.toLocaleString("id-ID")} baris.`);
-  }
-
-  async clearAllData(){
-    if (!this.state.wb && !this.state.rows.length){ toast("Belum ada data untuk dihapus."); return; }
-    const ok = await confirmDialog(
-      "Hapus Semua Data",
-      "Semua data yang sudah diunggah, hasil filter, dan pengaturan saat ini akan dihapus. Tindakan ini tidak dapat dibatalkan. Lanjutkan?",
-      "Ya, Hapus Semua"
-    );
-    if (!ok) return;
-    this.state.wb = null; this.state.rows = []; this.state.filtered = [];
-    this.state.detailInfo = null; this.state.gtInfo = null; this.state.autoFillInfo = null;
-    this.state.sheetName = ""; this.state.baseName = "extract"; this.state.deletedCount = 0;
-    this.el("file").value = "";
-    this.el("sheetSelect").innerHTML = "";
-    this.el("sheetBox").classList.add("hidden");
-    const box = this.el("detailInfo"); box.innerHTML = ""; box.classList.add("hidden");
-    this.resetFilter();
-    this.el("filter").classList.add("hidden");
-    this.el("preview").classList.add("hidden");
-    this.el("thead").innerHTML = "";
-    this.el("tbody").innerHTML = "";
-    this.el("emptyMsg").classList.add("hidden");
-    this.el("limitNote").textContent = "";
-    this.el("stTotal").textContent    = "0";
-    this.el("stFiltered").textContent = "0";
-    this.el("stCols").textContent     = "0";
-    this.el("stDetail").style.display = "none";
-    this.el("stGT").style.display     = "none";
-    const pillDel = this.el("stDeleted");
-    if (pillDel) pillDel.style.display = "none";
-    toast(`[${this.cfg.label}] Semua data berhasil dihapus.`);
-  }
-
-  renderPreview(){
-    const thead = this.el("thead");
-    const tbody = this.el("tbody");
-    const cols = this.state.columns;
-    thead.innerHTML = cols.map(c =>
-      `<th class="${NUMERIC_COLS.has(c) ? "num" : ""}">${escapeHtml(c)}</th>`
-    ).join("");
-    const renumber = this.el("chkRenumber").checked;
-    const rows = this.state.filtered;
-    const shown = rows.slice(0, MAX_PREVIEW_ROWS);
-    tbody.innerHTML = shown.map((r, i) => {
-      const cells = cols.map(col => {
-        let v;
-        if (col === "No") v = renumber ? (i + 1) : (r["No"] ?? "");
-        else v = r[col];
-        const isNum = NUMERIC_COLS.has(col);
-        const display = (v === "" || v === null || v === undefined) ? "" : v;
-        return `<td class="${isNum ? "num" : ""}">${escapeHtml(display)}</td>`;
-      }).join("");
-      return `<tr>${cells}</tr>`;
-    }).join("");
-    this.el("emptyMsg").classList.toggle("hidden", rows.length > 0);
-    this.el("limitNote").textContent = rows.length > MAX_PREVIEW_ROWS
-      ? `Pratinjau dibatasi ${MAX_PREVIEW_ROWS} baris pertama. Semua ${rows.length} baris tetap akan diekspor.`
-      : "";
-    this.el("stTotal").textContent    = this.state.rows.length.toLocaleString("id-ID");
-    this.el("stFiltered").textContent = rows.length.toLocaleString("id-ID");
-    this.el("stCols").textContent     = cols.length;
-  }
-
-  exportExcel(){
-    if (!this.state.rows.length){ toast("Belum ada data untuk diekspor."); return; }
-    if (!this.state.filtered.length){ toast("Tidak ada baris yang cocok untuk diekspor."); return; }
-    const cols      = this.state.columns;
-    const renumber  = this.el("chkRenumber").checked;
-    const withBlank = this.el("chkBlank").checked;
-    const aoa = [];
-    if (withBlank) aoa.push([], [], []);
-    aoa.push(cols.slice());
-    this.state.filtered.forEach((r, i) => {
-      const row = cols.map(col => {
-        if (col === "No"){
-          if (renumber) return i + 1;
-          const orig = r["No"];
-          if (orig === null || orig === undefined || orig === "") return null;
-          if (typeof orig === "number") return orig;
-          const n = Number(orig);
-          return isNaN(n) ? String(orig) : n;
-        }
-        const v = r[col];
-        if (v === null || v === undefined || v === "") return null;
-        if (NUMERIC_COLS.has(col)){
-          if (typeof v === "number") return v;
-          const s = String(v).trim();
-          if (s !== "" && !isNaN(Number(s))) return Number(s);
-          return s;
-        }
-        if (TEXT_COLS.has(col)) return String(v);
-        if (DATE_COLS.has(col)) return String(v);
-        return v;
-      });
-      aoa.push(row);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = cols.map(c => ({ wch: Math.min(45, Math.max(11, c.length + 4)) }));
-    if (withBlank){ ws["!freeze"] = { xSplit:0, ySplit:4 }; }
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, this.cfg.label);
-    const fname = `${this.state.baseName}_${this.cfg.exportTag}_${todayStamp()}.xlsx`;
-    XLSX.writeFile(wb, fname);
-    toast(`[${this.cfg.label}] Berhasil diunduh: ${fname}`);
-  }
-}
-
-/* =========================================================================
-   4) TAP 3 — PANEL CETAK LABEL (daftar tautan)
-   ========================================================================= */
-function mountSettingsPanel(tabId, cfg){
-  const panel = document.createElement("div");
-  panel.className = "tab-panel hidden";
-  panel.id = `panel-${tabId}`;
-
-  const cardsHtml = (cfg.links || []).map(link => `
-    <a class="link-card"
-       href="${escapeAttr(link.url)}"
-       target="_blank"
-       rel="noopener noreferrer"
-       title="Buka di tab baru">
-      <div class="link-card-icon">${escapeHtml(link.icon || "🔗")}</div>
-      <div class="link-card-body">
-        <div class="link-card-title">${escapeHtml(link.title)}</div>
-        <div class="link-card-desc">${escapeHtml(link.desc || "")}</div>
-        <div class="link-card-url">${escapeHtml(link.url)}</div>
-      </div>
-      <div class="link-card-arrow">↗</div>
-    </a>
-  `).join("");
-
-  panel.innerHTML = `
-    <section class="card">
-      <h2>Cetak Label — Tautan Cepat</h2>
-      <p class="sub">
-        Akses cepat ke aplikasi pendukung pencetakan label.
-        Semua tautan akan dibuka di <b>tab baru</b>.
-      </p>
-      <div class="link-grid">${cardsHtml}</div>
-
-      <div class="settings-note">
-        <span class="ico">ℹ️</span>
-        <div>
-          Halaman ini tidak memproses data Excel. Gunakan tab <b>TAP 1</b> atau <b>TAP 2</b>
-          untuk mengunggah, memfilter, dan mengekspor file penerimaan transaksi.
-        </div>
-      </div>
-    </section>
-  `;
-
-  $("tabPanels").appendChild(panel);
-}
-
-/* =========================================================================
-   5) INISIALISASI
-   ========================================================================= */
-const CONTROLLERS = {};
-
-(function init(){
-  const tabsBar = $("tabsBar");
-
-  Object.entries(TAB_CONFIGS).forEach(([id, cfg]) => {
-    const t = document.createElement("div");
-    t.className = "tab" + (id === "tap1" ? " active" : "");
-    t.dataset.tab = id;
-    t.innerHTML = `${cfg.label}<span class="badge">${cfg.badge}</span>`;
-    t.addEventListener("click", () => switchTab(id));
-    tabsBar.appendChild(t);
-  });
-
-  Object.entries(TAB_CONFIGS).forEach(([id, cfg]) => {
-    if (cfg.type === "settings"){
-      mountSettingsPanel(id, cfg);
-    } else {
-      CONTROLLERS[id] = new TabController(id, cfg);
-    }
-  });
-})();
-
-function switchTab(tabId){
-  document.querySelectorAll(".tab").forEach(t =>
-    t.classList.toggle("active", t.dataset.tab === tabId)
-  );
-  document.querySelectorAll(".tab-panel").forEach(p =>
-    p.classList.toggle("hidden", p.id !== `panel-${tabId}`)
-  );
-}
+/* ===== 11. INIT ===== */
+window.addEventListener('load', () => { updateTimerDisplay(); renderLogos(); applyStaticVisibility(); applyAspectRatio('original'); selectSource('video'); setTimeout(restartTicker, 120); setTimeout(restartTicker, 600); });
 </script>
 </body>
 </html>
