@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Studio — Ticker Bisa Atur Kecepatan</title>
+<title>Live Studio — Fullscreen Ngikutin Rasio</title>
 <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{--bg-app:#141414;--bg-panel:#202020;--bg-head:#2a2a2a;--bg-input:#131313;--tx:#cfcfcf;--tx-dim:#8a8a8a;--accent:#3d7eff;--danger:#d9534f;--success:#4caf50;--warn:#e0a13d}
@@ -33,12 +33,13 @@
     .btn:hover{background:#3d3d3d}.btn.primary{background:#2f66c4;border-color:#3d7eff;color:#fff}.btn.success{background:#2e7d32;border-color:#43a047;color:#fff}.btn.danger{background:#8c3330;border-color:#c0392b;color:#fff}.btn.block{width:100%}
     .btn.recording{background:#c0392b!important;border-color:#ff5b5b!important;color:#fff!important;animation:pl 1.2s infinite}
     .btn.active{background:#2e7d32!important;border-color:#4caf50!important;color:#fff!important}
-    /* Tombol preset kecepatan */
     .speed-presets{display:flex;gap:4px}.speed-presets button{flex:1;padding:7px 2px;font-size:11px;background:#2a2a2a;border:1px solid #3a3a3a;color:#aaa;border-radius:3px;cursor:pointer}
     .speed-presets button.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
     .speed-row{display:flex;align-items:center;gap:8px;background:#191919;border:1px solid #2a2a2a;border-radius:3px;padding:7px 8px}
     .speed-row b{color:#fff;font-size:13px;min-width:42px;text-align:center}
     .speed-row span{font-size:11px;color:#888}
+    .rec-ratio-box{background:#191919;border:1px solid #2a2a2a;border-left:3px solid var(--accent);border-radius:3px;padding:7px 8px;font-size:11px;line-height:1.5;color:#aaa}
+    .rec-ratio-box b{color:#fff}
     .input{width:100%;background:var(--bg-input);border:1px solid #3a3a3a;color:var(--tx);padding:7px 9px;border-radius:3px;font-size:12.5px;outline:none}
     .input:focus{border-color:var(--accent)}
     .prop-label{font-size:10.5px;color:var(--tx-dim);text-transform:uppercase;letter-spacing:.5px}
@@ -51,8 +52,19 @@
     .rec-badge{font-size:10px;font-weight:800;letter-spacing:1px;color:#fff;background:#c0392b;padding:3px 9px;border-radius:3px;display:none;animation:pl 1s infinite}.rec-badge.show{display:inline-block}
     .preview-canvas{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#0a0a0a;padding:14px;container-type:size}
     .video-player-container{position:relative;width:100%;max-width:100%;aspect-ratio:var(--ar-num,1.7778);width:min(100%,calc(100cqh * var(--ar-num,1.7778)));background:#000;overflow:hidden;border-radius:2px;box-shadow:0 0 0 1px #262626,0 12px 40px rgba(0,0,0,.75)}
-    .video-player-container:fullscreen{position:fixed;inset:0;width:min(100vw,calc(100vh * var(--ar-num,1.7778)));height:min(100vh,calc(100vw / var(--ar-num,1.7778)));max-width:none;max-height:none;margin:auto;aspect-ratio:auto;border-radius:0;box-shadow:none;background:#000;overflow:hidden}
+    /* ===== FIX FULLSCREEN: NGIKUTIN RASIO ===== */
+    .video-player-container:fullscreen{
+        position:fixed; inset:0; margin:auto;
+        /* Ukuran dihitung JS biar pas, tidak melar. CSS ini cadangan kalau JS telat */
+        width:min(100vw, calc(100vh * var(--ar-num,1.7778)));
+        height:min(100vh, calc(100vw / var(--ar-num,1.7778)));
+        max-width:100vw; max-height:100vh; aspect-ratio:auto;
+        border-radius:0; box-shadow:none; background:#000; overflow:hidden;
+    }
     .video-player-container:fullscreen::backdrop{background:#000}
+    /* Saat fullscreen, sembunyikan badge PROGRAM biar bersih kayak contoh */
+    .video-player-container:fullscreen .fs-hint{opacity:0}
+    .fs-hint{position:absolute;bottom:58px;right:12px;z-index:30;font-size:10px;color:rgba(255,255,255,.6);background:rgba(0,0,0,.5);padding:3px 7px;border-radius:3px;pointer-events:none;transition:opacity .3s}
     .video-background,#mainVideo,#camVideo{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background-color:#000}
     #camVideo{object-fit:cover;z-index:5}
     .scoreboard{position:absolute;top:15px;left:15px;display:flex;border-radius:4px;overflow:hidden;font-size:14px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,.6);z-index:10;pointer-events:none;max-width:calc(100% - 30px);flex-wrap:wrap}
@@ -61,7 +73,9 @@
     .overlay-logos{position:absolute;inset:0;z-index:10;pointer-events:none}
     .overlay-logos .logo-draggable{position:absolute;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
     .overlay-logos .logo-draggable img{display:block;width:100%;height:auto;pointer-events:none}.overlay-logos.locked .logo-draggable{pointer-events:none}
+    /* Ticker — di fullscreen ukuran font ikut % biar tidak kegedean / kekecilan */
     .ticker-wrapper{position:absolute;bottom:0;left:0;right:0;height:46px;display:flex;align-items:stretch;background:linear-gradient(90deg,#0b1220 0%,#15233d 35%,#15233d 65%,#0b1220 100%);border-top:2px solid #e11d2f;z-index:20;pointer-events:none;overflow:hidden;font-family:'Arial Narrow','Segoe UI',Tahoma,sans-serif}
+    .video-player-container:fullscreen .ticker-wrapper{height:6.2cqh; min-height:42px; border-top-width:3px}
     .ticker-label{background:linear-gradient(180deg,#ff2d3f 0%,#c00d1f 100%);color:#fff;padding:0 24px 0 14px;font-weight:900;font-size:12.5px;letter-spacing:1.6px;display:flex;align-items:center;gap:8px;white-space:nowrap;text-transform:uppercase;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 100%,0 100%);z-index:2;flex-shrink:0}
     .ticker-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:pl 1.1s infinite}
     @keyframes pl{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
@@ -73,6 +87,7 @@
     .live-dot{width:7px;height:7px;border-radius:50%;background:#ff4d5e;animation:pl 1.4s infinite}
     .fs-btn{position:absolute;top:12px;right:12px;z-index:30;width:38px;height:38px;border-radius:4px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;padding:0}
     .video-player-container:hover .fs-btn{opacity:1}
+    .video-player-container:fullscreen .fs-btn{opacity:1; width:44px; height:44px}
     .player-controls{flex-shrink:0;background:var(--bg-panel);border:1px solid #262626;border-top:none;display:flex;align-items:center;gap:8px;padding:8px 10px}
     .ctrl-btn{width:44px;height:36px;border-radius:6px;background:#2a2a2a;border:1px solid #3a3a3a;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .ctrl-btn:disabled{opacity:.35}.ctrl-btn.play{width:52px;height:40px;background:var(--accent);border-color:var(--accent);font-size:18px}
@@ -109,9 +124,13 @@
         </aside>
         <main class="col center">
             <div class="preview-toolbar">
-                <div class="ratio-group"><button type="button" class="ratio-btn active" data-ratio="original">ASLI</button><button type="button" class="ratio-btn" data-ratio="16:9">16:9</button><button type="button" class="ratio-btn" data-ratio="9:16">9:16</button></div>
+                <div class="ratio-group">
+                    <button type="button" class="ratio-btn active" data-ratio="original">ASLI</button>
+                    <button type="button" class="ratio-btn" data-ratio="16:9">16:9</button>
+                    <button type="button" class="ratio-btn" data-ratio="9:16">9:16</button>
+                </div>
                 <label class="lock-toggle"><input type="checkbox" id="lockPositions"><span>🔒 Kunci posisi logo</span></label>
-                <span class="rec-badge" id="recBadge">● REC 00:00</span><span class="preview-badge">PROGRAM</span>
+                <span class="rec-badge" id="recBadge">● REC 00:00</span><span class="preview-badge" id="previewBadge">PROGRAM • ASLI</span>
             </div>
             <div class="preview-canvas"><div class="video-player-container" id="playerContainer">
                 <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1200&auto=format&fit=crop" class="video-background" id="placeholderImage">
@@ -120,6 +139,7 @@
                 <div class="scoreboard" id="scoreboard" style="display:none"><div class="score-team"><span id="teamA">TIM A</span><span id="scoreDisplay">0 - 0</span><span id="teamB">TIM B</span></div><div class="score-time" id="matchTime">00:00</div></div>
                 <div class="overlay-logos" id="overlayLogos"></div>
                 <div class="ticker-wrapper" id="tickerWrapper" style="display:none"><div class="ticker-label"><span class="ticker-dot"></span>INFO</div><div class="ticker-track"><div class="ticker-content" id="runningText"><span></span><span aria-hidden="true"></span></div></div><div class="ticker-live"><span class="live-dot"></span>LIVE</div></div>
+                <div class="fs-hint" id="fsHint">Klik 2x / tombol ⛶ untuk fullscreen</div>
                 <button class="fs-btn" id="fsBtn">⛶</button>
             </div></div>
             <div class="player-controls">
@@ -134,7 +154,7 @@
             <div class="mixer"><div class="mixer-head">Audio Mixer — Playlist</div><div class="mixer-channels" id="playlistBox" style="flex-direction:column;overflow-y:auto;gap:4px;align-items:stretch"><div class="empty-note" id="playlistEmpty">Belum ada video. Klik Unggah Video & pilih banyak file sekaligus.</div></div></div>
         </main>
         <aside class="col right">
-            <section class="dock" style="flex:0 0 auto"><header class="dock-head">Controls — Rekam Gambar + Suara</header><div class="dock-body pad">
+            <section class="dock" style="flex:0 0 auto"><header class="dock-head">Controls — Rekam Sesuai Rasio</header><div class="dock-body pad">
                 <span class="prop-label">Sumber Gambar</span>
                 <div class="src-select"><button id="srcVideoBtn" class="active">🎬 Video File</button><button id="srcCamBtn">📷 Kamera</button></div>
                 <button class="btn block" id="btnCam">📷 Nyalakan Kamera</button>
@@ -145,12 +165,13 @@
                 <label class="prop-label">Volume Mic</label><input type="range" id="micVol" class="range" min="0" max="150" value="100">
                 <button class="btn primary block">● Mulai Streaming</button>
                 <button class="btn block" id="btnRecord">● Mulai Rekaman Gambar + Suara</button>
-                <div class="prop-hint" id="recInfo">Hasil rekaman = persis contoh: video penuh + ticker INFO / LIVE di bawah, tanpa UI OBS.</div>
-                <label class="prop-label">Kualitas Rekaman</label>
-                <select id="recQuality" class="input"><option value="720">720p — 1280x720 (Aman HP)</option><option value="1080" selected>1080p — 1920x1080 (HD, Sama Contoh)</option><option value="480">480p — 854x480 (Paling Ringan)</option></select>
+                <div class="rec-ratio-box" id="recRatioInfo">📐 <b>Rasio: ASLI</b><br>Hasil rekaman akan ngikutin ukuran video aslinya.</div>
+                <div class="prop-hint" id="recInfo">Belum merekam.</div>
+                <label class="prop-label">Kualitas (Sisi Terpanjang)</label>
+                <select id="recQuality" class="input"><option value="1080" selected>HD — 1080p</option><option value="720">720p — hemat, aman HP</option><option value="480">480p — paling ringan</option></select>
             </div></section>
             <section class="dock" style="flex:1"><header class="dock-head">Properties — <span id="propsTitle">Video Utama</span></header><div class="dock-body pad">
-                <div class="props-panel" id="propsVideo"><span class="prop-label">Sumber Video / Playlist</span><button class="btn block" id="btnUpload">⬆ Unggah Video (Bisa Banyak)</button><div class="prop-hint" id="videoInfo">Belum ada video dipilih.</div><span class="prop-label">Rasio</span><div class="prop-hint">Pilih 16:9 biar hasil rekaman sama persis contoh.</div></div>
+                <div class="props-panel" id="propsVideo"><span class="prop-label">Sumber Video / Playlist</span><button class="btn block" id="btnUpload">⬆ Unggah Video (Bisa Banyak)</button><div class="prop-hint" id="videoInfo">Belum ada video dipilih.</div><span class="prop-label">Rasio Layar</span><div class="prop-hint">Pilih di atas preview: <b>ASLI</b> = ngikutin video, <b>16:9</b> = YouTube, <b>9:16</b> = TikTok / Reels. Preview, Fullscreen, DAN hasil rekaman semuanya SAMA.</div><span class="prop-label">Fullscreen</span><div class="prop-hint">Klik tombol ⛶ atau klik 2x video. Layar akan membesar tapi tetap ngikutin rasio — tidak melar, tidak kepotong.</div></div>
                 <div class="props-panel hidden" id="propsScoreboard">
                     <span class="prop-label">Nama Tim Kiri</span><input type="text" id="inputTeamA" class="input" placeholder="Nama Tim Kiri">
                     <span class="prop-label">Skor</span><input type="text" id="inputScore" class="input" placeholder="Contoh: 2 - 1">
@@ -164,37 +185,23 @@
                     <span class="prop-label">Teks Berjalan</span>
                     <input type="text" id="inputText" class="input" placeholder="Contoh: Cerita Anak Jungle Book...">
                     <button id="btnKirim" class="btn primary block">Kirim Teks Berjalan</button>
-
-                    <!-- BARU: ATUR KECEPATAN -->
                     <span class="prop-label">⚡ Kecepatan Teks Berjalan</span>
-                    <div class="speed-row">
-                        <span>🐢 Lambat</span>
-                        <input type="range" id="tickerSpeed" class="range" min="30" max="400" step="10" value="130" style="flex:1">
-                        <b id="tickerSpeedLabel">1.0x</b>
-                        <span>Cepat 🐇</span>
-                    </div>
-                    <div class="speed-presets">
-                        <button type="button" data-speed="65">0.5x<br>Lambat</button>
-                        <button type="button" data-speed="100">0.8x<br>Santai</button>
-                        <button type="button" data-speed="130" class="active">1.0x<br>Normal</button>
-                        <button type="button" data-speed="200">1.5x<br>Cepat</button>
-                        <button type="button" data-speed="300">2.3x<br>Kilat</button>
-                    </div>
-                    <div class="prop-hint" id="tickerSpeedHint">Kecepatan sekarang: 130 px/detik — Normal, sama seperti contoh. Geser slider, teks langsung berubah kecepatannya, tanpa perlu kirim ulang. Berlaku juga untuk hasil rekaman.</div>
-
+                    <div class="speed-row"><span>🐢</span><input type="range" id="tickerSpeed" class="range" min="30" max="400" step="10" value="130" style="flex:1"><b id="tickerSpeedLabel">1.0x</b><span>🐇</span></div>
+                    <div class="speed-presets"><button type="button" data-speed="65">0.5x<br>Lambat</button><button type="button" data-speed="100">0.8x<br>Santai</button><button type="button" data-speed="130" class="active">1.0x<br>Normal</button><button type="button" data-speed="200">1.5x<br>Cepat</button><button type="button" data-speed="300">2.3x<br>Kilat</button></div>
+                    <div class="prop-hint" id="tickerSpeedHint">Kecepatan sekarang: 130 px/detik — Normal.</div>
                     <button id="btnHideTicker" class="btn block">🙈 Sembunyikan Teks Berjalan</button>
                 </div>
                 <div class="props-panel hidden" id="propsLogo"></div>
             </div></section>
         </aside>
     </div>
-    <div class="statusbar"><span><i class="dot green"></i><span id="statCpu">CPU 3.2%</span></span><span id="statRec">● REC OFF</span><span id="statAudio">🔊 Audio: ON</span><span id="statMic">🎤 Mic: OFF</span><span id="statSpeed">⚡ Ticker: 1.0x</span><span class="spacer"></span><span id="statClock">00:00:00</span></div>
+    <div class="statusbar"><span><i class="dot green"></i><span id="statCpu">CPU 3.2%</span></span><span id="statRec">● REC OFF</span><span id="statAudio">🔊 Audio: ON</span><span id="statMic">🎤 Mic: OFF</span><span id="statSpeed">⚡ Ticker: 1.0x</span><span id="statRatio">📐 Rasio: ASLI</span><span class="spacer"></span><span id="statClock">00:00:00</span></div>
 </div>
 <input type="file" id="videoInput" accept="video/*" multiple style="display:none">
 <canvas id="recCanvas" style="display:none"></canvas>
 <script>
 const $ = id => document.getElementById(id);
-const overlayLogos=$('overlayLogos'),logoInput=$('logoInput'),btnAddLogo=$('btnAddLogo'),logoSources=$('logoSources'),lockCheckbox=$('lockPositions'),playerContainer=$('playerContainer'),mainVideo=$('mainVideo'),camVideo=$('camVideo'),placeholderImage=$('placeholderImage'),scoreboardEl=$('scoreboard'),tickerEl=$('tickerWrapper'),fsBtn=$('fsBtn');
+const overlayLogos=$('overlayLogos'),logoInput=$('logoInput'),btnAddLogo=$('btnAddLogo'),logoSources=$('logoSources'),lockCheckbox=$('lockPositions'),playerContainer=$('playerContainer'),mainVideo=$('mainVideo'),camVideo=$('camVideo'),placeholderImage=$('placeholderImage'),scoreboardEl=$('scoreboard'),tickerEl=$('tickerWrapper'),fsBtn=$('fsBtn'),fsHint=$('fsHint');
 const propsVideo=$('propsVideo'),propsScoreboard=$('propsScoreboard'),propsTicker=$('propsTicker'),propsLogo=$('propsLogo'),propsTitle=$('propsTitle');
 let logos=[],logoIdCounter=0,selectedSource='video',currentRatio='original',videoSource='file';
 const sourceVisible={video:true,scoreboard:false,ticker:false};
@@ -254,7 +261,7 @@ async function toggleCam(){
       if(!mainVideo.paused) mainVideo.pause();
       $('btnCam').textContent='📷 Matikan Kamera'; $('btnCam').classList.add('active');
       $('srcCamBtn').classList.add('active'); $('srcVideoBtn').classList.remove('active');
-      $('camInfo').textContent='Kamera ON.'; $('nowPlaying').textContent='📷 Kamera Live'; updateSub();
+      $('camInfo').textContent='Kamera ON.'; $('nowPlaying').textContent='📷 Kamera Live'; updateSub(); updateRatioInfo();
     }catch(e){ alert('Kamera ditolak.'); }
   } else stopCam();
 }
@@ -263,60 +270,41 @@ function stopCam(){
   camStream=null; camOn=false; videoSource='file'; camVideo.srcObject=null; camVideo.style.display='none';
   $('btnCam').textContent='📷 Nyalakan Kamera'; $('btnCam').classList.remove('active');
   $('srcVideoBtn').classList.add('active'); $('srcCamBtn').classList.remove('active');
-  $('camInfo').textContent='Kamera OFF.'; applyVideoVisibility(); updateSub();
+  $('camInfo').textContent='Kamera OFF.'; applyVideoVisibility(); updateSub(); updateRatioInfo();
 }
 $('btnCam').addEventListener('click',toggleCam);
 $('srcVideoBtn').addEventListener('click',()=>{ if(camOn) stopCam(); });
 $('srcCamBtn').addEventListener('click',()=>{ if(!camOn) toggleCam(); });
 function updateSub(){ $('nowPlayingSub').textContent=`${videoSource==='camera'?'Kamera Live':(playlist.length?`Video ${currentIndex+1} dari ${playlist.length}`:'Playlist kosong')} • Kamera ${camOn?'ON':'OFF'} • Mic ${micOn?'ON':'OFF'}`; }
 
-/* ===== TICKER + KECEPATAN ===== */
+/* TICKER + KECEPATAN */
 const btnKirim=$('btnKirim'),inputText=$('inputText'),runningText=$('runningText'),btnHideTicker=$('btnHideTicker');
 const tickerSpeedSlider=$('tickerSpeed'), tickerSpeedLabel=$('tickerSpeedLabel'), tickerSpeedHint=$('tickerSpeedHint'), statSpeed=$('statSpeed');
 let currentTickerText='';
-let tickerSpeed = 130; // px/detik, 130 = 1.0x Normal (sama contoh)
-let tickerSpeedFactor = 1.0;
-
-function speedName(px){
-  if(px <= 50) return 'Sangat Lambat — enak dibaca anak-anak';
-  if(px <= 80) return 'Lambat — santai';
-  if(px <= 120) return 'Santai';
-  if(px <= 150) return 'Normal — sama seperti contoh';
-  if(px <= 220) return 'Cepat — info kilat';
-  if(px <= 300) return 'Sangat Cepat';
-  return 'Kilat — hampir tidak terbaca';
-}
-function setTickerSpeed(px, fromSlider=true){
-  tickerSpeed = Math.max(30, Math.min(400, parseInt(px,10) || 130));
-  tickerSpeedFactor = tickerSpeed / 130;
-  const x = tickerSpeedFactor.toFixed(1) + 'x';
-  tickerSpeedLabel.textContent = x;
-  statSpeed.textContent = '⚡ Ticker: ' + x;
-  tickerSpeedHint.textContent = `Kecepatan sekarang: ${tickerSpeed} px/detik (${x}) — ${speedName(tickerSpeed)}. Geser slider, teks langsung berubah, tanpa kirim ulang. Berlaku juga untuk hasil rekaman.`;
-  if(fromSlider !== 'preset') tickerSpeedSlider.value = tickerSpeed;
-  // Highlight preset yang paling dekat
-  document.querySelectorAll('.speed-presets button').forEach(b=>{
-    b.classList.toggle('active', parseInt(b.dataset.speed,10) === tickerSpeed);
-  });
+let tickerSpeed = 130, tickerSpeedFactor = 1.0;
+function speedName(px){ if(px<=50) return 'Sangat Lambat'; if(px<=80) return 'Lambat'; if(px<=120) return 'Santai'; if(px<=150) return 'Normal'; if(px<=220) return 'Cepat'; if(px<=300) return 'Sangat Cepat'; return 'Kilat'; }
+function setTickerSpeed(px){
+  tickerSpeed = Math.max(30, Math.min(400, parseInt(px,10)||130));
+  tickerSpeedFactor = tickerSpeed/130;
+  const x = tickerSpeedFactor.toFixed(1)+'x';
+  tickerSpeedLabel.textContent=x; statSpeed.textContent='⚡ Ticker: '+x;
+  tickerSpeedHint.textContent=`Kecepatan sekarang: ${tickerSpeed} px/detik (${x}) — ${speedName(tickerSpeed)}.`;
+  tickerSpeedSlider.value=tickerSpeed;
+  document.querySelectorAll('.speed-presets button').forEach(b=>b.classList.toggle('active', parseInt(b.dataset.speed,10)===tickerSpeed));
   restartTicker();
 }
-tickerSpeedSlider.addEventListener('input', e => setTickerSpeed(e.target.value));
-document.querySelectorAll('.speed-presets button').forEach(b=>{
-  b.addEventListener('click', ()=> setTickerSpeed(b.dataset.speed, 'preset'));
-});
-
+tickerSpeedSlider.addEventListener('input', e=> setTickerSpeed(e.target.value));
+document.querySelectorAll('.speed-presets button').forEach(b=> b.addEventListener('click', ()=> setTickerSpeed(b.dataset.speed)));
 function restartTicker(){
   if(!sourceVisible.ticker) return;
   const f=runningText.querySelector('span'); if(!f) return;
   runningText.style.animation='none'; void runningText.offsetWidth;
-  // Durasi = lebar teks / kecepatan. Makin besar kecepatan, makin kecil durasi = makin cepat.
-  const dur = Math.max(3, (f.offsetWidth || 600) / tickerSpeed);
+  const dur=Math.max(3,(f.offsetWidth||600)/tickerSpeed);
   runningText.style.animation=`marquee ${dur}s linear infinite`;
 }
 function updateRunningText(){
   let t=inputText.value.trim(); if(!t){alert('Teks tidak boleh kosong!');return;}
-  t=t.replace(/\s+/g,' ').trim();
-  currentTickerText=t;
+  t=t.replace(/\s+/g,' ').trim(); currentTickerText=t;
   sourceVisible.ticker=true; tickerEl.style.display='';
   runningText.innerHTML=`<span>${t.replace(/</g,'&lt;')}</span><span aria-hidden="true">${t.replace(/</g,'&lt;')}</span>`;
   restartTicker(); inputText.value=''; refreshUI();
@@ -359,7 +347,7 @@ function loadVideo(idx,autoplay=true){
   if(camOn) stopCam();
   currentIndex=idx; const v=playlist[idx]; mainVideo.src=v.url; mainVideo.muted=false;
   nowPlaying.textContent=v.name; $('videoInfo').textContent=`${v.name} • ${v.sizeMB}`; btnPlayPause.textContent='⏸';
-  applyVideoVisibility(); renderPlaylist(); updateSub();
+  applyVideoVisibility(); renderPlaylist(); updateSub(); updateRatioInfo();
   if(autoplay){ unlockAudio().then(()=>mainVideo.play().catch(()=>{btnPlayPause.textContent='▶';})); }
 }
 async function togglePlayPause(){
@@ -377,12 +365,12 @@ mainVideo.addEventListener('play',()=>btnPlayPause.textContent='⏸');
 mainVideo.addEventListener('pause',()=>btnPlayPause.textContent='▶');
 mainVideo.addEventListener('ended',()=>{ if(currentIndex<playlist.length-1) nextVideo(); else btnPlayPause.textContent='▶'; });
 mainVideo.addEventListener('timeupdate',()=>{ if(!isSeeking&&mainVideo.duration){ seekBar.value=(mainVideo.currentTime/mainVideo.duration)*100; timeLabel.textContent=`${formatTime(Math.floor(mainVideo.currentTime))} / ${formatTime(Math.floor(mainVideo.duration))}`; } });
-mainVideo.addEventListener('loadedmetadata',()=>{ if(currentRatio==='original') applyAspectRatio('original'); timeLabel.textContent=`00:00 / ${formatTime(Math.floor(mainVideo.duration||0))}`; });
+mainVideo.addEventListener('loadedmetadata',()=>{ if(currentRatio==='original') applyAspectRatio('original'); timeLabel.textContent=`00:00 / ${formatTime(Math.floor(mainVideo.duration||0))}`; updateRatioInfo(); });
 seekBar.addEventListener('input',()=>{ isSeeking=true; if(mainVideo.duration) timeLabel.textContent=`${formatTime(Math.floor(mainVideo.duration*seekBar.value/100))} / ${formatTime(Math.floor(mainVideo.duration))}`; });
 seekBar.addEventListener('change',()=>{ if(mainVideo.duration) mainVideo.currentTime=mainVideo.duration*seekBar.value/100; isSeeking=false; });
 volBar.addEventListener('input',()=>{ mainVideo.volume=volBar.value/100; mainVideo.muted=false; if(audioGain) audioGain.gain.value=mainVideo.volume; $('statAudio').textContent=mainVideo.volume===0?'🔇 Audio: MUTE':'🔊 Audio: ON'; });
 btnUpload.addEventListener('click',()=>videoInput.click());
-videoInput.addEventListener('change',e=>{ const files=[...e.target.files]; if(!files.length) return; files.forEach(f=>playlist.push({name:f.name,size:f.size,sizeMB:(f.size/1048576).toFixed(1)+' MB',url:URL.createObjectURL(f)})); if(currentIndex===-1) loadVideo(0,true); else renderPlaylist(); updateSub(); videoInput.value=''; });
+videoInput.addEventListener('change',e=>{ const files=[...e.target.files]; if(!files.length) return; files.forEach(f=>playlist.push({name:f.name,size:f.size,sizeMB:(f.size/1048576).toFixed(1)+' MB',url:URL.createObjectURL(f)})); if(currentIndex===-1) loadVideo(0,true); else renderPlaylist(); updateSub(); updateRatioInfo(); videoInput.value=''; });
 function applyVideoVisibility(){ if(videoSource==='camera') return; const has=!!mainVideo.src; if(!sourceVisible.video){mainVideo.style.display='none'; placeholderImage.style.display='none'; return;} if(has){mainVideo.style.display='block'; placeholderImage.style.display='none';} else {mainVideo.style.display='none'; placeholderImage.style.display='block';} }
 
 /* LOGO */
@@ -403,25 +391,109 @@ document.getElementById('sourceList').addEventListener('click',e=>{const row=e.t
 
 /* RASIO */
 const ratioButtons=document.querySelectorAll('.ratio-btn');
-function getOriginalAR(){ if(mainVideo.src&&mainVideo.videoWidth>0) return mainVideo.videoWidth/mainVideo.videoHeight; if(placeholderImage.naturalWidth>0) return placeholderImage.naturalWidth/placeholderImage.naturalHeight; return 16/9; }
-function applyAspectRatio(m){ currentRatio=m; let ar=m==='9:16'?9/16:m==='16:9'?16/9:getOriginalAR(); playerContainer.style.setProperty('--ar-num',ar.toFixed(4)); clearTimeout(playerContainer._t); playerContainer._t=setTimeout(()=>{logos.forEach(clampPosition); restartTicker();},320); }
+function getOriginalAR(){ if(videoSource==='camera' && camVideo.videoWidth>0) return camVideo.videoWidth/camVideo.videoHeight; if(mainVideo.src&&mainVideo.videoWidth>0) return mainVideo.videoWidth/mainVideo.videoHeight; if(placeholderImage.naturalWidth>0) return placeholderImage.naturalWidth/placeholderImage.naturalHeight; return 16/9; }
+function getCurrentAR(){ if(currentRatio==='9:16') return 9/16; if(currentRatio==='16:9') return 16/9; return getOriginalAR(); }
+function applyAspectRatio(m){
+  currentRatio=m;
+  let ar = m==='9:16' ? 9/16 : m==='16:9' ? 16/9 : getOriginalAR();
+  playerContainer.style.setProperty('--ar-num', ar.toFixed(4));
+  $('previewBadge').textContent = 'PROGRAM • ' + (m==='original' ? 'ASLI' : m);
+  $('statRatio').textContent = '📐 Rasio: ' + (m==='original' ? 'ASLI' : m);
+  updateRatioInfo();
+  fitFullscreen(); // kalau lagi fullscreen, langsung sesuaikan
+  clearTimeout(playerContainer._t); playerContainer._t=setTimeout(()=>{logos.forEach(clampPosition); restartTicker();},320);
+}
+function updateRatioInfo(){
+  const s = getRecSize();
+  let label = '';
+  if(currentRatio==='16:9') label = `📐 <b>Rasio: 16:9</b><br>Hasil rekaman: <b>${s.w}x${s.h} Landscape</b> — pas untuk YouTube.`;
+  else if(currentRatio==='9:16') label = `📐 <b>Rasio: 9:16</b><br>Hasil rekaman: <b>${s.w}x${s.h} Portrait</b> — pas untuk TikTok / Reels.`;
+  else label = `📐 <b>Rasio: ASLI</b><br>Hasil rekaman: <b>${s.w}x${s.h}</b> — ngikutin video asli (${getCurrentAR().toFixed(2)}:1).`;
+  $('recRatioInfo').innerHTML = label;
+}
+$('recQuality').addEventListener('change', updateRatioInfo);
 ratioButtons.forEach(b=>b.addEventListener('click',()=>{ratioButtons.forEach(x=>x.classList.remove('active')); b.classList.add('active'); applyAspectRatio(b.dataset.ratio);}));
 
-/* FULLSCREEN */
-function getFs(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+/* ===== FULLSCREEN — NGIKUTIN RASIO ===== */
+const FS_ICON_OPEN = `⛶`;
+const FS_ICON_CLOSE = `⛶`;
+function getFs(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
 let isRedirectingFs=false;
-function reqFs(){ if(isRedirectingFs)return; if(playerContainer.requestFullscreen) playerContainer.requestFullscreen().catch(()=>{}); }
-function exitFs(){ if(document.exitFullscreen) document.exitFullscreen().catch(()=>{}); }
+// Fungsi inti: hitung ukuran pas biar tidak melar
+function fitFullscreen(){
+  const isFs = !!getFs();
+  if(!isFs){
+    // Balik ke mode normal — hapus style inline dari fullscreen
+    playerContainer.style.width=''; playerContainer.style.height='';
+    playerContainer.style.left=''; playerContainer.style.top='';
+    return;
+  }
+  const ar = getCurrentAR();
+  const sw = window.innerWidth, sh = window.innerHeight;
+  let w = sw, h = sw / ar;
+  if(h > sh){ h = sh; w = sh * ar; }
+  // Pasang ukuran yang sudah dihitung, ditengah, tidak melar
+  playerContainer.style.width = Math.floor(w)+'px';
+  playerContainer.style.height = Math.floor(h)+'px';
+  playerContainer.style.left = '50%';
+  playerContainer.style.top = '50%';
+  playerContainer.style.transform = 'translate(-50%,-50%)';
+  // Ticker & skor ikut membesar proporsional
+  playerContainer.style.fontSize = Math.max(12, Math.round(h/40))+'px';
+}
+function reqFs(){ if(isRedirectingFs) return; if(playerContainer.requestFullscreen){ playerContainer.requestFullscreen().catch(()=>{}); } else if(playerContainer.webkitRequestFullscreen){ playerContainer.webkitRequestFullscreen(); } }
+function exitFs(){ if(document.exitFullscreen){ document.exitFullscreen().catch(()=>{}); } else if(document.webkitExitFullscreen){ document.webkitExitFullscreen(); } }
 function toggleFs(){ if(!getFs()) reqFs(); else exitFs(); }
-fsBtn.addEventListener('click',toggleFs);
-playerContainer.addEventListener('dblclick',e=>{if(e.target.closest('.logo-draggable'))return; if(e.target.closest('.fs-btn'))return; toggleFs();});
-function onFsChange(){ const el=getFs(); if(el===mainVideo&&!isRedirectingFs){isRedirectingFs=true; exitFs(); setTimeout(()=>{reqFs(); setTimeout(()=>isRedirectingFs=false,300);},80); return;} setTimeout(()=>{logos.forEach(clampPosition); restartTicker();},200); }
-document.addEventListener('fullscreenchange',onFsChange);
+fsBtn.addEventListener('click', toggleFs);
+playerContainer.addEventListener('dblclick', e=>{ if(e.target.closest('.logo-draggable')) return; if(e.target.closest('.fs-btn')) return; toggleFs(); });
+function onFsChange(){
+  const fsEl = getFs();
+  const isFs = !!fsEl;
+  fsBtn.textContent = '⛶';
+  fsBtn.title = isFs ? 'Keluar Layar Penuh' : 'Layar Penuh';
+  // Kalau yang fullscreen malah video-nya (karena klik controls bawaan), alihkan ke container
+  if(fsEl === mainVideo && !isRedirectingFs){
+    isRedirectingFs=true; exitFs();
+    setTimeout(()=>{ reqFs(); setTimeout(()=>{ isRedirectingFs=false; },300); },80);
+    return;
+  }
+  if(isFs){
+    // Sembunyikan hint, pasang ukuran
+    if(fsHint) fsHint.style.display='none';
+    // Tunggu sebentar biar browser selesai masuk fullscreen baru ukur
+    setTimeout(()=>{ fitFullscreen(); logos.forEach(clampPosition); restartTicker(); },80);
+    setTimeout(()=>{ fitFullscreen(); },300);
+  } else {
+    if(fsHint) fsHint.style.display='';
+    playerContainer.style.width=''; playerContainer.style.height='';
+    playerContainer.style.left=''; playerContainer.style.top=''; playerContainer.style.transform='';
+    playerContainer.style.fontSize='';
+    setTimeout(()=>{ logos.forEach(clampPosition); restartTicker(); },200);
+  }
+}
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
+// Kalau HP diputar saat fullscreen, hitung ulang
+window.addEventListener('resize', ()=>{ if(getFs()) fitFullscreen(); });
+window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ if(getFs()) fitFullscreen(); },250); });
 
-/* REKAM */
+/* REKAM — UKURAN NGIKUTIN RASIO */
 const recCanvas=$('recCanvas'), recCtx=recCanvas.getContext('2d'), btnRecord=$('btnRecord'), recInfo=$('recInfo'), recBadge=$('recBadge'), statRec=$('statRec'), liveBadge=$('liveBadge'), brandDot=$('brandDot');
 let mediaRecorder=null, recordedChunks=[], isRecording=false, recStartTime=0, recTimer=null, drawRaf=null, tickerX=0, lastTickerTime=0;
-function getRecSize(){ const q=$('recQuality').value; if(q==='1080') return {w:1920,h:1080}; if(q==='480') return {w:854,h:480}; return {w:1280,h:720}; }
+function getRecSize(){
+  const q = $('recQuality').value; const longSide = parseInt(q,10) || 1080;
+  const ar = getCurrentAR();
+  let w, h;
+  if(ar >= 1){ w = longSide; h = Math.round(longSide / ar); }
+  else {
+    if(longSide >= 1080){ w = 1080; h = 1920; }
+    else if(longSide >= 720){ w = 720; h = 1280; }
+    else { w = 480; h = 854; }
+    if(currentRatio === 'original'){ w = Math.round(longSide * ar); h = longSide; if(w%2) w++; if(h%2) h++; }
+  }
+  if(w%2) w++; if(h%2) h++;
+  return {w, h};
+}
 function drawRoundRect(x,y,w,h,r){ recCtx.beginPath(); recCtx.moveTo(x+r,y); recCtx.arcTo(x+w,y,x+w,y+h,r); recCtx.arcTo(x+w,y+h,x,y+h,r); recCtx.arcTo(x,y+h,x,y,r); recCtx.arcTo(x,y,x+w,y,r); recCtx.closePath(); }
 function drawFrame(now){
   drawRaf=requestAnimationFrame(drawFrame);
@@ -433,7 +505,7 @@ function drawFrame(now){
   if(src){ const sw=src.videoWidth||src.naturalWidth||W, sh=src.videoHeight||src.naturalHeight||H; const sc=Math.max(W/sw,H/sh); const dw=sw*sc,dh=sh*sc; recCtx.drawImage(src,(W-dw)/2,(H-dh)/2,dw,dh); }
   logos.forEach(l=>{ if(!l.visible||!l.imgEl||!l.imgEl.complete) return; const scaleW=W/playerContainer.clientWidth; const w=l.width*scaleW; const h=w*((l.imgEl.naturalHeight||w)/(l.imgEl.naturalWidth||w)); recCtx.drawImage(l.imgEl,(l.x/100)*W,(l.y/100)*H,w,h); });
   if(sourceVisible.scoreboard){
-    recCtx.font=`800 ${Math.round(H*0.028)}px Arial`; const txt=`${teamA.textContent}  ${scoreDisplay.textContent}  ${teamB.textContent}`; const tw=recCtx.measureText(txt).width+H*0.04; const th=H*0.055,tx=W*0.012,ty=H*0.028;
+    recCtx.font=`800 ${Math.round(H*0.028)}px Arial`; const txt=`${teamA.textContent}  ${scoreDisplay.textContent}  ${teamB.textContent}`; const tw=Math.min(W*0.92, recCtx.measureText(txt).width+H*0.04); const th=H*0.055,tx=W*0.012,ty=H*0.028;
     recCtx.fillStyle='#cc0000'; drawRoundRect(tx,ty,tw,th,8); recCtx.fill(); recCtx.fillStyle='#fff'; recCtx.textBaseline='middle'; recCtx.fillText(txt,tx+H*0.02,ty+th/2+1);
     const tt=matchTime.textContent; const tw2=recCtx.measureText(tt).width+H*0.03; recCtx.fillStyle='#1b1b1b'; drawRoundRect(tx+tw+4,ty,tw2,th,8); recCtx.fill(); recCtx.fillStyle='#fff'; recCtx.fillText(tt,tx+tw+4+H*0.015,ty+th/2+1);
   }
@@ -441,22 +513,22 @@ function drawFrame(now){
     const th=Math.round(H*0.062), ty=H-th;
     recCtx.fillStyle='#15233d'; recCtx.fillRect(0,ty,W,th);
     recCtx.fillStyle='#e11d2f'; recCtx.fillRect(0,ty,W,3);
+    const labelW = W < H ? W*0.24 : W*0.155;
     recCtx.fillStyle='#c00d1f';
-    recCtx.beginPath(); recCtx.moveTo(0,ty); recCtx.lineTo(W*0.155,ty); recCtx.lineTo(W*0.14,ty+th); recCtx.lineTo(0,ty+th); recCtx.closePath(); recCtx.fill();
+    recCtx.beginPath(); recCtx.moveTo(0,ty); recCtx.lineTo(labelW,ty); recCtx.lineTo(labelW - W*0.015,ty+th); recCtx.lineTo(0,ty+th); recCtx.closePath(); recCtx.fill();
     recCtx.fillStyle='#fff'; recCtx.font=`900 ${Math.round(H*0.021)}px Arial`; recCtx.textBaseline='middle';
-    recCtx.fillText('●  INFO', W*0.015, ty+th/2+1);
-    recCtx.fillStyle='rgba(225,29,47,.18)'; recCtx.fillRect(W*0.92,ty,W*0.08,th);
+    recCtx.fillText(W < H ? '● INFO' : '●  INFO', W*0.015, ty+th/2+1);
+    recCtx.fillStyle='rgba(225,29,47,.18)'; recCtx.fillRect(W*0.88,ty,W*0.12,th);
     recCtx.fillStyle='#ff4d5e'; recCtx.font=`900 ${Math.round(H*0.02)}px Arial`;
-    recCtx.fillText('● LIVE', W*0.935, ty+th/2+1);
-    recCtx.save(); recCtx.beginPath(); recCtx.rect(W*0.17, ty, W*0.74, th); recCtx.clip();
+    recCtx.fillText('● LIVE', W*0.895, ty+th/2+1);
+    recCtx.save(); recCtx.beginPath(); recCtx.rect(labelW+W*0.02, ty, W - labelW - W*0.15, th); recCtx.clip();
     recCtx.font=`600 ${Math.round(H*0.024)}px Arial`;
     const gap=W*0.12; const tw=recCtx.measureText(currentTickerText).width + gap;
     if(!lastTickerTime) lastTickerTime=now;
     const dt=(now-lastTickerTime)/1000; lastTickerTime=now;
-    // KECEPATAN REKAMAN ikut slider: 130 px/detik di 1080p = W*0.11, dikali factor
     tickerX -= dt * (W*0.11 * tickerSpeedFactor);
     if(tickerX < -tw) tickerX += tw;
-    recCtx.fillStyle='#fff'; const startX = W*0.18 + tickerX;
+    recCtx.fillStyle='#fff'; const startX = labelW + W*0.03 + tickerX;
     recCtx.fillText(currentTickerText, startX, ty+th/2+1);
     recCtx.fillText(currentTickerText, startX+tw, ty+th/2+1);
     recCtx.fillText(currentTickerText, startX+tw*2, ty+th/2+1);
@@ -483,12 +555,12 @@ async function startRecording(){
   mediaRecorder.ondataavailable=e=>{if(e.data.size>0) recordedChunks.push(e.data);};
   mediaRecorder.onstop=()=>{
     const type=mediaRecorder._ext==='mp4'?'video/mp4':'video/webm'; const blob=new Blob(recordedChunks,{type}); const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); a.href=url; a.download=`live-studio-${stamp}.${mediaRecorder._ext}`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000);
-    recInfo.textContent=`✅ Selesai: live-studio-${stamp}.${mediaRecorder._ext} (${(blob.size/1048576).toFixed(1)} MB)`;
+    const a=document.createElement('a'); const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); a.href=url; a.download=`live-studio-${currentRatio}-${size.w}x${size.h}-${stamp}.${mediaRecorder._ext}`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000);
+    recInfo.textContent=`✅ Selesai: ${size.w}x${size.h} (${currentRatio}) — ${(blob.size/1048576).toFixed(1)} MB`;
   };
   mediaRecorder.start(1000); isRecording=true; recStartTime=Date.now();
   btnRecord.textContent='■ Stop Rekaman'; btnRecord.classList.add('recording'); recBadge.classList.add('show'); liveBadge.classList.add('rec'); brandDot.classList.add('rec'); statRec.textContent='● REC ON'; statRec.style.color='#ff5b5e';
-  recInfo.textContent=`⏺ Merekam ${size.w}x${size.h} • ${ext.toUpperCase()} + SUARA • Ticker ${tickerSpeedLabel.textContent}`;
+  recInfo.textContent=`⏺ Merekam ${size.w}x${size.h} (${currentRatio}) • ${ext.toUpperCase()} + SUARA • Ticker ${tickerSpeedLabel.textContent}`;
   recTimer=setInterval(()=>{ const s=Math.floor((Date.now()-recStartTime)/1000); recBadge.textContent=`● REC ${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },1000);
 }
 function stopRecording(){ if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop(); if(drawRaf) cancelAnimationFrame(drawRaf); drawRaf=null; clearInterval(recTimer); isRecording=false; btnRecord.textContent='● Mulai Rekaman Gambar + Suara'; btnRecord.classList.remove('recording'); recBadge.classList.remove('show'); liveBadge.classList.remove('rec'); brandDot.classList.remove('rec'); statRec.textContent='● REC OFF'; statRec.style.color=''; }
@@ -497,7 +569,7 @@ btnRecord.addEventListener('click',()=>{ if(isRecording) stopRecording(); else s
 /* INIT */
 setInterval(()=>{ $('statCpu').textContent='CPU '+(2+Math.random()*4).toFixed(1)+'%'; },2200);
 let clockSeconds=0; setInterval(()=>{clockSeconds++; $('statClock').textContent=`${String(Math.floor(clockSeconds/3600)).padStart(2,'0')}:${String(Math.floor((clockSeconds%3600)/60)).padStart(2,'0')}:${String(clockSeconds%60).padStart(2,'0')}`;},1000);
-window.addEventListener('load',()=>{ updateTimerDisplay(); renderLogos(); applyStaticVisibility(); applyAspectRatio('original'); selectSource('video'); renderPlaylist(); updateSub(); setTickerSpeed(130); });
+window.addEventListener('load',()=>{ updateTimerDisplay(); renderLogos(); applyStaticVisibility(); applyAspectRatio('original'); selectSource('video'); renderPlaylist(); updateSub(); setTickerSpeed(130); updateRatioInfo(); });
 </script>
 </body>
 </html>
